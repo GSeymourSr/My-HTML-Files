@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Enhanced Shader Animation – GUI & 130 Effects with Detailed Comments</title>
+  <style>
+    /* Reset & Full-screen: Ensures the canvas fills the viewport */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+    /* Effect name overlay: Displays current effect name at bottom left */
+    #effectDropdown {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 14px;
+      border-radius: 4px;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      opacity: 0;
+      z-index: 10;
+    }
+    /* GUI overlay: Provides effect selection interface */
+    #guiOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(20, 20, 20, 0.95);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    #guiOverlay h1 {
+      color: #fff;
+      margin-bottom: 20px;
+    }
+    /* Effect selection container: Scrollable list of effect checkboxes */
+    #effectSelectionContainer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      max-width: 1000px;
+      margin-bottom: 20px;
+      border: 1px solid #fff;
+      padding: 10px;
+      max-height: 60%;
+      overflow-y: auto;
+    }
+    .effect-option {
+      display: flex;
+      align-items: center;
+      background: #333;
+      border-radius: 4px;
+      padding: 5px 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .effect-option input[type="checkbox"] {
+      margin-right: 5px;
+      transform: scale(1.3);
+      cursor: pointer;
+    }
+    .effect-option label {
+      font-size: 18px;
+      padding: 2px 4px;
+      border-radius: 3px;
+      color: #fff;
+      cursor: pointer;
+    }
+    /* Order options: Toggle for random playback */
+    #orderModeContainer {
+      margin-bottom: 20px;
+      color: #fff;
+      font-size: 14px;
+    }
+    /* Button container: Select All/None buttons */
+    #selectButtonsContainer {
+      margin-bottom: 20px;
+    }
+    #selectButtonsContainer button,
+    #startButton,
+    #menuButton {
+      font-size: 14px;
+      padding: 8px 14px;
+      margin: 0 5px;
+      background: #555;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #selectButtonsContainer button:hover,
+    #startButton:hover,
+    #menuButton:hover {
+      background: #777;
+    }
+    #startButton {
+      font-size: 16px;
+      background: #28a745;
+    }
+    /* Menu button: Reopens GUI during playback */
+    #menuButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="shaderCanvas"></canvas>
+  <div id="effectDropdown"></div>
+  <button id="menuButton">Menu</button>
+
+  <div id="guiOverlay">
+    <h1>Select Effects to Display</h1>
+    <div id="effectSelectionContainer"></div>
+    <div id="selectButtonsContainer">
+      <button id="selectAllButton">Select All</button>
+      <button id="selectNoneButton">Select None</button>
+    </div>
+    <div id="orderModeContainer">
+      <input type="checkbox" id="randomOrderCheckbox" />
+      <label for="randomOrderCheckbox">Play Randomly</label>
+    </div>
+    <button id="startButton">Start</button>
+  </div>
+
+  <!-- Vertex Shader: Simple pass-through for full-screen quad -->
+  <script id="vertexShader" type="x-shader/x-vertex">
+    attribute vec2 aVertexPosition;
+    void main() {
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0);
+    }
+  </script>
+
+  <!-- Fragment Shader: Defines 130 effects with educational comments -->
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision highp float;
+    
+    uniform vec2 uResolution;      // Canvas resolution (width, height)
+    uniform float uTime;           // Animation time in seconds
+    uniform float uIterations;     // Number of fractal iterations
+    uniform float uColorShift;     // Color palette shift
+    uniform float uZoom;           // Zoom level for UV coordinates
+    uniform vec3 uColor1;          // Base color for palette
+    uniform vec3 uColor2;          // Amplitude color for palette
+    uniform vec3 uColor3;          // Frequency color for palette
+    uniform vec3 uColor4;          // Phase color for palette
+    uniform float uMirrors;        // Number of kaleidoscopic mirrors
+    uniform float uRotation;       // First rotation angle
+    uniform float uRotation2;      // Second rotation angle
+    uniform float uPulse;          // Pulse amplitude
+    uniform float uPulseSpeed;     // Pulse speed
+    uniform float uLayerMix;       // Mix factor between rotations
+    uniform float uWaveAmplitude;  // Wave distortion amplitude
+    uniform float uWaveFrequency;  // Wave distortion frequency
+    uniform float uSwirl;          // Swirl strength
+    uniform float uEffectMode;     // Current effect mode (0–129)
+    
+    // Palette function: Generates smooth color gradients using cosine interpolation
+    vec3 palette(float t) {
+      vec3 a = uColor1;
+      vec3 b = uColor2;
+      vec3 c = uColor3;
+      vec3 d = uColor4;
+      return a + b * cos(6.28318 * (c * t + d)); // 2π for full cycle
+    }
+    
+    void main() {
+      // Normalize UV coordinates to [-1, 1] range, centered, aspect-corrected
+      vec2 uv = (gl_FragCoord.xy * 2.0 - uResolution.xy) / uResolution.y;
+      float pulse = 1.0 + sin(uTime * uPulseSpeed) * uPulse; // Pulsing scale
+      uv *= pulse;
+      
+      // Apply dual rotation layers for depth
+      vec2 uv1 = uv;
+      vec2 uv2 = uv;
+      float cosRot1 = cos(uRotation);
+      float sinRot1 = sin(uRotation);
+      uv1 = mat2(cosRot1, -sinRot1, sinRot1, cosRot1) * uv1;
+      float cosRot2 = cos(uRotation2);
+      float sinRot2 = sin(uRotation2);
+      uv2 = mat2(cosRot2, -sinRot2, sinRot2, cosRot2) * uv2;
+      float mixFactor = smoothstep(0.0, 1.0, length(uv)) * uLayerMix;
+      uv = mix(uv1, uv2, mixFactor); // Blend rotations based on distance
+      
+      uv *= uZoom; // Apply zoom to UV coordinates
+      
+      // Kaleidoscopic mirroring: Creates symmetrical patterns
+      float angle = atan(uv.y, uv.x);
+      float dist = length(uv);
+      float sector = 6.28318 / uMirrors; // Divide circle into sectors
+      angle = mod(angle, sector);
+      if(mod(floor(atan(uv.y, uv.x) / sector), 2.0) == 1.0)
+        angle = sector - angle; // Mirror alternate sectors
+      uv = vec2(cos(angle), sin(angle)) * dist;
+      
+      // Effects 0–99: Core effects common to both files
+      if(uEffectMode < 100.0) {
+        if(uEffectMode < 1.0) {
+          // Effect 0: Original
+          // No transformation; displays the base kaleidoscopic pattern.
+        } else if(uEffectMode < 2.0) {
+          // Effect 1: Wave Distortion
+          // Creates a wavy effect by offsetting UV with sine and cosine waves.
+          uv.x += sin(uv.y * uWaveFrequency + uTime) * uWaveAmplitude;
+          uv.y += cos(uv.x * uWaveFrequency + uTime) * uWaveAmplitude;
+        } else if(uEffectMode < 3.0) {
+          // Effect 2: Swirl Distortion
+          // Rotates UV coordinates with a time-varying swirl.
+          float swirlAngle = uSwirl * sin(uTime * 0.5);
+          uv = mat2(cos(swirlAngle), -sin(swirlAngle), sin(swirlAngle), cos(swirlAngle)) * uv;
+        } else if(uEffectMode < 4.0) {
+          // Effect 3: Spiral Distortion
+          // Forms a spiral by adjusting the angle based on distance and time.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x);
+          a += sin(r * 10.0 + uTime) * 0.5;
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 5.0) {
+          // Effect 4: Jitter
+          // Introduces rapid, small oscillations using sine and cosine.
+          uv += vec2(sin(uTime * 5.0), cos(uTime * 5.0)) * 0.05;
+        } else if(uEffectMode < 6.0) {
+          // Effect 5: Inversion Twist
+          // Inverts UV coordinates for a mirrored twist effect.
+          uv = vec2(1.0) - uv;
+        } else if(uEffectMode < 7.0) {
+          // Effect 6: Zoom Distortion
+          // Dynamically zooms in and out with a sine wave.
+          uv *= (1.0 + 0.3 * sin(uTime * 2.0));
+        } else if(uEffectMode < 8.0) {
+          // Effect 7: Kaleidoscopic Twist
+          // Enhances kaleidoscopic patterns with a sine-based twist.
+          float t = atan(uv.y, uv.x) + sin(uv.x * 10.0 + uTime) * 0.2;
+          float r = length(uv);
+          uv = vec2(cos(t), sin(t)) * r;
+        } else if(uEffectMode < 9.0) {
+          // Effect 8: Pixelation
+          // Quantizes UV coordinates for a blocky, pixelated look.
+          uv = floor(uv * 10.0) / 10.0;
+        } else if(uEffectMode < 10.0) {
+          // Effect 9: Turbulence
+          // Adds high-frequency noise to simulate turbulent flow.
+          uv += 0.1 * vec2(sin(uv.y * 20.0 + uTime), cos(uv.x * 20.0 + uTime));
+        } else if(uEffectMode < 11.0) {
+          // Effect 10: Ripple
+          // Creates a ripple effect by normalizing UV and raising distance to a power.
+          float r = length(uv);
+          uv = normalize(uv) * pow(r, 0.8);
+        } else if(uEffectMode < 12.0) {
+          // Effect 11: Fisheye
+          // Simulates a fisheye lens by applying a sine-based rotation.
+          float angle2 = sin(uTime + length(uv) * 10.0) * 0.5;
+          uv = mat2(cos(angle2), -sin(angle2), sin(angle2), cos(angle2)) * uv;
+        } else if(uEffectMode < 13.0) {
+          // Effect 12: Sine Swirl
+          // Modifies angle with an exponential factor to swirl the image.
+          float a = atan(uv.y, uv.x);
+          float r = length(uv);
+          a += exp(-r) * 0.5;
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 14.0) {
+          // Effect 13: Exponential Twist
+          // Uses fract to create an abrupt twist effect.
+          uv = fract(uv * 5.0) - 0.5;
+        } else if(uEffectMode < 15.0) {
+          // Effect 14: Grid Distortion
+          // Swaps UV components conditionally to create a grid-like pattern.
+          uv = mix(uv, vec2(uv.y, uv.x), step(uv.x, uv.y));
+        } else if(uEffectMode < 16.0) {
+          // Effect 15: Diagonal Mirror
+          // Mirrors diagonally by modifying uv.x with sine.
+          uv.x *= sin(uTime + uv.y * 5.0) * 1.5;
+        } else if(uEffectMode < 17.0) {
+          // Effect 16: Sinusoidal Stretch
+          // Stretches vertically using cosine modulation.
+          uv.y *= cos(uTime + uv.x * 5.0) * 1.5;
+        } else if(uEffectMode < 18.0) {
+          // Effect 17: Cosine Compression
+          // Compresses the image by adjusting the angle with cosine.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x) + uTime * 0.3;
+          uv = vec2(cos(a), sin(a)) * sqrt(r);
+        } else if(uEffectMode < 19.0) {
+          // Effect 18: Twisted Tunnel
+          // Creates a tunnel-like twist with sine offsets.
+          uv += 0.1 * vec2(sin(uv.x * 15.0 + uTime), cos(uv.y * 15.0 + uTime));
+        } else if(uEffectMode < 20.0) {
+          // Effect 19: Complex Ripple
+          // Uses absolute sine to generate a ripple pattern.
+          uv = abs(sin(uv + uTime));
+        } else if(uEffectMode < 21.0) {
+          // Effect 20: Mirror Warp
+          // Warps UV using angle and sine offset.
+          float a = atan(uv.y, uv.x);
+          float r = length(uv) + 0.1 * sin(10.0 * a + uTime);
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 22.0) {
+          // Effect 21: Circular Wave
+          // Applies multiple fract operations for a circular wave pattern.
+          for (int i = 0; i < 3; i++) {
+            uv = fract(uv * 1.5) - 0.5;
+          }
+        } else if(uEffectMode < 23.0) {
+          // Effect 22: Fractal-like Distortion
+          // Adds fractal noise using sine and cosine dot products.
+          uv += 0.05 * vec2(
+            fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453),
+            fract(cos(dot(uv, vec2(12.9898, 78.233))) * 43758.5453)
+          );
+        } else if(uEffectMode < 24.0) {
+          // Effect 23: Random Jitter
+          // Inverts and offsets UV with sine jitter.
+          uv = vec2(1.0) - uv + 0.1 * sin(uTime + uv.x * 10.0);
+        } else if(uEffectMode < 25.0) {
+          // Effect 24: Wavy Inversion
+          // Combines ripple with inversion using a power function.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x) + uTime;
+          uv = vec2(cos(a), sin(a)) * pow(r, 0.9);
+        } else if(uEffectMode < 26.0) {
+          // Effect 25: Spiral Zoom
+          // Mixes horizontal and vertical components for spiral zoom.
+          uv = vec2(uv.x + 0.3 * uv.y, uv.y + 0.3 * uv.x);
+        } else if(uEffectMode < 27.0) {
+          // Effect 26: Shear Distortion
+          // Applies shear by offsetting UV with sine.
+          uv += 0.1 * sin(uv * 10.0 + uTime);
+        } else if(uEffectMode < 28.0) {
+          // Effect 27: Oscillatory Distortion
+          // Divides UV by its length to create oscillations.
+          float r = length(uv);
+          uv = uv / (r + 0.5);
+        } else if(uEffectMode < 29.0) {
+          // Effect 28: Hyperbolic Distortion
+          // Uses absolute value for hyperbolic mirror effect.
+          uv = abs(uv);
+        } else if(uEffectMode < 30.0) {
+          // Effect 29: Absolute Mirror
+          // Rotates UV and adds sine offset.
+          uv = mat2(cos(uTime * 0.5), -sin(uTime * 0.5),
+                    sin(uTime * 0.5), cos(uTime * 0.5)) * uv;
+          uv += 0.05 * vec2(sin(uv.y * 20.0), cos(uv.x * 20.0));
+        } else if(uEffectMode < 31.0) {
+          // Effect 30: Combined Rotation & Jitter
+          // Combines rotation with jitter.
+          uv += 0.05 * sin(vec2(uv.x * 15.0, uv.y * 15.0) + uTime);
+        } else if(uEffectMode < 32.0) {
+          // Effect 31: Wave Grid
+          // Applies grid-like wave by offsetting x and y.
+          uv.x += sin(uv.y * 20.0) * 0.1;
+          uv.y += sin(uv.x * 20.0) * 0.1;
+        } else if(uEffectMode < 33.0) {
+          // Effect 32: Zigzag Distortion
+          // Uses normalization and sine for zigzag pattern.
+          uv += 0.1 * normalize(uv) * sin(5.0 * length(uv) - uTime);
+        } else if(uEffectMode < 34.0) {
+          // Effect 33: Radial Displacement
+          // Adjusts angle with logarithmic term for radial displacement.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x) + log(r + 1.0) * 0.5;
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 35.0) {
+          // Effect 34: Logarithmic Spiral
+          // Creates spiral with sine on both components.
+          uv = vec2(sin(uv.x + uTime), sin(uv.y + uTime));
+        } else if(uEffectMode < 36.0) {
+          // Effect 35: Sine Wave Mirror
+          // Adds sine wave pattern to mirror the image.
+          uv += 0.05 * sin(vec2(uv.x * 20.0, uv.y * 20.0) + uTime);
+        } else if(uEffectMode < 37.0) {
+          // Effect 36: Ripple Grid (High Freq)
+          // Floors UV at higher frequency for fine grid ripple.
+          uv = fract(uv * 6.0) - 0.5;
+        } else if(uEffectMode < 38.0) {
+          // Effect 37: Checkerboard Distortion
+          // Combines absolute values and time offset for checkerboard.
+          uv = abs(uv);
+          float a = atan(uv.y, uv.x) + uTime;
+          float r = length(uv);
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 39.0) {
+          // Effect 38: Swirl Mirror
+          // Multiplies horizontal coordinate by sine for mirroring.
+          uv.x *= sin(uTime + uv.y * 7.0) * 1.5;
+        } else if(uEffectMode < 40.0) {
+          // Effect 39: Sin Stretch Variant
+          // Stretches vertically with cosine.
+          uv.y *= cos(uTime + uv.x * 7.0) * 1.5;
+        } else if(uEffectMode < 41.0) {
+          // Effect 40: Cos Compress Variant
+          // Applies rotation based on UV length for compression.
+          uv = mat2(cos(uTime + length(uv)), -sin(uTime + length(uv)),
+                    sin(uTime + length(uv)), cos(uTime + length(uv))) * uv;
+        } else if(uEffectMode < 42.0) {
+          // Effect 41: Complex Swirl Variant
+          // Combines angle adjustment with sine for complex swirl.
+          float a = atan(uv.y, uv.x) + sin(uTime + length(uv)*10.0) * 0.5;
+          float r = length(uv);
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 43.0) {
+          // Effect 42: Twirl Effect Variant
+          // Adds twirling with sine and cosine offsets.
+          uv += 0.1 * vec2(sin(uv.y * 10.0 + uTime), cos(uv.x * 10.0 + uTime));
+        } else if(uEffectMode < 44.0) {
+          // Effect 43: Distorted Grid Variant
+          // Uses fract and sine dot products for distorted grid.
+          uv += 0.05 * vec2(
+            fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453),
+            fract(cos(dot(uv, vec2(12.9898, 78.233))) * 43758.5453)
+          );
+        } else if(uEffectMode < 45.0) {
+          // Effect 44: Random Noise Variant
+          // Normalizes and applies square root for noisy shard effect.
+          float r = length(uv);
+          uv = normalize(uv) * sqrt(r);
+        } else if(uEffectMode < 46.0) {
+          // Effect 45: Spherical Distortion
+          // Applies absolute value for spherical mirror.
+          uv = abs(uv);
+        } else if(uEffectMode < 47.0) {
+          // Effect 46: Plasma Swirl
+          // Rotates UV with sine-based swirl and adds offset.
+          float a = sin(uTime + uv.x * 3.0) * 0.5;
+          uv = mat2(cos(a), -sin(a), sin(a), cos(a)) * uv;
+          uv += 0.1 * sin(uv * 10.0 + uTime);
+        } else if(uEffectMode < 48.0) {
+          // Effect 47: Lightning Bolts
+          // Adds strong sine offsets for lightning-like patterns.
+          uv += 0.2 * vec2(sin(uv.y * 20.0 + uTime), sin(uv.x * 20.0 + uTime));
+        } else if(uEffectMode < 49.0) {
+          // Effect 48: Glass Distortion
+          // Applies sine offset to swapped UV for glass-like refraction.
+          uv += 0.1 * sin(uv.yx * 20.0 + uTime);
+        } else if(uEffectMode < 50.0) {
+          // Effect 49: Tunnel Vortex
+          // Combines angle offset with sine for vortex tunnel.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x) + uTime * 0.5;
+          uv = vec2(cos(a), sin(a)) * (r + 0.2 * sin(r * 10.0 - uTime));
+        } else if(uEffectMode < 51.0) {
+          // Effect 50: Crystal Shards
+          // Uses fract to break into crystal-like shards with jitter.
+          uv = abs(fract(uv * 4.0) - 0.5) * 2.0 - 1.0;
+          uv += 0.1 * sin(uTime + uv.x + uv.y);
+        } else if(uEffectMode < 52.0) {
+          // Effect 51: Ink Spread
+          // Spreads ink effect with distance and smoothstep.
+          float d = length(uv);
+          uv *= 1.0 + 0.5 * smoothstep(0.0, 0.5, d) * sin(uTime * 2.0);
+        } else if(uEffectMode < 53.0) {
+          // Effect 52: Rainbow Fire
+          // Offsets UV for fire-like rainbow effect.
+          uv += 0.2 * vec2(sin(uTime*3.0 + uv.y*10.0), cos(uTime*3.0 + uv.x*10.0));
+        } else if(uEffectMode < 54.0) {
+          // Effect 53: Heat Mirage
+          // Adds subtle distortion for heat mirage appearance.
+          uv += 0.05 * vec2(sin(uv.y * 20.0 + uTime*2.0), cos(uv.x * 20.0 + uTime*2.0));
+        } else if(uEffectMode < 55.0) {
+          // Effect 54: Underwater Waves
+          // Floors UV and adds fract offset for underwater ripple.
+          uv = floor(uv * 20.0) / 20.0;
+          uv += 0.1 * (fract(sin(uTime + uv.x * 50.0) * 43758.5453) - 0.5);
+        } else if(uEffectMode < 56.0) {
+          // Effect 55: Pixel Explosion
+          // Uses modular arithmetic and rotation for exploding pixel effect.
+          float a = atan(uv.y, uv.x);
+          float r = length(uv);
+          a = mod(a * 6.0, 3.14159);
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 57.0) {
+          // Effect 56: Kaleidoscope Warp
+          // Floors UV for kaleidoscopic pattern with sine offset.
+          uv = fract(uv * 5.0) - 0.5;
+          uv += 0.05 * sin(uTime + uv.x + uv.y);
+        } else if(uEffectMode < 58.0) {
+          // Effect 57: Neon Wireframe
+          // Uses angle and sine offsets for neon wireframe look.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x);
+          uv.x += 0.1 * sin(a * 4.0 + uTime);
+          uv.y += 0.1 * cos(a * 4.0 + uTime);
+        } else if(uEffectMode < 59.0) {
+          // Effect 58: DNA Helix
+          // Adds fract-based offsets for twisting DNA helix.
+          uv += 0.1 * vec2(
+            fract(sin(dot(uv, vec2(12.9898,78.233))) * 43758.5453),
+            fract(cos(dot(uv, vec2(12.9898,78.233))) * 43758.5453)
+          ) - 0.05;
+        } else if(uEffectMode < 60.0) {
+          // Effect 59: Glitch Scramble
+          // Scrambles UV with rotation and sine-based glitch.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x) + uTime + 0.5 * sin(r * 20.0 - uTime);
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 61.0) {
+          // Effect 60: Hypnotic Spiral
+          // Adds hypnotic effect by offsetting vertical coordinate with sine.
+          uv.y += 0.1 * sin(uv.x * 10.0 + uTime);
+        } else if(uEffectMode < 62.0) {
+          // Effect 61: Melting Colors
+          // Uses fract and scales UV for melting simulation.
+          uv = fract(uv * 3.0) - 0.5;
+          uv *= 1.0 + 0.3 * sin(uTime * 3.0);
+        } else if(uEffectMode < 63.0) {
+          // Effect 62: Fractal Bloom
+          // Creates fractal bloom by offsetting UV with sine and cosine.
+          uv = fract(uv * 7.0 + vec2(sin(uTime), cos(uTime))) - 0.5;
+        } else if(uEffectMode < 64.0) {
+          // Effect 63: Shifting Mosaic
+          // Applies sine and cosine offsets for shifting mosaic appearance.
+          uv += 0.05 * vec2(sin(uTime + uv.y*15.0), cos(uTime + uv.x*15.0));
+        } else if(uEffectMode < 65.0) {
+          // Effect 64: Ghostly Trails
+          // Adds trails by offsetting UV proportionally to its length.
+          float d = length(uv);
+          uv += (uv / d) * sin(d * 10.0 - uTime) * 0.1;
+        } else if(uEffectMode < 66.0) {
+          // Effect 65: Dynamic Ripple
+          // Similar to ghostly trails but with dynamic ripple calculation.
+          float d = length(uv);
+          uv += (uv / d) * sin(d * 10.0 - uTime) * 0.1;
+        } else if(uEffectMode < 67.0) {
+          // Effect 66: Cosine Ripple
+          // Uses cosine to modulate ripple effect on UV.
+          uv += 0.1 * cos(uv * 10.0 + uTime);
+        } else if(uEffectMode < 68.0) {
+          // Effect 67: Double Frequency Wave
+          // Adds double-frequency sine wave to both UV components.
+          uv += 0.15 * vec2(sin(uv.y * 20.0 + uTime), sin(uv.x * 20.0 + uTime));
+        } else if(uEffectMode < 69.0) {
+          // Effect 68: Exponential Mirror
+          // Mixes UV with its inverse for mirror effect.
+          uv = mix(uv, 1.0 - uv, 0.5);
+        } else if(uEffectMode < 70.0) {
+          // Effect 69: Radial Cosine Twist
+          // Adjusts UV angle with cosine for radial twist.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x) + cos(r * 10.0 + uTime) * 0.5;
+          uv = vec2(cos(a), sin(a)) * r;
+        } else if(uEffectMode < 71.0) {
+          // Effect 70: Jittered Sine Twist
+          // Rotates UV by angle derived from sine for twisted effect.
+          float angle = sin(uTime + uv.x * 3.0) * 3.14159;
+          uv = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * uv;
+        } else if(uEffectMode < 72.0) {
+          // Effect 71: Noise Twist
+          // Adds noise by offsetting UV with sine and cosine of scaled values.
+          uv += 0.05 * vec2(sin(uv.x * 12.0 + uTime), cos(uv.y * 12.0 + uTime));
+        } else if(uEffectMode < 73.0) {
+          // Effect 72: Sine Mirror
+          // Mirrors image by replacing UV with sine functions.
+          uv = vec2(sin(uv.x * 3.0 + uTime), sin(uv.y * 3.0 + uTime));
+        } else if(uEffectMode < 74.0) {
+          // Effect 73: Spiral Vortex
+          // Combines spiral and vortex with sine-modulated radius.
+          float r = length(uv);
+          float a = atan(uv.y, uv.x) + uTime;
+          uv = vec2(cos(a), sin(a)) * (r + 0.1 * sin(r * 5.0));
+        } else if(uEffectMode < 75.0) {
+          // Effect 74: Hyperbolic Inversion
+          // Inverts UV based on length for hyperbolic distortion.
+          float r = length(uv);
+          uv = uv / (r + 0.1);
+        } else if(uEffectMode < 76.0) {
+          // Effect 75: Twisted Inversion
+          // Inverts UV and adds sine offset for twisted look.
+          uv = 1.0 - uv + 0.05 * vec2(sin(uTime*3.0), cos(uTime*3.0));
+        } else if(uEffectMode < 77.0) {
+          // Effect 76: Fractal Zoom
+          // Scales UV for zoom into fractal pattern.
+          uv *= 1.0 + 0.2 * sin(uTime * 3.0);
+        } else if(uEffectMode < 78.0) {
+          // Effect 77: Inverted Fractal
+          // Inverts UV and adds sine modulation for fractal look.
+          uv = 1.0 - uv + 0.1 * sin(uTime * 4.0);
+        } else if(uEffectMode < 79.0) {
+          // Effect 78: Pixel Shift
+          // Floors UV for pixelated shift with sine offset.
+          uv = floor(uv * 8.0) / 8.0 + 0.02 * sin(uTime * 5.0);
+        } else if(uEffectMode < 80.0) {
+          // Effect 79: Spiral Stretch
+          // Adjusts UV with sine-modulated angle for stretched spiral.
+          float a = atan(uv.y, uv.x) + sin(uTime + length(uv) * 5.0) * 0.3;
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 81.0) {
+          // Effect 80: Rotating Grid
+          // Floors UV and rotates for rotating grid effect.
+          uv = fract(uv * 4.0) - 0.5;
+          uv = mat2(cos(uTime), -sin(uTime), sin(uTime), cos(uTime)) * uv;
+        } else if(uEffectMode < 82.0) {
+          // Effect 81: Diagonal Wave
+          // Adds diagonal sine wave offset.
+          uv += vec2(sin(uv.x * 10.0 + uTime), sin(uv.y * 10.0 + uTime)) * 0.05;
+        } else if(uEffectMode < 83.0) {
+          // Effect 82: Cosine Swirl
+          // Applies cosine to both components for smooth swirl.
+          uv = vec2(cos(uv.x + uTime), cos(uv.y + uTime));
+        } else if(uEffectMode < 84.0) {
+          // Effect 83: Sine Zoom
+          // Scales UV with sine for zooming effect.
+          uv *= 1.0 + 0.3 * sin(uTime * 2.0);
+        } else if(uEffectMode < 85.0) {
+          // Effect 84: Fractal Noise
+          // Adds fractal noise using sine of dot product.
+          uv += 0.1 * vec2(fract(sin(dot(uv, vec2(12.9898,78.233))) * 43758.5453),
+                           fract(cos(dot(uv, vec2(12.9898,78.233))) * 43758.5453));
+        } else if(uEffectMode < 86.0) {
+          // Effect 85: Wave Mirror
+          // Mixes UV with inversion for wave-like mirror.
+          uv = mix(uv, 1.0 - uv, 0.3);
+        } else if(uEffectMode < 87.0) {
+          // Effect 86: Twisted Fractal
+          // Rotates UV with sine-derived angle for twisted fractal.
+          float a = atan(uv.y, uv.x) + sin(uTime + length(uv) * 10.0) * 0.2;
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 88.0) {
+          // Effect 87: Distorted Rotation
+          // Applies constant rotation and adds offset.
+          uv = mat2(cos(uTime * 0.5), -sin(uTime * 0.5),
+                    sin(uTime * 0.5), cos(uTime * 0.5)) * uv;
+          uv += 0.05;
+        } else if(uEffectMode < 89.0) {
+          // Effect 88: Mirror Twist
+          // Inverts UV and swaps components with sine offset.
+          uv = abs(uv);
+          uv = vec2(uv.y, uv.x) + 0.1 * sin(uTime);
+        } else if(uEffectMode < 90.0) {
+          // Effect 89: Zigzag Wave
+          // Adds zigzag pattern with sine and cosine offsets.
+          uv += 0.05 * vec2(sin(uv.x * 15.0 + uTime), cos(uv.y * 15.0 + uTime));
+        } else if(uEffectMode < 91.0) {
+          // Effect 90: Log Spiral
+          // Uses logarithmic function for spiral adjustment.
+          float a = atan(uv.y, uv.x) + log(length(uv) + 1.0) * 0.5;
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 92.0) {
+          // Effect 91: Exponential Swirl
+          // Raises absolute UV to power and offsets with sine.
+          uv = pow(abs(uv), vec2(0.8)) * sign(uv) + 0.1*sin(uTime);
+        } else if(uEffectMode < 93.0) {
+          // Effect 92: Dynamic Mirror
+          // Mirrors UV around 0.5 dynamically.
+          uv = abs(uv - 0.5) * 2.0 - 1.0;
+        } else if(uEffectMode < 94.0) {
+          // Effect 93: Sine Fractal
+          // Adds fractal-like pattern with sine.
+          uv += 0.1 * sin(uv * 20.0 + uTime);
+        } else if(uEffectMode < 95.0) {
+          // Effect 94: Noise Mirror
+          // Mixes UV with fractal version for noise.
+          uv = mix(uv, fract(uv * 3.0) - 0.5, 0.5);
+        } else if(uEffectMode < 96.0) {
+          // Effect 95: Radial Wave
+          // Scales UV radially with sine of radius.
+          float r = length(uv);
+          uv *= 1.0 + 0.2 * sin(r * 10.0 - uTime);
+        } else if(uEffectMode < 97.0) {
+          // Effect 96: Circular Twist
+          // Twists image circularly with sine angle offset.
+          float a = atan(uv.y, uv.x) + 0.5 * sin(uTime + length(uv) * 8.0);
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 98.0) {
+          // Effect 97: Swirl Pixel
+          // Floors UV and rotates for pixelated swirl.
+          uv = fract(uv * 6.0) - 0.5;
+          uv = mat2(cos(uTime), -sin(uTime), sin(uTime), cos(uTime)) * uv;
+        } else if(uEffectMode < 99.0) {
+          // Effect 98: Inverted Sine
+          // Applies sine and inverts result.
+          uv = 1.0 - sin(uv + uTime);
+        } else {
+          // Effect 99: Final Vortex
+          // Combines vortex rotation with sine offset.
+          float a = atan(uv.y, uv.x) + uTime;
+          uv = vec2(cos(a), sin(a)) * length(uv) + 0.1 * sin(uv * 10.0);
+        }
+      }
+      // Effects 100–129: New effects, shared (100–119) and unique (120–129)
+      else if(uEffectMode < 130.0) {
+        if(uEffectMode < 101.0) {
+          // Effect 100: New Effect 1 – Sine Distortion
+          // Applies a horizontal sine wave distortion, warping the pattern over time.
+          uv += 0.05 * sin(uTime + uv.x * 15.0);
+        } else if(uEffectMode < 102.0) {
+          // Effect 101: New Effect 2 – Absolute Value
+          // Mirrors the pattern across both axes by taking absolute UV values.
+          uv = abs(uv);
+        } else if(uEffectMode < 103.0) {
+          // Effect 102: New Effect 3 – Cosine Distortion
+          // Adds a vertical cosine wave distortion for a rippling effect.
+          uv += 0.05 * cos(uTime + uv.y * 15.0);
+        } else if(uEffectMode < 104.0) {
+          // Effect 103: New Effect 4 – Mix Inversion
+          // Blends the original UV with its inverse, creating a partial mirror.
+          uv = mix(uv, 1.0 - uv, 0.5);
+        } else if(uEffectMode < 105.0) {
+          // Effect 104: New Effect 5 – Swirl Twist
+          // Twists the UV radially with a sine-modulated angle.
+          float a = atan(uv.y, uv.x) + sin(uTime) * 0.3;
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 106.0) {
+          // Effect 105: New Effect 6 – Scaling Distortion
+          // Scales UV coordinates in and out with a sine function.
+          uv *= 1.0 + 0.2 * sin(uTime);
+        } else if(uEffectMode < 107.0) {
+          // Effect 106: New Effect 7 – Fractal Noise
+          // Introduces pseudo-random noise using a fractal sine pattern.
+          uv += 0.1 * fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453);
+        } else if(uEffectMode < 108.0) {
+          // Effect 107: New Effect 8 – Mirror Effect
+          // Reflects the pattern symmetrically using absolute values.
+          uv = abs(uv);
+        } else if(uEffectMode < 109.0) {
+          // Effect 108: New Effect 9 – Radial Pulse
+          // Creates a pulsing effect that radiates from the center.
+          float r = length(uv);
+          uv *= 1.0 + 0.1 * sin(r * 20.0 + uTime);
+        } else if(uEffectMode < 110.0) {
+          // Effect 109: New Effect 10 – Displacement
+          // Displaces UV with synchronized sine and cosine waves.
+          uv += 0.05 * vec2(sin(uTime + uv.x * 20.0), cos(uTime + uv.y * 20.0));
+        } else if(uEffectMode < 111.0) {
+          // Effect 110: New Effect 11 – Twisting
+          // Rotates UV coordinates over time for a continuous twist.
+          float a = atan(uv.y, uv.x) + uTime * 0.5;
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 112.0) {
+          // Effect 111: New Effect 12 – Jitter
+          // Adds random jitter using fractal noise, centered around zero.
+          uv += 0.1 * vec2(fract(sin(uv.x * 10.0 + uTime) * 43758.5453) - 0.5,
+                           fract(cos(uv.y * 10.0 + uTime) * 43758.5453) - 0.5);
+        } else if(uEffectMode < 113.0) {
+          // Effect 112: New Effect 13 – Horizontal Wave
+          // Distorts horizontally with a sine wave based on vertical position.
+          uv.x += 0.1 * sin(uTime + uv.y * 25.0);
+        } else if(uEffectMode < 114.0) {
+          // Effect 113: New Effect 14 – Zoom
+          // Zooms the pattern in and out dynamically.
+          uv *= 1.0 + 0.3 * sin(uTime * 2.0);
+        } else if(uEffectMode < 115.0) {
+          // Effect 114: New Effect 15 – Diagonal Distortion
+          // Shears the pattern diagonally by mixing coordinates.
+          uv = vec2(uv.x + 0.05 * uv.y, uv.y + 0.05 * uv.x);
+        } else if(uEffectMode < 116.0) {
+          // Effect 115: New Effect 16 – Fractal Bloom
+          // Breaks the pattern into tiled segments for a blooming effect.
+          uv = fract(uv * 4.0) - 0.5;
+        } else if(uEffectMode < 117.0) {
+          // Effect 116: New Effect 17 – Rotating Distortion
+          // Applies a continuous rotation to the entire pattern.
+          uv = mat2(cos(uTime), -sin(uTime), sin(uTime), cos(uTime)) * uv;
+        } else if(uEffectMode < 118.0) {
+          // Effect 117: New Effect 18 – Complex Noise
+          // Adds intricate noise with high-frequency oscillations.
+          uv += 0.05 * vec2(sin(uv.x * 30.0 + uTime), cos(uv.y * 30.0 + uTime));
+        } else if(uEffectMode < 119.0) {
+          // Effect 118: New Effect 19 – Cosine Twist
+          // Twists radially with a cosine-modulated angle.
+          float a = atan(uv.y, uv.x) + cos(uTime) * 0.3;
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 120.0) {
+          // Effect 119: New Effect 20 – Combined Sine-Cosine
+          // Combines sine and cosine distortions for a wavy, dynamic effect.
+          uv += 0.05 * (sin(uTime + uv.x * 10.0) + cos(uTime + uv.y * 10.0));
+        } else if(uEffectMode < 121.0) {
+          // Effect 120: New Effect 21 – Vibrant Mosaic
+          // Tiles the pattern and animates each tile with sine waves.
+          uv = fract(uv * 8.0) - 0.5;
+          uv += 0.1 * vec2(sin(uTime + uv.x), sin(uTime + uv.y));
+        } else if(uEffectMode < 122.0) {
+          // Effect 121: New Effect 22 – Color Burst
+          // Creates bursts of movement with sine and cosine offsets.
+          uv += 0.1 * vec2(sin(uTime + uv.x * 8.0), cos(uTime + uv.y * 8.0));
+        } else if(uEffectMode < 123.0) {
+          // Effect 122: New Effect 23 – Cosmic Swirl
+          // Produces a swirling, cosmic effect with a strong sine twist.
+          float a = atan(uv.y, uv.x) + sin(uTime * 2.0) * 0.4;
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 124.0) {
+          // Effect 123: New Effect 24 – Fractal Pulse
+          // Adds pulsing fractal noise along the x-axis.
+          uv += 0.1 * fract(sin(uv.x * 15.0 + uTime) * 43758.5453);
+        } else if(uEffectMode < 125.0) {
+          // Effect 124: New Effect 25 – Luminous Shift
+          // Shifts the pattern toward its inverse for a glowing effect.
+          uv = mix(uv, 1.0 - uv, 0.4);
+        } else if(uEffectMode < 126.0) {
+          // Effect 125: New Effect 26 – Radiant Twist
+          // Twists the pattern with a cosine-modulated radial shift.
+          float a = atan(uv.y, uv.x) + cos(uTime) * 0.3;
+          uv = vec2(cos(a), sin(a)) * length(uv);
+        } else if(uEffectMode < 127.0) {
+          // Effect 126: New Effect 27 – Sonic Ripple
+          // Creates ripple-like waves with a cosine function.
+          uv += 0.1 * cos(uv * 15.0 + uTime);
+        } else if(uEffectMode < 128.0) {
+          // Effect 127: New Effect 28 – Chromatic Flux
+          // Blends the pattern with a tiled version for a flux effect.
+          uv = mix(uv, fract(uv * 4.0) - 0.5, 0.6);
+        } else if(uEffectMode < 129.0) {
+          // Effect 128: New Effect 29 – Dynamic Mirror Burst
+          // Combines mirroring with dynamic sine-cosine bursts.
+          uv += 0.08 * vec2(sin(uTime + uv.x * 20.0), cos(uTime + uv.y * 20.0));
+        } else {
+          // Effect 129: New Effect 30 – Quantum Grid
+          // Fragments the pattern into a grid-like structure.
+          uv = fract(uv * 8.0) - 0.5;
+        }
+      }
+      
+      // Final color computation: Iterative fractal layering
+      vec2 uv0 = uv;
+      vec3 finalColor = vec3(0.0);
+      for (float i = 0.0; i < 10.0; i++) {
+        if(i >= uIterations) break;
+        uv = fract(uv * 1.5) - 0.5; // Scale and center for fractal effect
+        float d = length(uv) * exp(-length(uv0)); // Distance field
+        vec3 col = palette(length(uv0) + i * uColorShift + uTime * 0.4); // Color from palette
+        d = sin(d * 8.0 + uTime) / 8.0; // Oscillate distance
+        d = abs(d);
+        d = pow(0.01 / d, 1.2); // Sharpen peaks
+        finalColor += col * d; // Accumulate color
+      }
+      
+      gl_FragColor = vec4(finalColor, 1.0); // Output final color
+    }
+  </script>
+
+  <!-- Main JavaScript: Handles rendering and GUI logic -->
+  <script>
+    const canvas = document.getElementById('shaderCanvas');
+    const gl = canvas.getContext('webgl');
+    if (!gl) {
+      alert('WebGL is not supported in your browser.');
+      throw new Error('WebGL not supported');
+    }
+    
+    // Resize canvas to match window size
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    
+    // Shader compilation utilities
+    function compileShader(source, type) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(shader));
+      }
+      return shader;
+    }
+    function createProgram(vertexSource, fragmentSource) {
+      const vertexShader = compileShader(vertexSource, gl.VERTEX_SHADER);
+      const fragmentShader = compileShader(fragmentSource, gl.FRAGMENT_SHADER);
+      const program = gl.createProgram();
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(program));
+      }
+      return program;
+    }
+    
+    const vertexSource = document.getElementById('vertexShader').textContent;
+    const fragmentSource = document.getElementById('fragmentShader').textContent;
+    const program = createProgram(vertexSource, fragmentSource);
+    gl.useProgram(program);
+    
+    // Uniform and attribute locations
+    const positionAttributeLocation = gl.getAttribLocation(program, 'aVertexPosition');
+    const resolutionUniformLocation = gl.getUniformLocation(program, 'uResolution');
+    const timeUniformLocation = gl.getUniformLocation(program, 'uTime');
+    const iterationsUniformLocation = gl.getUniformLocation(program, 'uIterations');
+    const colorShiftUniformLocation = gl.getUniformLocation(program, 'uColorShift');
+    const zoomUniformLocation = gl.getUniformLocation(program, 'uZoom');
+    const color1UniformLocation = gl.getUniformLocation(program, 'uColor1');
+    const color2UniformLocation = gl.getUniformLocation(program, 'uColor2');
+    const color3UniformLocation = gl.getUniformLocation(program, 'uColor3');
+    const color4UniformLocation = gl.getUniformLocation(program, 'uColor4');
+    const mirrorsUniformLocation = gl.getUniformLocation(program, 'uMirrors');
+    const rotationUniformLocation = gl.getUniformLocation(program, 'uRotation');
+    const rotation2UniformLocation = gl.getUniformLocation(program, 'uRotation2');
+    const pulseUniformLocation = gl.getUniformLocation(program, 'uPulse');
+    const pulseSpeedUniformLocation = gl.getUniformLocation(program, 'uPulseSpeed');
+    const layerMixUniformLocation = gl.getUniformLocation(program, 'uLayerMix');
+    const waveAmplitudeUniformLocation = gl.getUniformLocation(program, 'uWaveAmplitude');
+    const waveFrequencyUniformLocation = gl.getUniformLocation(program, 'uWaveFrequency');
+    const swirlUniformLocation = gl.getUniformLocation(program, 'uSwirl');
+    const effectModeUniformLocation = gl.getUniformLocation(program, 'uEffectMode');
+    
+    // Set up full-screen quad
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    const positions = [-1, -1, 1, -1, -1, 1, 1, 1];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+    
+    // Shader parameters with default values
+    const parameters = {
+      speed: 0.5,
+      iterations: 10,
+      colorShift: 0.5,
+      zoom: 1.0,
+      color1: [1.0, 0.0, 0.0],
+      color2: [0.0, 1.0, 0.0],
+      color3: [0.0, 0.0, 1.0],
+      color4: [1.0, 1.0, 1.0],
+      mirrors: 5,
+      rotation: 0.0,
+      rotation2: 0.0,
+      pulse: 0.1,
+      pulseSpeed: 1.0,
+      layerMix: 0.5,
+      waveAmplitude: 0.03,
+      waveFrequency: 10.0,
+      swirl: 1.0,
+      effectMode: 0.0
+    };
+    
+    let rotationSpeed = 0.1, rotation2Speed = -0.1, currentRotation = 0, currentRotation2 = 0;
+    let previousTime = 0;
+    let inDisplayMode = false;
+    let selectedEffects = [];
+    let currentEffectIndex = 0;
+    let effectTimer = null;
+    let perChangeCountDesired = 3;
+    let perChangeDuration = 2000;
+    let parameterChangeCounter = 0;
+    
+    // 130 Effect names: Adjusted to match implemented effects
+    const effectNames = [
+      "Original", "Wave Distortion", "Swirl Distortion", "Spiral Distortion",
+      "Jitter", "Inversion Twist", "Zoom Distortion", "Kaleidoscopic Twist",
+      "Pixelation", "Turbulence", "Ripple", "Fisheye", "Sine Swirl", "Exponential Twist",
+      "Grid Distortion", "Diagonal Mirror", "Sinusoidal Stretch", "Cosine Compression",
+      "Twisted Tunnel", "Complex Ripple", "Mirror Warp", "Circular Wave",
+      "Fractal-like Distortion", "Random Jitter", "Wavy Inversion", "Spiral Zoom",
+      "Shear Distortion", "Oscillatory Distortion", "Hyperbolic Distortion",
+      "Absolute Mirror", "Combined Rotation & Jitter", "Wave Grid", "Zigzag Distortion",
+      "Radial Displacement", "Logarithmic Spiral", "Sine Wave Mirror",
+      "Ripple Grid (High Freq)", "Checkerboard Distortion", "Swirl Mirror",
+      "Sin Stretch Variant", "Cos Compress Variant", "Complex Swirl Variant",
+      "Twirl Effect Variant", "Distorted Grid Variant", "Random Noise Variant",
+      "Spherical Distortion", "Plasma Swirl", "Lightning Bolts", "Glass Distortion",
+      "Tunnel Vortex", "Crystal Shards", "Ink Spread", "Rainbow Fire",
+      "Heat Mirage", "Underwater Waves", "Pixel Explosion", "Kaleidoscope Warp",
+      "Neon Wireframe", "DNA Helix", "Glitch Scramble", "Hypnotic Spiral",
+      "Melting Colors", "Fractal Bloom", "Shifting Mosaic", "Ghostly Trails",
+      "Dynamic Ripple", "Cosine Ripple", "Double Frequency Wave", "Exponential Mirror",
+      "Radial Cosine Twist", "Jittered Sine Twist", "Noise Twist", "Sine Mirror",
+      "Spiral Vortex", "Hyperbolic Inversion", "Twisted Inversion", "Fractal Zoom",
+      "Inverted Fractal", "Pixel Shift", "Spiral Stretch", "Rotating Grid",
+      "Diagonal Wave", "Cosine Swirl", "Sine Zoom", "Fractal Noise",
+      "Wave Mirror", "Twisted Fractal", "Distorted Rotation", "Mirror Twist",
+      "Zigzag Wave", "Log Spiral", "Exponential Swirl", "Dynamic Mirror",
+      "Sine Fractal", "Noise Mirror", "Radial Wave", "Circular Twist",
+      "Swirl Pixel", "Inverted Sine", "Final Vortex",
+      "New Effect 1 – Sine Distortion", "New Effect 2 – Absolute Value",
+      "New Effect 3 – Cosine Distortion", "New Effect 4 – Mix Inversion",
+      "New Effect 5 – Swirl Twist", "New Effect 6 – Scaling Distortion",
+      "New Effect 7 – Fractal Noise", "New Effect 8 – Mirror Effect",
+      "New Effect 9 – Radial Pulse", "New Effect 10 – Displacement",
+      "New Effect 11 – Twisting", "New Effect 12 – Jitter",
+      "New Effect 13 – Horizontal Wave", "New Effect 14 – Zoom",
+      "New Effect 15 – Diagonal Distortion", "New Effect 16 – Fractal Bloom",
+      "New Effect 17 – Rotating Distortion", "New Effect 18 – Complex Noise",
+      "New Effect 19 – Cosine Twist", "New Effect 20 – Combined Sine-Cosine",
+      "New Effect 21 – Vibrant Mosaic", "New Effect 22 – Color Burst",
+      "New Effect 23 – Cosmic Swirl", "New Effect 24 – Fractal Pulse",
+      "New Effect 25 – Luminous Shift", "New Effect 26 – Radiant Twist",
+      "New Effect 27 – Sonic Ripple", "New Effect 28 – Chromatic Flux",
+      "New Effect 29 – Dynamic Mirror Burst", "New Effect 30 – Quantum Grid"
+    ];
+    
+    // Populate GUI with sorted effect options
+    const sortedEffects = effectNames.map((name, index) => ({name, index}))
+      .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    const effectSelectionContainer = document.getElementById('effectSelectionContainer');
+    sortedEffects.forEach(item => {
+      const optionDiv = document.createElement('div');
+      optionDiv.className = 'effect-option';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = item.index;
+      checkbox.id = 'effectCheckbox' + item.index;
+      checkbox.checked = true;
+      const label = document.createElement('label');
+      label.htmlFor = 'effectCheckbox' + item.index;
+      label.textContent = item.name;
+      label.style.backgroundColor = `hsl(${Math.floor(item.index * 360 / effectNames.length)}, 80%, 50%)`;
+      optionDiv.appendChild(checkbox);
+      optionDiv.appendChild(label);
+      effectSelectionContainer.appendChild(optionDiv);
+    });
+    
+    // GUI button event listeners
+    document.getElementById('selectAllButton').addEventListener('click', () => {
+      document.querySelectorAll('.effect-option input[type="checkbox"]').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('selectNoneButton').addEventListener('click', () => {
+      document.querySelectorAll('.effect-option input[type="checkbox"]').forEach(cb => cb.checked = false);
+    });
+    document.getElementById('startButton').addEventListener('click', startDisplayMode);
+    document.getElementById('menuButton').addEventListener('click', () => {
+      inDisplayMode = false;
+      if (effectTimer) clearInterval(effectTimer);
+      document.getElementById('guiOverlay').style.display = 'flex';
+    });
+    
+    // Update parameters periodically during display mode
+    function updateParameters() {
+      randomizeOtherParameters();
+      parameterChangeCounter++;
+      document.getElementById('effectDropdown').textContent = effectNames[parameters.effectMode];
+      if (parameterChangeCounter >= perChangeCountDesired) {
+        parameterChangeCounter = 0;
+        let randomOrder = document.getElementById('randomOrderCheckbox').checked;
+        if (randomOrder) {
+          currentEffectIndex = Math.floor(Math.random() * selectedEffects.length);
+        } else {
+          currentEffectIndex = (currentEffectIndex + 1) % selectedEffects.length;
+        }
+        parameters.effectMode = selectedEffects[currentEffectIndex];
+        randomizeOtherParameters();
+        document.getElementById('effectDropdown').textContent = effectNames[parameters.effectMode];
+      }
+    }
+    
+    function startDisplayMode() {
+      selectedEffects = [];
+      document.querySelectorAll('.effect-option input[type="checkbox"]').forEach(cb => {
+        if (cb.checked) {
+          selectedEffects.push(parseInt(cb.value, 10));
+        }
+      });
+      if (selectedEffects.length === 0) {
+        selectedEffects = effectNames.map((_, idx) => idx);
+      }
+      let countStr = prompt("Enter number of parameter changes per effect:", "3");
+      perChangeCountDesired = parseInt(countStr, 10) || 3;
+      let durStr = prompt("Enter duration (in milliseconds) per parameter change:", "2000");
+      perChangeDuration = parseInt(durStr, 10) || 2000;
+      inDisplayMode = true;
+      currentEffectIndex = 0;
+      parameters.effectMode = selectedEffects[currentEffectIndex];
+      parameterChangeCounter = 0;
+      randomizeOtherParameters();
+      if (effectTimer) clearInterval(effectTimer);
+      effectTimer = setInterval(updateParameters, perChangeDuration);
+      document.getElementById('guiOverlay').style.display = 'none';
+      document.getElementById('effectDropdown').textContent = effectNames[parameters.effectMode];
+    }
+    
+    function nextRandomEffect() {
+      if (effectTimer) clearInterval(effectTimer);
+      currentEffectIndex = Math.floor(Math.random() * selectedEffects.length);
+      parameters.effectMode = selectedEffects[currentEffectIndex];
+      parameterChangeCounter = 0;
+      randomizeOtherParameters();
+      document.getElementById('effectDropdown').textContent = effectNames[parameters.effectMode];
+      effectTimer = setInterval(updateParameters, perChangeDuration);
+    }
+    
+    function exitDisplayMode() {
+      inDisplayMode = false;
+      if (effectTimer) clearInterval(effectTimer);
+      effectTimer = null;
+      document.getElementById('guiOverlay').style.display = 'flex';
+    }
+    
+    document.addEventListener('keydown', event => {
+      if (inDisplayMode) {
+        if (event.key === ' ') nextRandomEffect();
+        else if (event.key === 'Escape') exitDisplayMode();
+      }
+    });
+    
+    let hideTimer;
+    document.addEventListener('mousemove', () => {
+      if (inDisplayMode) {
+        const dropdown = document.getElementById('effectDropdown');
+        dropdown.style.opacity = '1';
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => dropdown.style.opacity = '0', 3000);
+      }
+    });
+    
+    function randomizeOtherParameters() {
+      parameters.speed = 0.5 + Math.random() * 2.5;
+      parameters.iterations = Math.floor(Math.random() * 12) + 1;
+      parameters.colorShift = Math.random() * 2;
+      parameters.zoom = 0.3 + Math.random() * 2.0;
+      parameters.mirrors = Math.floor(Math.random() * 40) + 2;
+      parameters.pulse = Math.random() * 0.3;
+      parameters.pulseSpeed = 0.5 + Math.random() * 2.0;
+      parameters.layerMix = Math.random();
+      parameters.color1 = [Math.random(), Math.random(), Math.random()];
+      parameters.color2 = [Math.random(), Math.random(), Math.random()];
+      parameters.color3 = [Math.random(), Math.random(), Math.random()];
+      parameters.color4 = [Math.random(), Math.random(), Math.random()];
+      parameters.waveAmplitude = 0.01 + Math.random() * 0.1;
+      parameters.waveFrequency = 5.0 + Math.random() * 10.0;
+      parameters.swirl = 0.5 + Math.random() * 1.5;
+      rotationSpeed = (Math.random() - 0.5) * 4;
+      rotation2Speed = (Math.random() - 0.5) * 4;
+      if (Math.abs(rotationSpeed - rotation2Speed) < 0.5) rotation2Speed = -rotationSpeed;
+    }
+    
+    function render(time) {
+      time *= 0.001;
+      const deltaTime = time - previousTime;
+      previousTime = time;
+      resizeCanvas();
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      
+      gl.useProgram(program);
+      gl.enableVertexAttribArray(positionAttributeLocation);
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+      
+      gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
+      gl.uniform1f(timeUniformLocation, time * parameters.speed);
+      gl.uniform1f(iterationsUniformLocation, parameters.iterations);
+      gl.uniform1f(colorShiftUniformLocation, parameters.colorShift);
+      gl.uniform1f(zoomUniformLocation, parameters.zoom);
+      gl.uniform3fv(color1UniformLocation, parameters.color1);
+      gl.uniform3fv(color2UniformLocation, parameters.color2);
+      gl.uniform3fv(color3UniformLocation, parameters.color3);
+      gl.uniform3fv(color4UniformLocation, parameters.color4);
+      gl.uniform1f(mirrorsUniformLocation, parameters.mirrors);
+      currentRotation += rotationSpeed * deltaTime;
+      currentRotation2 += rotation2Speed * deltaTime;
+      gl.uniform1f(rotationUniformLocation, currentRotation);
+      gl.uniform1f(rotation2UniformLocation, currentRotation2);
+      gl.uniform1f(pulseUniformLocation, parameters.pulse);
+      gl.uniform1f(pulseSpeedUniformLocation, parameters.pulseSpeed);
+      gl.uniform1f(layerMixUniformLocation, parameters.layerMix);
+      gl.uniform1f(waveAmplitudeUniformLocation, parameters.waveAmplitude);
+      gl.uniform1f(waveFrequencyUniformLocation, parameters.waveFrequency);
+      gl.uniform1f(swirlUniformLocation, parameters.swirl);
+      gl.uniform1f(effectModeUniformLocation, parameters.effectMode);
+      
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
