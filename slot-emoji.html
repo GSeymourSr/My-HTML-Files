@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Emoji Slot Machine!</title>
+  <style>
+    :root {
+      --reel-width: 80px;
+      --reel-height: 80px;
+      --symbol-size: 55px; /* Adjusted for emojis */
+      --num-reels: 3;
+      --num-rows: 3;
+      --reel-gap: 10px;
+      --lever-width: 30px;
+      --lever-offset: 60px; /* How far lever is from machine */
+      --machine-width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap) + 40px); /* + padding */
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Arial Black', Gadget, sans-serif;
+      background: radial-gradient(circle, #5a0a4a, #2a001f);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden; /* Hide scrollbars */
+    }
+
+    #game-container {
+      position: relative; /* Needed for absolute positioning of lever and lines */
+      /* Add padding to the right to make space for the lever visually */
+      padding-right: calc(var(--lever-width) + var(--lever-offset) - 20px); /* Adjust as needed */
+    }
+
+    #slot-machine {
+      background: linear-gradient(145deg, #444, #111);
+      border: 10px solid #d4af37; /* Gold border */
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 30px rgba(255, 223, 0, 0.6), inset 0 0 15px rgba(0, 0, 0, 0.7);
+      text-align: center;
+      width: var(--machine-width);
+      position: relative; /* For overlay messages and win lines relative to this */
+      z-index: 1;
+    }
+
+    #title {
+      font-size: 36px;
+      font-weight: bold;
+      color: #ffd700; /* Gold */
+      text-shadow: 2px 2px 5px #000;
+      background: linear-gradient(to bottom, #800000, #4d0000); /* Dark Red gradient */
+      padding: 15px;
+      margin: -20px -20px 20px -20px; /* Extend to edges */
+      border-radius: 10px 10px 0 0;
+      border-bottom: 5px solid #d4af37;
+      line-height: 1.1;
+    }
+
+    #money-display {
+      font-size: 28px;
+      margin: 15px 0;
+      color: #0f0; /* Bright green */
+      text-shadow: 1px 1px 3px #000;
+      background-color: rgba(0,0,0,0.5);
+      padding: 5px 10px;
+      border-radius: 5px;
+      display: inline-block;
+    }
+
+    #reels-container {
+      display: grid;
+      grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+      grid-gap: var(--reel-gap);
+      justify-content: center;
+      margin-bottom: 20px;
+      background: #111;
+      padding: 15px; /* Inner padding */
+      border-radius: 10px;
+      border: 3px inset #555;
+      overflow: hidden; /* Crucial: Clip the spinning reels */
+      height: calc(var(--num-rows) * var(--reel-height)); /* Fixed height */
+      position: relative; /* For win lines positioning */
+    }
+
+    .reel {
+      width: var(--reel-width);
+      height: calc(var(--num-rows) * var(--reel-height)); /* Fixed height */
+      overflow: hidden; /* Hide symbols outside the viewport */
+      background: #222;
+      border-radius: 5px;
+      position: relative; /* Needed for absolute positioned symbols container */
+    }
+
+    .symbols-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        transition: transform 0.1s linear; /* Animation for spinning */
+    }
+
+    /* Style for stopping smoothly */
+    .reel.stopping .symbols-container {
+      transition: transform 1s cubic-bezier(0.25, 1, 0.5, 1); /* Ease out effect */
+    }
+
+
+    .symbol {
+      width: var(--reel-width);
+      height: var(--reel-height);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--symbol-size); /* Size for emojis */
+      position: relative; /* For win flash */
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5); /* Add shadow to emojis */
+      line-height: 1; /* Prevent extra spacing */
+      color: #fff; /* Default emoji color (can be overridden by browser/OS) */
+      user-select: none; /* Prevent text selection */
+    }
+
+    /* --- Win Animation --- */
+    @keyframes winFlash {
+      0%, 100% { transform: scale(1); filter: brightness(1); }
+      50% { transform: scale(1.15); filter: brightness(1.5) drop-shadow(0 0 8px yellow); }
+    }
+
+    .symbol.winning {
+      animation: winFlash 0.6s ease-in-out infinite;
+      z-index: 10; /* Bring winning symbols to front */
+    }
+
+    /* --- Win Lines --- */
+    .win-line {
+        position: absolute;
+        background-color: rgba(255, 215, 0, 0.7); /* Semi-transparent gold */
+        box-shadow: 0 0 10px 3px rgba(255, 215, 0, 0.9);
+        z-index: 5; /* Above reels, below winning symbols */
+        display: none; /* Hidden by default */
+        pointer-events: none; /* Don't interfere with clicks */
+        border-radius: 3px;
+    }
+    /* Position lines relative to #reels-container padding (15px) */
+    .win-line.horizontal {
+        height: 6px; /* Thickness */
+        width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap)); /* Full width inside padding */
+        left: 15px; /* Align with padding */
+    }
+    .win-line.vertical {
+        width: 6px; /* Thickness */
+        height: calc(var(--num-rows) * var(--reel-height)); /* Full height inside padding */
+        top: 15px; /* Align with padding */
+    }
+    /* Diagonal lines need specific transforms - handled partially in JS */
+    .win-line.diagonal {
+        width: 6px; /* Thickness */
+        /* Height/transform set inline/via JS */
+    }
+
+
+    #controls {
+      margin: 20px 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    #controls input, #controls button {
+      font-size: 18px;
+      padding: 10px 15px;
+      margin: 5px;
+      border-radius: 8px;
+      border: 2px solid #888;
+      background: linear-gradient(to bottom, #666, #333);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      box-shadow: 0 3px 5px rgba(0,0,0,0.4);
+    }
+     #controls input {
+        width: 80px;
+        text-align: center;
+        background: #eee;
+        color: #333;
+     }
+
+    #controls button:hover:not(:disabled) {
+      background: linear-gradient(to bottom, #888, #555);
+      border-color: #aaa;
+      box-shadow: 0 4px 7px rgba(0,0,0,0.5);
+      transform: translateY(-1px);
+    }
+    #controls button:active:not(:disabled) {
+        transform: translateY(1px);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+     #controls button:disabled {
+         cursor: not-allowed;
+         opacity: 0.6;
+     }
+
+    #spin {
+        background: linear-gradient(to bottom, #00a000, #006400); /* Green */
+        border-color: #00ff00;
+        color: #fff;
+        font-weight: bold;
+    }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #32cd32, #008000); border-color: #adff2f; }
+
+    #maxBet { background: linear-gradient(to bottom, #ff8c00, #cd6600); border-color: #ffa500; } /* Orange */
+    #auto { background: linear-gradient(to bottom, #1e90ff, #005cbf); border-color: #4682b4; } /* Blue */
+    #reset { background: linear-gradient(to bottom, #dc143c, #a00f2b); border-color: #ff4040; } /* Red */
+
+
+    #message {
+      font-size: 24px;
+      margin-top: 15px;
+      min-height: 60px; /* Reserve space */
+      padding: 10px;
+      background-color: rgba(0,0,0,0.6);
+      border-radius: 8px;
+      color: #ffeb3b; /* Yellow messages */
+      text-shadow: 1px 1px 2px #000;
+      white-space: pre-line;
+      line-height: 1.4;
+    }
+    #message.win {
+        color: #76ff03; /* Light Green for wins */
+        font-weight: bold;
+    }
+    #message.big-win {
+        font-size: 30px;
+        color: #ff3d00; /* Bright orange/red for big wins */
+        animation: bigWinPulse 1s infinite alternate;
+    }
+
+    @keyframes bigWinPulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.05); }
+    }
+
+     /* --- Pull Lever --- */
+    #lever-container {
+        position: absolute;
+        top: 80px; /* Adjust vertical position to be near the reels */
+        /* Position it right of the game container, considering its padding */
+        left: calc(100% - var(--lever-offset) + 20px); /* Position relative to game-container's right edge */
+        width: var(--lever-width);
+        height: 250px; /* Adjust height */
+        z-index: 2; /* Ensure it's clickable */
+        /* background-color: rgba(0, 255, 0, 0.1); */ /* Helper for positioning */
+    }
+
+
+    #lever-handle {
+        position: absolute;
+        bottom: 10px; /* Start near the bottom */
+        left: 0;
+        width: var(--lever-width);
+        height: 150px; /* Lever arm height */
+        background: linear-gradient(to right, #ccc, #888); /* Metallic look */
+        border: 3px solid #555;
+        border-radius: 10px 10px 0 0;
+        cursor: pointer;
+        transition: transform 0.3s ease-out, background 0.3s ease-out;
+        transform-origin: bottom center;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+    }
+    #lever-handle::after { /* Ball on top */
+        content: '';
+        position: absolute;
+        top: -18px; /* Position above the handle */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 45px; /* Larger ball */
+        height: 45px;
+        background: radial-gradient(circle at 12px 12px, #ff4d4d, #b30000); /* Red ball */
+        border-radius: 50%;
+        border: 3px solid #600;
+        box-shadow: inset -3px -3px 5px rgba(0,0,0,0.4), 1px 1px 3px rgba(255,255,255,0.3);
+    }
+
+    #lever-handle.pulled {
+        transform: translateY(-60px); /* Move up further when pulled */
+        background: linear-gradient(to right, #ddd, #999);
+        /* Add a slight rotation for effect */
+        /* transform: translateY(-60px) rotate(-5deg); */
+    }
+
+    #lever-handle.disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+        filter: grayscale(50%);
+    }
+
+
+    /* --- Title Screen --- */
+    #title-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      text-align: center;
+      color: #fff;
+    }
+    #title-screen h1 {
+      font-size: calc(2em + 3vw); /* Responsive font size */
+      color: #ffd700;
+      text-shadow: 3px 3px 10px #000;
+      margin-bottom: 20px;
+    }
+     #title-screen p {
+         font-size: calc(0.8em + 0.5vw);
+         margin-bottom: 40px;
+         max-width: 80%;
+         line-height: 1.5;
+     }
+    #start-button {
+      font-size: calc(1em + 1.5vw);
+      padding: 15px 35px;
+      border-radius: 15px;
+      background: linear-gradient(to bottom, #00a000, #006400);
+      border: 3px solid #00ff00;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 5px 15px rgba(0, 255, 0, 0.4);
+    }
+    #start-button:hover {
+      background: linear-gradient(to bottom, #32cd32, #008000);
+      box-shadow: 0 8px 20px rgba(0, 255, 0, 0.6);
+      transform: scale(1.05);
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Title Screen -->
+  <div id="title-screen">
+    <h1>EMOJI SLOTS!</h1>
+    <p>Get ready to spin and win! Match emojis across the lines.<br>Use the SPIN button or pull the LEVER!</p>
+    <button id="start-button">Start Game</button>
+  </div>
+
+  <!-- Main Game Area -->
+  <div id="game-container" style="display: none;"> <!-- Hidden initially -->
+      <div id="slot-machine">
+        <div id="title">EMOJI SLOTS!<br><span style="font-size: 16px; color: #ffccff;">By Enhanced AI</span></div>
+        <div id="money-display">Money: $100</div>
+
+        <div id="reels-container">
+          <!-- Reels will be generated by JS -->
+           <!-- Win Line Overlays (Positioned relative to this container) -->
+         <div class="win-line horizontal" id="line-h0"></div>
+         <div class="win-line horizontal" id="line-h1"></div>
+         <div class="win-line horizontal" id="line-h2"></div>
+         <div class="win-line vertical" id="line-v0"></div>
+         <div class="win-line vertical" id="line-v1"></div>
+         <div class="win-line vertical" id="line-v2"></div>
+         <div class="win-line diagonal" id="line-d0"></div>
+         <div class="win-line diagonal" id="line-d1"></div>
+        </div>
+
+        <div id="controls">
+          <label for="bet" style="font-size: 18px; margin-right: -5px;">Bet:</label>
+          <input type="number" id="bet" value="5" min="1">
+          <button id="maxBet">Max Bet</button>
+          <button id="spin">Spin</button>
+          <button id="auto">Auto</button>
+          <button id="payTable">Pay Table</button>
+          <button id="reset">Reset</button>
+        </div>
+        <div id="message">Set your bet and spin!</div>
+      </div>
+
+       <!-- Lever -->
+       <div id="lever-container">
+           <div id="lever-handle"></div>
+       </div>
+  </div>
+
+  <!-- Audio Elements (Remember to provide valid paths!) -->
+  <audio id="spin-sound" src="path/to/spin_sound.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="path/to/win_sound.mp3" preload="auto"></audio>
+  <audio id="big-win-sound" src="path/to/big_win_sound.mp3" preload="auto"></audio>
+  <audio id="reel-stop-sound" src="path/to/reel_stop_sound.mp3" preload="auto"></audio>
+  <audio id="button-click-sound" src="path/to/button_click_sound.mp3" preload="auto"></audio>
+  <audio id="lever-pull-sound" src="path/to/lever_pull_sound.mp3" preload="auto"></audio>
+
+
+  <script>
+    // --- Configuration ---
+    const config = {
+        money: 100,
+        reelCount: 3,
+        rowCount: 3,
+        symbolHeight: 80, // Must match --reel-height in CSS
+        spinDurationBase: 1000, // ms base duration
+        spinDurationVariance: 500, // ms variance
+        reelStopDelay: 200, // ms delay between reels stopping
+        autoSpinDelay: 1500, // ms delay between auto spins
+        leverPullDuration: 400, // ms for lever animation visual
+        bigWinThreshold: 20, // Payout multiplier considered a "big win"
+        symbols: [
+            // Using common emojis
+            { id: 'cherry', emoji: '🍒', payout: 5 },
+            { id: 'lemon', emoji: '🍋', payout: 8 },
+            { id: 'orange', emoji: '🍊', payout: 10 },
+            { id: 'plum', emoji: '🍇', payout: 15 }, // Grape as plum
+            { id: 'bell', emoji: '🔔', payout: 20 },
+            { id: 'bar', emoji: '🍫', payout: 30 }, // Chocolate bar as BAR
+            { id: 'seven', emoji: '💎', payout: 50 }, // Diamond as lucky seven
+            { id: 'star', emoji: '⭐', payout: 75 } // Added Star
+        ],
+        winningLines: [
+            // Indices based on flat visible grid [0, 1, 2, 3, 4, 5, 6, 7, 8]
+            { id: 'line-h0', indices: [0, 1, 2] }, // Top Row
+            { id: 'line-h1', indices: [3, 4, 5] }, // Middle Row
+            { id: 'line-h2', indices: [6, 7, 8] }, // Bottom Row
+            { id: 'line-v0', indices: [0, 3, 6] }, // Left Column
+            { id: 'line-v1', indices: [1, 4, 7] }, // Middle Column
+            { id: 'line-v2', indices: [2, 5, 8] }, // Right Column
+            { id: 'line-d0', indices: [0, 4, 8] }, // Diagonal TL-BR
+            { id: 'line-d1', indices: [2, 4, 6] }  // Diagonal TR-BL
+        ]
+    };
+
+    // --- Game State ---
+    let money = config.money;
+    let currentBet = 5;
+    let autoMode = false;
+    let spinning = false;
+    let reels = []; // Array to hold reel elements and their symbols
+    let finalSymbols = []; // Stores the final visible symbols [s0, s1, s2, ..., s8]
+    let autoSpinTimeout = null;
+    let stopPromises = []; // To track when each reel stops
+
+    // --- DOM Elements ---
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const payTableButton = document.getElementById('payTable');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const startButton = document.getElementById('start-button');
+    const gameContainer = document.getElementById('game-container');
+    const leverHandle = document.getElementById('lever-handle'); // Lever Handle
+    const winLineElements = {};
+    config.winningLines.forEach(line => {
+        winLineElements[line.id] = document.getElementById(line.id);
+        if (!winLineElements[line.id]) console.error(`Win line element not found: ${line.id}`);
+    });
+
+
+    // --- Audio Elements ---
+    const sounds = {
+        spin: document.getElementById('spin-sound'),
+        win: document.getElementById('win-sound'),
+        bigWin: document.getElementById('big-win-sound'),
+        reelStop: document.getElementById('reel-stop-sound'),
+        click: document.getElementById('button-click-sound'),
+        lever: document.getElementById('lever-pull-sound') // Lever sound
+    };
+
+    // --- Functions ---
+
+    function playSound(sound) {
+        if (sound && typeof sound.play === 'function') {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Sound play failed (user interaction needed?):", e));
+        }
+    }
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `Money: $${money.toLocaleString()}`;
+      betInput.max = money > 0 ? money : 1;
+      if (parseInt(betInput.value) > money && money > 0) { // Check money > 0 here
+          betInput.value = money;
+      } else if (money <= 0) {
+            betInput.value = 1; // Reset bet input if out of money
+      }
+       if (money <= 0 && !spinning) {
+            disableControls(true, true); // Disable buttons and lever
+            displayMessage("Game Over! Reset to play again.", false, true);
+       }
+    }
+
+    // Added disableLever flag
+    function disableControls(disable = true, disableLever = disable) {
+        spinButton.disabled = disable;
+        maxBetButton.disabled = disable;
+        betInput.disabled = disable;
+        if (!spinning) { // Don't disable auto stop while running
+            autoButton.disabled = disable;
+        }
+
+        // Handle lever disabling
+        if (leverHandle) {
+            if (disableLever) {
+                leverHandle.classList.add('disabled');
+            } else {
+                leverHandle.classList.remove('disabled');
+            }
+        }
+     }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg;
+      messageDisplay.className = 'message'; // Reset classes
+      if (isWin) messageDisplay.classList.add('win');
+      if (isBigWin) messageDisplay.classList.add('big-win');
+    }
+
+    // Create visual symbol element using EMOJI
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.style.height = `${config.symbolHeight}px`;
+        div.dataset.symbolId = symbolData.id; // Store ID for checks
+        div.textContent = symbolData.emoji; // Use emoji directly
+        return div;
+    }
+
+    // Build the reels visually
+    function buildReels() {
+      reelsContainer.innerHTML = ''; // Clear existing
+      reels = [];
+
+      for (let i = 0; i < config.reelCount; i++) {
+        const reelElement = document.createElement('div');
+        reelElement.classList.add('reel');
+        reelElement.style.height = `${config.rowCount * config.symbolHeight}px`;
+
+        const symbolsContainer = document.createElement('div');
+        symbolsContainer.classList.add('symbols-container');
+
+        // Populate with symbols (multiple times for smooth wrap)
+        const reelSymbolsData = [];
+        const reelSymbolElements = [];
+        // Increase repeats for longer visual spin if needed (e.g., 10+)
+        for (let k=0; k < 10; k++) {
+            const shuffledSymbols = [...config.symbols].sort(() => Math.random() - 0.5);
+            shuffledSymbols.forEach(symbolData => {
+                 const symbolElement = createSymbolElement(symbolData);
+                 symbolsContainer.appendChild(symbolElement);
+                 reelSymbolsData.push(symbolData);
+                 reelSymbolElements.push(symbolElement);
+            });
+        }
+
+        reelElement.appendChild(symbolsContainer);
+        reelsContainer.appendChild(reelElement);
+        reels.push({
+            element: reelElement,
+            symbolsContainer: symbolsContainer,
+            symbols: reelSymbolsData,           // Data of all symbols
+            symbolElements: reelSymbolElements, // DOM elements
+            finalPosition: 0
+        });
+      }
+      // Initial position (random start is better)
+      reels.forEach(reel => {
+          const randomIndex = Math.floor(Math.random() * reel.symbols.length);
+          const initialY = -(randomIndex * config.symbolHeight);
+          reel.symbolsContainer.style.transition = 'none'; // No animation on load
+          reel.symbolsContainer.style.transform = `translateY(${initialY}px)`;
+          reel.finalPosition = initialY; // Store initial offset immediately
+          // Force reflow to apply transform instantly
+          reel.symbolsContainer.offsetHeight;
+          reel.symbolsContainer.style.transition = ''; // Restore transitions
+      });
+    }
+
+    // Clear highlights from symbols and lines
+    function clearHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+        Object.values(winLineElements).forEach(lineEl => {
+            if(lineEl) lineEl.style.display = 'none';
+        });
+         messageDisplay.className = 'message'; // Reset message style
+    }
+
+    // Highlight winning symbols and lines
+    function highlightWins(winningLinesInfo) {
+        const containerPadding = 15; // From #reels-container CSS
+        const symbolCenterY = config.symbolHeight / 2;
+        const symbolCenterX = config.reelWidth / 2;
+        const lineThicknessHalf = 3; // Half of line height/width (6px)
+
+        winningLinesInfo.forEach(winInfo => {
+            // Highlight symbols based on VISIBLE final indices
+            winInfo.line.indices.forEach(flatIndex => {
+                const reelIndex = flatIndex % config.reelCount;
+                const visibleRowIndex = Math.floor(flatIndex / config.reelCount);
+                const reel = reels[reelIndex];
+
+                // Calculate the actual element index in the symbolsContainer based on finalPosition
+                const topVisibleIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const targetElementIndex = (topVisibleIndex + visibleRowIndex) % reel.symbolElements.length; // Use modulo for wrap-around
+
+                const targetElement = reel.symbolElements[targetElementIndex];
+                 if(targetElement) {
+                     targetElement.classList.add('winning');
+                 } else {
+                     console.warn(`Highlight: Could not find element at reel ${reelIndex}, visible row ${visibleRowIndex}, target index ${targetElementIndex}`);
+                 }
+            });
+
+            // Show and position win line
+            const lineElement = winLineElements[winInfo.line.id];
+            if (lineElement) {
+                if (lineElement.classList.contains('horizontal')) {
+                    const rowIndex = Math.floor(winInfo.line.indices[0] / config.reelCount);
+                    lineElement.style.top = `${containerPadding + (rowIndex * config.symbolHeight) + symbolCenterY - lineThicknessHalf}px`;
+                } else if (lineElement.classList.contains('vertical')) {
+                     const colIndex = winInfo.line.indices[0] % config.reelCount;
+                     lineElement.style.left = `${containerPadding + (colIndex * (config.reelWidth + config.reelGap)) + symbolCenterX - lineThicknessHalf}px`;
+                } else if (lineElement.id === 'line-d0') { // TL-BR
+                    // Requires careful geometry or simpler fixed overlay
+                    lineElement.style.height = `calc(100% - ${2 * containerPadding}px)`; // Approximate diagonal length
+                    lineElement.style.top = `${containerPadding}px`;
+                    lineElement.style.left = `${containerPadding + symbolCenterX - lineThicknessHalf}px`;
+                    lineElement.style.transform = `rotate(45deg) scaleY(1.414)`; // Scale Y accounts for rotation
+                    lineElement.style.transformOrigin = `top center`;
+                } else if (lineElement.id === 'line-d1') { // TR-BL
+                    lineElement.style.height = `calc(100% - ${2 * containerPadding}px)`;
+                    lineElement.style.top = `${containerPadding}px`;
+                    lineElement.style.left = `calc(100% - ${containerPadding + symbolCenterX + lineThicknessHalf}px)`; // Position from right edge
+                    lineElement.style.transform = `rotate(-45deg) scaleY(1.414)`;
+                    lineElement.style.transformOrigin = `top center`;
+                }
+                lineElement.style.display = 'block';
+            } else {
+                 console.error(`Missing line element for ID: ${winInfo.line.id}`);
+            }
+        });
+    }
+
+
+    // Evaluate the final grid state
+    function evaluateResult() {
+        let totalWinnings = 0;
+        let winningLinesInfo = [];
+        let isBigWinOverall = false;
+
+        // Get final VISIBLE symbols in a flat array [0..8] based on finalPosition
+        finalSymbols = [];
+        for (let r = 0; r < config.rowCount; r++) {
+            for (let c = 0; c < config.reelCount; c++) {
+                const reel = reels[c];
+                // Index of the symbol at the TOP of the visible area
+                const topVisibleIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                // Index of the symbol in the specific row (r)
+                const symbolIndexInReel = (topVisibleIndex + r) % reel.symbols.length; // Modulo for wrap
+                finalSymbols.push(reel.symbols[symbolIndexInReel]);
+            }
+        }
+        // console.log("Final Visible Symbols:", finalSymbols.map(s=>s?.id ?? '?'));
+
+
+        config.winningLines.forEach(line => {
+            const symbolsOnLine = line.indices.map(index => finalSymbols[index]);
+
+             // Check if all symbols on the line exist and are the same
+            if (symbolsOnLine.length > 0 && symbolsOnLine.every(s => s && s.id === symbolsOnLine[0]?.id)) {
+                // We have a match!
+                 const winningSymbolId = symbolsOnLine[0].id;
+                 const symbolData = config.symbols.find(s => s.id === winningSymbolId);
+
+                 if (symbolData && symbolData.payout > 0) {
+                    const winAmount = currentBet * symbolData.payout;
+                    totalWinnings += winAmount;
+                    winningLinesInfo.push({ line: line, amount: winAmount, symbolId: winningSymbolId });
+                     if (symbolData.payout >= config.bigWinThreshold) {
+                         isBigWinOverall = true; // Mark if any line hits the threshold
+                     }
+                 }
+            }
+        });
+
+        // --- Process Results ---
+        if (totalWinnings > 0) {
+            money += totalWinnings;
+            let winMessage = `WIN! $${totalWinnings.toLocaleString()}`;
+            if (isBigWinOverall) {
+                 winMessage = `!!! BIG WIN !!!\n$${totalWinnings.toLocaleString()}`;
+                 playSound(sounds.bigWin);
+            } else {
+                 playSound(sounds.win);
+            }
+            displayMessage(winMessage, true, isBigWinOverall);
+            highlightWins(winningLinesInfo);
+        } else {
+            displayMessage("No win. Spin again!");
+        }
+
+        updateMoneyDisplay();
+        spinning = false;
+        disableControls(false, false); // Re-enable controls and lever
+        spinButton.innerText = "Spin";
+
+        // Handle Auto Spin
+         if (autoMode) {
+             if (money >= currentBet && money > 0) { // Check if can afford next spin
+                autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+             } else {
+                 autoMode = false;
+                 autoButton.innerText = "Auto";
+                 autoButton.style.background = ''; // Reset style
+                 autoButton.classList.remove('active'); // Optional active state class
+                 displayMessage(money <= 0 ? "Game Over! Reset to play again." : "Can't afford bet. Auto stopped.", false, money <= 0);
+             }
+         }
+    }
+
+    // Start the spinning process
+    function startSpin() {
+        if (spinning) return;
+
+        clearTimeout(autoSpinTimeout); // Clear any pending auto spin
+        clearHighlights();
+        // Don't play click sound if lever was used (lever sound played instead)
+        // playSound(sounds.click); // Moved inside specific button handler
+
+        currentBet = parseInt(betInput.value);
+        if (isNaN(currentBet) || currentBet <= 0) {
+            displayMessage("Please enter a valid bet > 0.");
+            if (autoMode) { // Stop auto mode if bet is invalid
+                autoMode = false;
+                autoButton.innerText = "Auto";
+                autoButton.classList.remove('active');
+            }
+            return;
+        }
+        if (currentBet > money) {
+            displayMessage("Not enough money to bet!");
+             if (autoMode) { // Stop auto mode if can't afford
+                autoMode = false;
+                autoButton.innerText = "Auto";
+                autoButton.classList.remove('active');
+            }
+            return;
+        }
+
+        spinning = true;
+        money -= currentBet;
+        updateMoneyDisplay();
+        disableControls(true, true); // Disable buttons and lever during spin
+        spinButton.innerText = "Spinning...";
+        displayMessage("Spinning...");
+        playSound(sounds.spin);
+
+        stopPromises = []; // Reset promises array for this spin
+
+        // --- Animate Reels ---
+        reels.forEach((reel, index) => {
+            const symbolsContainer = reel.symbolsContainer;
+            const currentY = reel.finalPosition; // Use the stored final position from last spin
+            const extraRevolutions = 3 + Math.floor(Math.random() * 3); // Spin at least 3 extra times
+            const totalSymbolsHeight = reel.symbols.length * config.symbolHeight;
+
+            symbolsContainer.classList.remove('stopping');
+            symbolsContainer.style.transition = `transform ${config.spinDurationBase / 1000 + index * (config.reelStopDelay / 1000)}s linear`; // Adjust duration slightly per reel
+
+            // Target a position far down for the linear spin animation
+            const spinTargetY = currentY - (extraRevolutions * totalSymbolsHeight) - (Math.random() * totalSymbolsHeight) ;
+            symbolsContainer.style.transform = `translateY(${spinTargetY}px)`;
+
+
+            // Schedule stop
+            const stopDelay = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+
+             // Create a promise that resolves when this reel's stop animation finishes
+             const stopPromise = new Promise(resolve => {
+                 setTimeout(() => {
+                    // Calculate actual final position (snap to a symbol)
+                    const randomSymbolIndex = Math.floor(Math.random() * reel.symbols.length);
+                    // Final Y ensures the symbol is aligned within the visible rows
+                    // We want target symbol 'randomSymbolIndex' to appear in the middle row (index 1)
+                    // So the container needs to shift up so that symbol (r=1) is at finalY = -(index * H)
+                    const finalY = -((randomSymbolIndex - 1 + reel.symbols.length) % reel.symbols.length) * config.symbolHeight;
+
+                    reel.finalPosition = finalY; // Store for evaluation
+
+                    reel.element.classList.add('stopping'); // Add class for smooth stop CSS transition
+                    symbolsContainer.style.transform = `translateY(${finalY}px)`; // Apply final position
+
+                    playSound(sounds.reelStop);
+
+                    // Resolve the promise after the smooth CSS stop transition completes
+                    const transitionEndHandler = (event) => {
+                        // Ensure we only react to the transform transition ending
+                        if (event.propertyName === 'transform') {
+                            symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                            reel.element.classList.remove('stopping'); // Clean up class
+                            resolve(); // Signal that this reel has stopped
+                        }
+                    };
+                    symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+
+                 }, stopDelay);
+             });
+             stopPromises.push(stopPromise);
+        });
+
+        // --- Wait for all reels to stop ---
+        Promise.all(stopPromises).then(() => {
+             // Short delay before evaluation allows visual updates to settle
+             setTimeout(evaluateResult, 150);
+        });
+    }
+
+
+    // --- Event Listeners ---
+    startButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        titleScreen.style.display = 'none';
+        gameContainer.style.display = 'block'; // Show the game container
+        initializeGame();
+    });
+
+    spinButton.addEventListener('click', () => {
+         if (!spinning) {
+             playSound(sounds.click); // Play click sound for button press
+             startSpin();
+         }
+         // No manual stop implemented in this version
+    });
+
+    // Lever Pull Listener
+    leverHandle.addEventListener('click', () => {
+        if (!spinning && !leverHandle.classList.contains('disabled')) {
+             playSound(sounds.lever); // Play lever sound
+             leverHandle.classList.add('pulled');
+             startSpin(); // Start the game spin
+
+             // Reset lever visual after a short delay
+             setTimeout(() => {
+                 leverHandle.classList.remove('pulled');
+             }, config.leverPullDuration);
+        }
+    });
+
+
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (!spinning) {
+             betInput.value = money > 0 ? money : 1;
+             currentBet = parseInt(betInput.value); // Update state immediately
+        }
+    });
+
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (spinning && autoMode) { // If spinning AND in auto mode, stop auto
+             autoMode = false;
+             clearTimeout(autoSpinTimeout);
+             autoButton.innerText = "Auto";
+             autoButton.style.background = ''; // Reset style
+             autoButton.classList.remove('active');
+             displayMessage("Auto spin stopped.");
+             // Let the current spin finish naturally
+
+        } else if (!spinning) { // If not spinning, toggle auto mode on/off
+            autoMode = !autoMode;
+             if (autoMode) {
+                 autoButton.innerText = "Stop Auto";
+                 autoButton.style.background = 'linear-gradient(to bottom, #ff4500, #cc3700)'; // Indicate active
+                 autoButton.classList.add('active');
+                 displayMessage("Auto spin started!");
+                 startSpin(); // Start the first auto spin immediately
+             } else {
+                 autoButton.innerText = "Auto";
+                 autoButton.style.background = ''; // Reset style
+                  autoButton.classList.remove('active');
+                 displayMessage("Auto spin stopped.");
+             }
+        }
+        // If spinning but NOT in auto mode, do nothing (don't start auto mid-spin)
+    });
+
+    payTableButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        let table = "Pay Table (Bet x Multiplier for 3):\n\n";
+        config.symbols.forEach(s => {
+            if (s.payout > 0) {
+                 // Display emoji in the alert
+                 table += `${s.emoji} ${s.id.charAt(0).toUpperCase() + s.id.slice(1)} = ${s.payout}x\n`;
+            }
+        });
+         table += "\nLines: 3 Horizontal, 3 Vertical, 2 Diagonal.";
+         // Use alert for simplicity, or create a custom modal dialog
+        alert(table);
+    });
+
+    resetButton.addEventListener('click', () => {
+        // A simple page reload is the easiest way to reset everything
+        playSound(sounds.click);
+        if (confirm("Reset game and start over with $100?")) {
+            location.reload();
+        }
+    });
+
+    // Prevent non-numeric input and enforce min/max
+    betInput.addEventListener('input', () => {
+        let value = parseInt(betInput.value.replace(/[^0-9]/g, '')) || 1; // Default to 1 if empty/invalid
+        value = Math.max(1, value); // Ensure minimum is 1
+        if (money > 0) {
+            value = Math.min(value, money); // Ensure maximum is current money
+        }
+        betInput.value = value;
+        currentBet = value; // Update state
+    });
+    // Also check on 'change' event (e.g., when focus is lost)
+     betInput.addEventListener('change', () => {
+         if (parseInt(betInput.value) < 1 || isNaN(parseInt(betInput.value))) {
+             betInput.value = 1;
+         }
+         currentBet = parseInt(betInput.value);
+     });
+
+
+     // --- Initialization ---
+     function initializeGame() {
+        money = config.money;
+        currentBet = parseInt(betInput.value) || 5;
+        autoMode = false;
+        spinning = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Set your bet and spin!");
+        buildReels(); // Build reels with random initial positions
+        updateMoneyDisplay();
+        clearHighlights();
+        disableControls(false, false); // Enable controls and lever
+         autoButton.innerText = "Auto";
+         autoButton.style.background = '';
+         autoButton.classList.remove('active');
+        leverHandle.classList.remove('disabled', 'pulled');
+     }
+
+     // Initial setup is deferred until the Start button is clicked.
+
+  </script>
+</body>
+</html>

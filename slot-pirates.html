@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plunderin' Pirates' Payouts!</title>
+  <style>
+    :root {
+      /* --- Plunderin' Pirates' Payouts Theme --- */
+      --bg-color-main: #4a3b31; /* Weathered Wood Brown */
+      --bg-color-accent: #2a1f1b; /* Darker Wood */
+      --machine-border: #daa520; /* Old Gold */
+      --title-bg: linear-gradient(to bottom, #8b4513, #5d2f0e); /* Dark Sienna Brown */
+      --title-text-color: #f5deb3; /* Wheat / Parchment */
+      --title-shadow: rgba(0, 0, 0, 0.5);
+      --money-color: #ffd700; /* Bright Gold */
+      --reels-bg: #6b5548; /* Medium Wood Brown */
+      --reel-bg: #806658; /* Lighter Wood for Reel itself */
+      --button-bg: linear-gradient(to bottom, #c06020, #a04000); /* Rusty Orange/Brown */
+      --button-border: #803000; /* Darker Rusty Brown */
+      --button-hover-bg: linear-gradient(to bottom, #d07030, #b05010);
+      --spin-button-bg: linear-gradient(to bottom, #e02020, #b00000); /* Crimson Red */
+      --spin-button-border: #800000; /* Dark Red */
+      --message-bg: rgba(40, 30, 20, 0.95); /* Dark Brown Transparent */
+      --message-text-color: #ffe4b5; /* Moccasin / Light Parchment */
+      --message-win-color: #ffd700;
+      --message-bigwin-color: #ff4500; /* OrangeRed for Big Win */
+      --paytable-bg: rgba(74, 59, 49, 0.97); /* Weathered Wood Transparent */
+      --paytable-text-color: #f5f5dc; /* Beige */
+      --paytable-header-bg: rgba(139, 69, 19, 0.9); /* SaddleBrown */
+
+      --bonus-bg: rgba(10, 20, 30, 0.98); /* Deep Night Sea Blue for Bonus */
+      --bonus-text: #add8e6; /* Light Blue */
+      --bonus-item-bg: #5c4033; /* Dark Brown for Ships */
+      --bonus-item-hover-bg: #704c3a;
+
+      --reel-width: 70px; --reel-height: 70px; --symbol-size: 45px;
+      --num-reels: 5; --num-rows: 5; --reel-gap: 6px;
+
+      /* Pirate gradient colors for text */
+      --g-color1: #ff4500; --g-color2: #ffd700; --g-color3: #ff8c00;
+      --g-color4: #dc143c; --g-color5: #8b0000;
+    }
+
+    @keyframes gradientTextFlowPirate {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .animated-gradient-text-pirate {
+        background-size: 250% 250%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent !important;
+        animation: gradientTextFlowPirate 8s linear infinite;
+        display: inline-block;
+    }
+
+    @keyframes jollyRogerEyesGlow {
+        0%, 100% { filter: drop-shadow(0 0 2px #ff0000) brightness(1); }
+        50% { filter: drop-shadow(0 0 7px #ff0000) drop-shadow(0 0 3px #ff4500) brightness(1.3); }
+    }
+    .wild-symbol-animate-pirate { animation: jollyRogerEyesGlow 1.8s ease-in-out infinite; }
+
+    @keyframes treasureMapUnroll {
+        0% { transform: scaleY(1) rotate(0deg) translateX(0); filter: brightness(1); }
+        20% { transform: scaleY(0.95) rotate(-1deg) translateX(-2px); filter: brightness(1.1) drop-shadow(0 0 2px #ffd700); }
+        40% { transform: scaleY(1.05) rotate(1deg) translateX(2px); filter: brightness(1.2) drop-shadow(0 0 4px #ffd700); }
+        60% { transform: scaleY(0.98) rotate(-0.5deg) translateX(-1px); }
+        100% { transform: scaleY(1) rotate(0deg) translateX(0); filter: brightness(1); }
+    }
+    .scatter-symbol-animate-pirate { animation: treasureMapUnroll 2.5s ease-in-out infinite; display: inline-block; /* Important for transform */ }
+
+    body {
+      margin: 0;
+      font-family: 'IM Fell English SC', 'Pirata One', serif;
+      background-image: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAyADIDASIAAhEBAxEB/8QAFwABAQEBAAAAAAAAAAAAAAAABAcDBv/EACUQAQABAwIGAgMBAAAAAAAAAAABAgMRBAUVMVESFCFBYXGBsf/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwDrlZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWQF1XyXgGk1GpvXNMymqmLdFVymqreNpiO094AtsC3tTNXEVUxHXcwDoq0N+3TNU2qqYiO0xBkAzrdbpdJTFd67RbpnpEzMRAIq8X6G3Rqn6zE9+UxmfwDSa3W3dVqJuaidqdojtEQDWEREcRAEREcRAdZVlZWVlZJZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWUAXgH//Z"),
+                        linear-gradient(to bottom, rgba(42,31,27,0.7) 0%, rgba(20,10,5,0.9) 100%);
+      background-size: auto, cover;
+      background-blend-mode: multiply, normal;
+      color: var(--paytable-text-color);
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; width: 100vw; overflow: hidden; box-sizing: border-box;
+    }
+    #app-wrapper { display: flex; width: 100%; height: 100%; padding: 10px; box-sizing: border-box; }
+
+    #title-screen {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; height: 100%; width: 100%;
+        background: linear-gradient(135deg, #3a2d27, #1a0f0b 50%, #0a0502);
+        position: fixed; top: 0; left: 0; z-index: 100; padding: 20px; box-sizing: border-box;
+    }
+    #title-screen .main-title-ts {
+        font-size: clamp(2.3rem, 6.5vw, 4.2rem); font-weight: bold; margin-bottom: 15px;
+        font-family: 'Pirata One', 'Blackadder ITC',  cursive; /* Blackadder ITC might not be available widely */
+        background-image: linear-gradient(90deg, var(--g-color2), var(--g-color1), var(--g-color3), var(--g-color2));
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+    }
+    #title-screen .sub-title-ts {
+        font-size: clamp(1rem, 2.2vw, 1.5rem); color: #f5deb3; margin-bottom: 30px;
+        max-width: 75%; line-height: 1.5; font-family: 'IM Fell English SC', serif;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    }
+    #title-screen #start-button {
+        font-family: 'Pirata One', 'IM Fell English SC', cursive; /* Using Pirata for button too */
+        font-size: clamp(1.4rem, 4vw, 2rem); padding: 12px 30px; border-radius: 8px;
+        background: linear-gradient(145deg, #daa520, #b8860b); /* Gold gradient */
+        border: 3px solid #8b4513; /* Dark brown border */
+        color: #2a1f1b; cursor: pointer; transition: all 0.3s ease;
+        box-shadow: 0 0 15px #daa520, 0 5px 10px rgba(0, 0, 0, 0.4);
+        text-shadow: 1px 1px 1px rgba(255,220,150,0.3); text-transform: uppercase; font-weight: bold;
+    }
+    #title-screen #start-button:hover {
+        transform: scale(1.05); box-shadow: 0 0 25px #ffd700, 0 7px 15px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(145deg, #ffd700, #daa520);
+    }
+
+    #game-layout-container { display: none; flex-direction: row; width: 100%; height: 100%; gap: 10px; align-items: stretch; box-sizing: border-box; }
+    #paytable-panel {
+        flex: 0 0 280px; background: var(--paytable-bg); border-radius: 10px;
+        padding: 10px; box-shadow: 0 0 10px rgba(218,165,32,0.25); overflow-y: auto;
+        border: 2px solid var(--machine-border); display: flex; flex-direction: column;
+        max-height: calc(100vh - 40px);
+    }
+    #paytable-panel h2 {
+        text-align: center; color: var(--machine-border); font-family: 'Pirata One','Blackadder ITC',  cursive;
+        font-size: 1.8em; margin-top: 0; margin-bottom: 6px; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+    }
+    .paytable-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.7em;}
+    .paytable-table th, .paytable-table td { border: 1px solid var(--machine-border); padding: 3px; text-align: center; vertical-align: middle; }
+    .paytable-table th { background-color: var(--paytable-header-bg); color: #fff; font-weight: bold; font-family: 'IM Fell English SC', serif;}
+    .paytable-table td { color: var(--paytable-text-color); }
+    .paytable-symbol-emoji { font-size: 18px; vertical-align: middle; }
+    .paytable-symbol-name { font-weight: bold; text-transform: capitalize; font-size: 0.85em; }
+    .paytable-wild-info { margin-top: 10px; font-size: 0.75em; text-align: center; color: var(--money-color); line-height: 1.3; }
+    @keyframes paytableWinFlashPirate {
+        0%, 100% { background-color: transparent; transform: scale(1); }
+        50% { background-color: var(--message-win-color); transform: scale(1.05); color: #000 !important; box-shadow: 0 0 8px var(--money-color); }
+    }
+    .paytable-table td.paytable-win-flash { animation: paytableWinFlashPirate 0.8s ease-in-out infinite; }
+
+    #main-game-area { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; overflow: hidden; min-width: 0; height: 100%; }
+    #slot-machine {
+      background-image: url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAyADIDASIAAhEBAxEB/8QAFwABAQEBAAAAAAAAAAAAAAAABAcDBv/EACUQAQABAwIGAgMBAAAAAAAAAAABAgMRBAUVMVESFCFBYXGBsf/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwDrlZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWQF1XyXgGk1GpvXNMymqmLdFVymqreNpiO094AtsC3tTNXEVUxHXcwDoq0N+3TNU2qqYiO0xBkAzrdbpdJTFd67RbpnpEzMRAIq8X6G3Rqn6zE9+UxmfwDSa3W3dVqJuaidqdojtEQDWEREcRAEREcRAdZVlZWVlZJZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWVlZWVklZWUAXgH//Z"),
+                        linear-gradient(160deg, var(--bg-color-accent) 0%, var(--bg-color-main) 100%);
+      background-size: auto, cover; background-blend-mode: multiply, normal; /* Multiply for darker wood */
+      border: 6px solid;
+      border-image-slice: 1;
+      border-image-source: linear-gradient(to bottom right, #b8860b, #daa520, #cd853f);
+      border-radius: 10px; padding: 15px;
+      box-shadow: 0 0 25px rgba(218, 165, 32, 0.5), inset 0 0 15px rgba(0,0,0,0.6);
+      text-align: center; width: 100%; height: auto;
+      max-height: calc(100vh - 40px);
+      box-sizing: border-box; display: flex; flex-direction: column;
+      justify-content: space-around; position: relative; z-index: 1;
+    }
+    #title {
+      font-size: clamp(1.4em, 2.5vw, 1.8em); font-weight: bold;
+      text-shadow: 1px 1px 3px var(--title-shadow), 0 0 8px var(--machine-border);
+      background: var(--title-bg); padding: 7px; margin: 0 auto 8px auto;
+      border-radius: 5px 5px 0 0; border-bottom: 2px solid var(--machine-border);
+      line-height: 1.1; letter-spacing: 1px; width: 95%; box-sizing: border-box;
+      font-family: 'Pirata One', 'Blackadder ITC', cursive;
+    }
+    #title .main-title-ingame { background-image: linear-gradient(90deg, var(--g-color1), var(--g-color2), var(--g-color3), var(--g-color1)); }
+    #title .subtitle {
+        font-size: clamp(0.4em, 1vw, 0.6em); color: #f5deb3; font-weight: normal; display: block;
+        margin-top: 4px; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); line-height: 1.3;
+        font-family: 'IM Fell English SC', serif;
+    }
+    #money-display {
+      font-size: clamp(1.3em, 2.1vw, 1.6em); margin: 6px 0; color: var(--money-color);
+      text-shadow: 0 0 5px #000, 0 0 3px var(--money-color); background-color: rgba(20,10,5,0.9);
+      padding: 6px 10px; border-radius: 4px; display: inline-block; border: 1px solid var(--money-color);
+      font-weight: bold; font-family: 'Pirata One', 'IM Fell English SC', sans-serif;
+    }
+    #reels-container {
+      display: grid; grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+      grid-gap: var(--reel-gap); justify-content: center; margin-bottom: 8px;
+      background: rgba(0,0,0,0.35); /* Darker wash for better symbol contrast */
+      padding: 6px; border-radius: 4px;
+      border: 2px solid #a0522d;
+      height: calc(var(--num-rows) * var(--reel-height));
+      position: relative; align-self: center;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.6);
+    }
+    .reel { width: var(--reel-width); height: calc(var(--num-rows) * var(--reel-height)); overflow: hidden; background: var(--reel-bg); border-radius: 3px; position: relative; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
+    .symbols-container { position: absolute; top: 0; left: 0; width: 100%; }
+    .reel.spinning .symbols-container { transition: transform 0.07s linear; filter: blur(1.3px) sepia(0.4) brightness(1.05); }
+    .reel.stopping .symbols-container { transition: transform 0.6s cubic-bezier(0.1, 0.8, 0.25, 1); filter: blur(0px); }
+    .symbol {
+        width: var(--reel-width); height: var(--reel-height);
+        display: flex; align-items: center; justify-content: center;
+        font-size: var(--symbol-size); position: relative; box-sizing: border-box;
+        line-height: 1; text-shadow: 1px 1px 2px rgba(0,0,0,0.8), 0 0 4px var(--machine-border);
+        user-select: none; color: #f0e6d2; /* Lighter Parchment for symbols */
+    }
+    @keyframes symbolWinFlashPirate {
+        0%,100%{transform:scale(1) rotate(0deg); opacity: 1; filter: brightness(1) drop-shadow(0 0 2px var(--machine-border));}
+        25%{transform:scale(1.2) rotate(-5deg); opacity: 0.9; filter: brightness(1.4) drop-shadow(0 0 5px var(--money-color));}
+        50%{transform:scale(0.9) rotate(5deg); opacity: 1; filter: brightness(1.2) drop-shadow(0 0 3px var(--money-color));}
+        75%{transform:scale(1.1) rotate(0deg); opacity: 0.95; filter: brightness(1.5) drop-shadow(0 0 7px var(--money-color));}
+    }
+    .symbol.winning { animation: symbolWinFlashPirate 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; z-index: 10; outline: 1.5px solid var(--message-win-color); background-color: rgba(255, 215, 0, 0.15); outline-offset: -1.5px; }
+
+    #controls { margin: 8px 0 6px 0; display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(3px, 0.7vw, 6px); }
+    #controls input, #controls button {
+      font-family: 'Pirata One', 'IM Fell English SC', cursive; font-size: clamp(0.75em, 1.2vw, 0.9em);
+      padding: clamp(6px, 0.8vw, 8px) clamp(8px, 1.3vw, 12px); margin: clamp(2px, 0.4vw, 3px);
+      border-radius: 3px; border: 1px solid var(--button-border); background: var(--button-bg);
+      color: #f5deb3; cursor: pointer; transition: all 0.15s ease-out;
+      box-shadow: 0 1.5px 0px #5d2f0e, 0 2px 3px rgba(0,0,0,0.5);
+      text-shadow: 1px 1px 1px rgba(0,0,0,0.7); font-weight: bold; text-transform: uppercase;
+    }
+    #controls input { width: clamp(50px, 7vw, 60px); text-align: center; background: #4a3b31; color: #f5deb3; text-shadow: none; border-color: var(--machine-border); }
+    #controls button:hover:not(:disabled) { background: var(--button-hover-bg); transform: translateY(-1px); box-shadow: 0 2.5px 0px #5d2f0e, 0 3px 5px rgba(0,0,0,0.6), 0 0 5px var(--machine-border); }
+    #spin {
+        font-size: clamp(0.8em, 1.4vw, 0.95em); padding: clamp(7px, 1.1vw, 10px) clamp(15px, 2vw, 18px);
+        background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #f5deb3; text-shadow: 1px 1px 0px rgba(0,0,0,0.6);
+    }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #ff4500, #d02000); border-color: #a00000; box-shadow: 0 0 10px #ff4500; }
+    #maxBet { background: linear-gradient(to bottom, #228B22, #006400); border-color: #004000; color: #fff;}
+
+    #message {
+      font-size: clamp(0.85em, 1.5vw, 0.95em); margin-top: 6px; min-height: clamp(28px, 5vh, 35px); padding: 6px;
+      background-color: var(--message-bg); border-radius: 3px; color: var(--message-text-color); text-shadow: none;
+      white-space: pre-line; line-height: 1.2; border: 1px solid var(--machine-border);
+      box-shadow: inset 0 0 8px rgba(218, 165, 32, 0.4); font-weight: bold;
+      width: 90%; align-self: center; box-sizing: border-box; font-family: 'IM Fell English SC', serif;
+    }
+    #message.win { color: var(--message-win-color); font-weight: bold; text-shadow: 0 0 4px var(--message-win-color), 0 0 2px #000; }
+    @keyframes bigWinMessagePulsePirate {0%{transform:scale(1);opacity:.9; text-shadow: 0 0 6px var(--message-bigwin-color), 0 0 12px #fff0b3;}100%{transform:scale(1.03);opacity:1; text-shadow: 0 0 10px var(--message-bigwin-color), 0 0 20px #fff0b3, 0 0 5px var(--message-bigwin-color);}}
+    #message.big-win { font-size: clamp(1em, 2vw, 1.2em); color: var(--message-bigwin-color); animation: bigWinMessagePulsePirate 0.5s infinite alternate; font-weight: bold; }
+
+    #bonus-cannonball-barrage-screen {
+        display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background-color: var(--bonus-bg);
+        background-image:
+            linear-gradient(rgba(10,20,30,0.7), rgba(5,10,15,0.9)),
+            url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23add8e6' fill-opacity='0.05'%3E%3Cpath d='M0 0h40v40H0zM40 40h40v40H40z' transform='translate(20 0) rotate(15 40 40)'/%3E%3Cpath d='M0 0h40v40H0zM40 40h40v40H40z' transform='translate(-20 0) rotate(-15 40 40)'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); /* Subtle wave/sea pattern */
+        color: var(--bonus-text);
+        z-index: 2000; flex-direction: column; align-items: center; justify-content: space-around;
+        padding: clamp(20px, 5vh, 40px); box-sizing: border-box; text-align: center;
+        font-family: 'IM Fell English SC', serif;
+    }
+    #bonus-cannonball-barrage-screen h2 {
+        font-family: 'Pirata One', 'Blackadder ITC', cursive; font-size: clamp(1.8em, 4vw, 2.8em);
+        color: var(--machine-border); text-shadow: 2px 2px 4px #000;
+        margin-bottom: clamp(10px, 2vh, 20px);
+    }
+    #bonus-cannonball-barrage-screen p#bonus-instructions {
+      font-size: clamp(1em, 2.5vw, 1.4em);
+      margin-bottom: clamp(15px, 3vh, 25px); line-height: 1.5;
+    }
+    #enemy-ships-container {
+        display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+        gap: clamp(15px, 3vw, 30px); width: 90%; max-width: 900px;
+        margin-bottom: clamp(15px, 2vh, 20px);
+    }
+    .enemy-ship-item {
+        background-color: var(--bonus-item-bg);
+        width: clamp(80px, 15vw, 120px); height: clamp(60px, 12vw, 90px);
+        border-radius: 10px 10px 40% 40% / 10px 10px 20px 20px;
+        font-size: clamp(2.5em, 7vmin, 3.8em); color: #daa520;
+        cursor: pointer; transition: all 0.2s ease-out;
+        border: 2px solid #4a2a1a;
+        box-shadow: 3px 3px 8px rgba(0,0,0,0.5), inset 0 0 5px rgba(0,0,0,0.3);
+        display: flex; align-items: center; justify-content: center; text-align: center;
+        position: relative;
+        background-image: linear-gradient(to bottom, #6b4f3f, #5c4033);
+    }
+    .enemy-ship-item::after {
+      content: ''; position: absolute; bottom: 90%; left: 50%;
+      width: 5px; height: 40%; background: #4a2a1a; transform: translateX(-50%);
+    }
+    .enemy-ship-item:hover:not(.picked) {
+        background-color: var(--bonus-item-hover-bg);
+        transform: scale(1.05) translateY(-5px) rotate(1deg);
+        box-shadow: 5px 5px 12px rgba(0,0,0,0.6), 0 0 8px #ffd700;
+    }
+    .enemy-ship-item.picked {
+        opacity: 0.6; cursor: default;
+        transform: translateY(5px) rotate(-3deg) scale(0.9);
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.7);
+    }
+    .enemy-ship-item.hit-animation { animation: shipHitShake 0.5s ease-in-out; }
+    @keyframes shipHitShake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px) rotate(-2deg); }
+      40%, 80% { transform: translateX(8px) rotate(2deg); }
+    }
+    #cannonball-special-items-collected {
+      margin-bottom: clamp(10px, 2.5vh, 18px);
+      font-size: clamp(0.9em, 2vw, 1.1em); line-height: 1.5;
+    }
+    #cannonball-special-items-collected span {
+        display: inline-block; padding: 5px 10px; background-color: #a00000;
+        border-radius: 5px; margin: 5px 8px; border: 1px solid var(--machine-border);
+        font-size: 1em; box-shadow: 0 0 5px var(--machine-border); color: #f5deb3;
+    }
+    #bonus-cannonball-winnings-display {
+        font-size: clamp(1.1em, 2.8vw, 1.6em); color: var(--money-color);
+        font-weight: bold; margin-bottom: clamp(18px, 3.5vh, 30px);
+        text-shadow: 0 0 5px var(--money-color);
+    }
+    #collect-cannonball-bonus-button {
+        padding: 10px 22px; font-size: clamp(0.9em, 2.2vw, 1.2em);
+        font-family: 'Pirata One', 'IM Fell English SC', cursive; text-transform: uppercase;
+        background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #f5deb3;
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.5);
+        cursor: pointer; border-radius: 5px;
+    }
+    @keyframes captainBountyFlash {
+        0%, 100% { box-shadow: 0 0 20px #fff, 0 0 30px var(--money-color), 0 0 40px #ff4500; }
+        50% { box-shadow: 0 0 30px #fff, 0 0 50px var(--money-color), 0 0 70px #ff4500, 0 0 10px #fff inset; }
+    }
+    #bonus-cannonball-barrage-screen.captain-bounty-active {
+        animation: captainBountyFlash 0.7s ease-in-out 3;
+    }
+
+    @media (max-width: 768px) {
+        #game-layout-container { flex-direction: column; overflow-y: auto; }
+        #paytable-panel { flex: 0 0 auto; max-height: 250px; margin-bottom: 10px; }
+        #main-game-area { justify-content: flex-start; padding-top: 10px; }
+        #title { font-size: clamp(1.2em, 4vw, 1.6em); }
+        #bonus-cannonball-barrage-screen h2 { font-size: clamp(1.4em, 5vw, 1.8em); }
+        .enemy-ship-item { font-size: clamp(1.8em, 8vmin, 2.5em); }
+    }
+     @media (max-height: 600px) and (min-width: 769px) {
+        #slot-machine { padding: 5px; }
+        #title { font-size: clamp(1.2em, 2vw, 1.5em); padding: 5px; margin-bottom: 5px;}
+        #money-display { font-size: clamp(1.1em, 1.8vw, 1.4em); margin: 4px 0; }
+        #reels-container { margin-bottom: 5px; }
+    }
+     @media (max-height: 500px) {
+        #paytable-panel { max-height: 150px; }
+        #title { display: none; }
+        #slot-machine { padding: 5px; }
+        #controls button { padding: 5px 8px; font-size: clamp(0.7em, 1vw, 0.8em); }
+        #spin { padding: 6px 10px; }
+        #bonus-cannonball-barrage-screen h2 { font-size: clamp(1.2em, 4vw, 1.5em); margin-bottom: 10px;}
+        #bonus-cannonball-barrage-screen p#bonus-instructions { font-size: clamp(0.8em, 3vw, 1em); margin-bottom: 10px;}
+        #enemy-ships-container { gap: 8px; }
+        .enemy-ship-item { min-height: clamp(35px, 10vmin, 50px); font-size: clamp(1.5em, 7vmin, 2em); }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Pirata+One&display=swap" rel="stylesheet">
+  <!-- Note: Blackadder ITC & Captain Redemption are often system/local fonts. Pirata One and IM Fell are Google Fonts. -->
+</head>
+<body>
+    <div id="title-screen">
+        <div class="main-title-ts animated-gradient-text-pirate">Plunderin' Pirates' Payouts!</div>
+        <p class="sub-title-ts">Ahoy, Matey! Hoist the colors, load the cannons, and set sail for legendary loot! The ☠️ Jolly Roger is WILD, leadin' ye to untold riches!</p>
+        <button id="start-button">Weigh Anchor!</button>
+    </div>
+
+    <div id="app-wrapper" style="display:none;">
+      <div id="game-layout-container">
+          <aside id="paytable-panel">
+              <h2>Ship's Manifest</h2>
+              <div id="paytable-content"></div>
+          </aside>
+          <main id="main-game-area">
+              <div id="slot-machine">
+                <div id="title">
+                    <span class="main-title-ingame animated-gradient-text-pirate">Pirates' Payouts</span>
+                    <span class="subtitle">By Greg Seymour &amp; AI<br>X Marks the Spot!</span>
+                </div>
+                <div id="money-display">Pieces o' Eight: $100</div>
+                <div id="reels-container"></div>
+                <div id="controls">
+                  <label for="bet">Wager:</label>
+                  <input type="number" id="bet" value="5" min="1">
+                  <button id="maxBet">All In!</button>
+                  <button id="spin">Fire!</button>
+                  <button id="auto">Auto-Plunder</button>
+                  <button id="reset">Abandon Ship!</button>
+                </div>
+                <div id="message">Chart yer course (wager) and fire the cannons!</div>
+              </div>
+          </main>
+      </div>
+    </div>
+
+    <div id="bonus-cannonball-barrage-screen">
+        <h2>Cannonball Barrage!</h2>
+        <p id="bonus-instructions">Ye have <span id="bonus-cannonballs-left">5</span> cannonballs 💣 remaining. Sink 3 ships for a Captain's Bounty multiplier!</p>
+        <div id="cannonball-special-items-collected">Ships Sunk: 0/3</div>
+        <div id="enemy-ships-container"></div>
+        <p id="bonus-cannonball-winnings-display">Loot Plundered: $0</p>
+        <button id="collect-cannonball-bonus-button" style="display:none;">Collect Yer Haul!</button>
+    </div>
+
+  <script>
+    const config = {
+        money: 100,
+        reelCount: 5, rowCount: 5, symbolHeight: 70,
+        spinDurationBase: 600, spinDurationVariance: 250, reelStopDelay: 70, autoSpinDelay: 1000,
+        symbols: [
+            { id: 'gold_coin', emoji: '🪙', payouts: { '3': 2,  '4': 4,   '5': 8  } },
+            { id: 'anchor',    emoji: '⚓', payouts: { '3': 3,  '4': 6,   '5': 12  } },
+            { id: 'compass',   emoji: '🧭', payouts: { '3': 4,  '4': 8,   '5': 16  } },
+            { id: 'parrot',    emoji: '🦜', payouts: { '3': 5,  '4': 10,  '5': 25  } },
+            { id: 'bomb',      emoji: '💣', payouts: { '3': 8,  '4': 15,  '5': 40  } },
+            { id: 'rum_bottle',emoji: '🍾', payouts: { '3': 12, '4': 25,  '5': 60  } },
+            { id: 'swords',    emoji: '⚔️', payouts: { '3': 20, '4': 50,  '5': 100 } },
+            { id: 'map_scatter',emoji: '🗺️', scatter: true, payouts: { '3': 5, '4': 10, '5': 20} },
+            { id: 'jolly_roger_wild',emoji: '☠️', payouts: { '3': 25, '4': 75, '5': 200 }, wild: true },
+        ],
+        winningLines: [
+            { id: 'sea-lane-1', name: 'Lane 1 (Row 1)', type: 'horizontal', indices: [0,1,2,3,4] },
+            { id: 'sea-lane-2', name: 'Lane 2 (Row 2)', type: 'horizontal', indices: [5,6,7,8,9] },
+            { id: 'sea-lane-3', name: 'Lane 3 (Row 3)', type: 'horizontal', indices: [10,11,12,13,14] },
+            { id: 'sea-lane-4', name: 'Lane 4 (Row 4)', type: 'horizontal', indices: [15,16,17,18,19] },
+            { id: 'sea-lane-5', name: 'Lane 5 (Row 5)', type: 'horizontal', indices: [20,21,22,23,24] },
+            { id: 'broadside-diag', name: 'Broadside \\', type: 'fixedpath', indices: [0,6,12,18,24] },
+            { id: 'boarding-diag', name: 'Boarding /', type: 'fixedpath', indices: [20,16,12,8,4] },
+        ],
+        bigWinThresholdMultiplier: 20,
+        cannonballBarrageBonus: {
+            numEnemyShips: 5,
+            cannonballsPerScatter: { '3': 5, '4': 7, '5': 10 },
+            shipsToSinkForMultiplier: 3,
+            captainBountyMultiplier: 3,
+            shipPrizes: [
+                { type: 'sack_of_gold', value: 3, emoji: '💰' }, { type: 'sack_of_gold', value: 5, emoji: '💰' },
+                { type: 'sack_of_gold', value: 8, emoji: '💰' }, { type: 'sack_of_gold', value: 10, emoji: '💰' },
+                { type: 'jewel_casket', value: 15, emoji: '💎' }, { type: 'jewel_casket', value: 20, emoji: '💎' },
+                { type: 'powder_keg', value: 2, emoji: '🧨' },
+                { type: 'miss', value: 1, emoji: '💦' },
+            ]
+        }
+    };
+
+    let money = config.money;
+    let currentBet = parseInt(document.getElementById('bet').value) || 5;
+    let autoMode = false;
+    let spinning = false;
+    let reels = [];
+    let finalSymbols = [];
+    let autoSpinTimeout = null;
+
+    let bonusActive = false;
+    let bonusCannonballsLeft = 0;
+    let bonusCannonballCurrentWinnings = 0;
+    let bonusShipsSunk = 0;
+    let bonusCaptainBountyMultiplier = 1;
+
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const appWrapper = document.getElementById('app-wrapper');
+    const gameLayoutContainer = document.getElementById('game-layout-container');
+    const paytablePanelContent = document.getElementById('paytable-content');
+    const bonusCannonballScreen = document.getElementById('bonus-cannonball-barrage-screen');
+    const bonusCannonballsLeftDisplay = document.getElementById('bonus-cannonballs-left'); // In #bonus-instructions span
+    const cannonballSpecialDisplay = document.getElementById('cannonball-special-items-collected');
+    const enemyShipsContainer = document.getElementById('enemy-ships-container');
+    const bonusCannonballWinningsDisplay = document.getElementById('bonus-cannonball-winnings-display');
+    const collectCannonballBonusButton = document.getElementById('collect-cannonball-bonus-button');
+
+    const sounds = {
+        click: null, spin: null, win: null, bigWin: null, reelStop: null,
+        scatterTrigger: null, bonusPick: null, grandPrize: null, // Generic names, map to pirate sounds if available
+        cannonFire: null, shipHit: null, captainBounty: null
+    };
+
+    function playSound(sound) {
+        if (sound && typeof sound.play === 'function') {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Sound play failed:", e.message));
+        }
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `Pieces o' Eight: $${money.toLocaleString()}`;
+      const maxBetForNextSpin = money > 0 ? money : 1;
+      betInput.max = maxBetForNextSpin;
+      let betValInInput = parseInt(betInput.value);
+      if (isNaN(betValInInput) || betValInInput < 1) betInput.value = 1;
+      else if (betValInInput > maxBetForNextSpin && money > 0) betInput.value = maxBetForNextSpin;
+      else if (money <= 0 && betValInInput > 1) betInput.value = 1;
+
+       if (money <= 0 && !spinning && !bonusActive) {
+            disableControls(true, false);
+            displayMessage("Yer coffers are empty, Captain! 'Abandon Ship' or risk a $1 mutiny.", false, false);
+            if (autoMode) stopAutoSpin();
+       }
+    }
+
+    function disableControls(disable = true, disableReset = disable) {
+        spinButton.disabled = disable;
+        maxBetButton.disabled = disable;
+        betInput.disabled = disable;
+        if (!spinning && !bonusActive) { autoButton.disabled = disable; }
+        else {
+            autoButton.disabled = true;
+            if (autoMode && !disable) autoButton.disabled = false;
+        }
+        resetButton.disabled = disableReset;
+        if (money <= 0 && parseInt(betInput.value) === 1 && !spinning && !bonusActive) {
+            spinButton.disabled = false; betInput.disabled = true; maxBetButton.disabled = true;
+        }
+    }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg; messageDisplay.className = 'message';
+      if (isBigWin) messageDisplay.classList.add('big-win');
+      else if (isWin) messageDisplay.classList.add('win');
+    }
+
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol'); div.dataset.symbolId = symbolData.id;
+        div.textContent = symbolData.emoji;
+        if (symbolData.wild) div.classList.add('wild-symbol-animate-pirate');
+        if (symbolData.scatter) div.classList.add('scatter-symbol-animate-pirate');
+        return div;
+    }
+
+    function buildReels() {
+      reelsContainer.innerHTML = ''; reels = [];
+      for (let i = 0; i < config.reelCount; i++) {
+        const reelElement = document.createElement('div'); reelElement.classList.add('reel');
+        const symbolsContainer = document.createElement('div'); symbolsContainer.classList.add('symbols-container');
+        const reelSymbolsData = []; const reelSymbolElements = [];
+        for (let k = 0; k < 30; k++) {
+            const shuffledPortion = [...config.symbols].sort(() => Math.random() - 0.5);
+            shuffledPortion.forEach(symbolData => {
+                 const symbolElement = createSymbolElement(symbolData);
+                 symbolsContainer.appendChild(symbolElement);
+                 reelSymbolsData.push(symbolData); reelSymbolElements.push(symbolElement);
+            });
+        }
+        reelElement.appendChild(symbolsContainer); reelsContainer.appendChild(reelElement);
+        reels.push({ element: reelElement, symbolsContainer, symbols: reelSymbolsData, symbolElements: reelSymbolElements, finalPosition: 0, failsafeTimeout: null });
+      }
+      reels.forEach(reel => {
+         const initialOffset = -(Math.floor(Math.random() * reel.symbols.length) * config.symbolHeight);
+         reel.symbolsContainer.style.transition = 'none';
+         reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`;
+         reel.finalPosition = initialOffset; void reel.symbolsContainer.offsetWidth;
+         reel.symbolsContainer.style.transition = '';
+      });
+    }
+
+    function clearReelHighlights() { document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning')); }
+    function clearPaytableHighlights() { document.querySelectorAll('.paytable-table td.paytable-win-flash').forEach(el => el.classList.remove('paytable-win-flash')); }
+
+    function highlightWinsOnReels(winningLinesInfo) {
+        winningLinesInfo.forEach(winInfo => {
+            if (!winInfo.indices || winInfo.indices.length === 0) return;
+            winInfo.indices.forEach(gridIndex => {
+                 const reelIndex = gridIndex % config.reelCount;
+                 const visibleRowIndex = Math.floor(gridIndex / config.reelCount);
+                 const reel = reels[reelIndex];
+                 if (!reel || !reel.symbolElements || reel.symbolElements.length === 0) return;
+                 const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                 const targetSymbolIndexInElementArray = (topVisibleSymbolIndex + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length;
+                 const symbolElement = reel.symbolElements[targetSymbolIndexInElementArray];
+                 if (symbolElement) symbolElement.classList.add('winning');
+            });
+        });
+    }
+
+    function highlightPaytableEntry(symbolId, winCount) {
+        if (!symbolId) return;
+        const row = paytablePanelContent.querySelector(`.paytable-table tr[data-symbol-id="${symbolId}"]`);
+        if (row) {
+            const cell = row.querySelector(`td[data-payout-count="${winCount.toString()}"]`);
+            if (cell) cell.classList.add('paytable-win-flash');
+        }
+    }
+
+    function startSpin() {
+        if (spinning || bonusActive) return;
+        let betForThisSpin = parseInt(betInput.value);
+        if (isNaN(betForThisSpin) || betForThisSpin < 1) betForThisSpin = 1;
+        const maxAffordableBet = money > 0 ? money : 1;
+        if (betForThisSpin > maxAffordableBet && money > 0) betForThisSpin = maxAffordableBet;
+        else if (money <= 0 && betForThisSpin > 1) betForThisSpin = 1;
+        betInput.value = betForThisSpin; currentBet = betForThisSpin;
+
+        const isFreeSpin = (money <= 0 && currentBet === 1);
+        if (!isFreeSpin && currentBet > money) {
+            displayMessage("Not enough Pieces o' Eight for this wager, scallywag!");
+            if (autoMode) stopAutoSpin();
+            disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+            return;
+        }
+        clearTimeout(autoSpinTimeout); clearReelHighlights(); clearPaytableHighlights();
+        playSound(sounds.click); spinning = true;
+
+        if (isFreeSpin) displayMessage("Last chance on the Cap'n's coin!");
+        else { money -= currentBet; displayMessage("Cannons at the ready..."); }
+
+        updateMoneyDisplay(); disableControls(true); spinButton.innerText = "Firing...";
+        playSound(sounds.spin);
+
+        let reelsStoppedCount = 0;
+        reels.forEach((reel, index) => {
+            if (reel.failsafeTimeout) clearTimeout(reel.failsafeTimeout);
+            const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element;
+            reelElement.classList.remove('stopping'); reelElement.classList.add('spinning');
+            const randomSymbolIndexOnStrip = Math.floor(Math.random() * reel.symbols.length);
+            reel.finalPosition = -(randomSymbolIndexOnStrip * config.symbolHeight);
+            const currentY = parseFloat(symbolsContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0;
+            const fullRotations = Math.floor(Math.random() * 2) + 2;
+            const spinDistance = (reel.symbols.length * config.symbolHeight) * fullRotations;
+            symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`;
+            const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+            const stopAnimationDuration = 600;
+
+            setTimeout(() => {
+                reelElement.classList.remove('spinning'); reelElement.classList.add('stopping');
+                symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`;
+                playSound(sounds.reelStop);
+                const transitionEndHandler = (event) => {
+                    if (event.target === symbolsContainer && event.propertyName === 'transform') {
+                        symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                        clearTimeout(reel.failsafeTimeout); reelElement.classList.remove('stopping');
+                        reelsStoppedCount++;
+                        if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                    }
+                };
+                symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+                reel.failsafeTimeout = setTimeout(() => {
+                     if (!reelElement.classList.contains('stopping') && !spinning) return;
+                     console.warn(`Failsafe for reel ${index}`);
+                     symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                     reelElement.classList.remove('stopping'); reelsStoppedCount++;
+                     if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                }, stopAnimationDuration + 200);
+            }, totalSpinDuration - stopAnimationDuration);
+        });
+    }
+
+    function evaluateResult() {
+        let totalWinningsFromSpin = 0;
+        let combinedWinningLinesInfo = [];
+        let isBigWinOverall = false;
+        const scatterSymbolData = config.symbols.find(s => s.scatter);
+        let bonusTriggeredThisSpin = false;
+        let bonusTriggerCount = 0;
+
+        finalSymbols = [];
+         for (let r = 0; r < config.rowCount; r++) {
+            for (let c = 0; c < config.reelCount; c++) {
+                const reel = reels[c];
+                if (!reel || !reel.symbols) { finalSymbols.push({id: "error", emoji: "❓"}); continue; }
+                const topVisibleSymbolIndexOnStrip = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const symbolIndexInDataArray = (topVisibleSymbolIndexOnStrip + r + reel.symbols.length) % reel.symbols.length;
+                if (reel.symbols[symbolIndexInDataArray]) finalSymbols.push(reel.symbols[symbolIndexInDataArray]);
+                else finalSymbols.push({id: "error", emoji: "❓"});
+            }
+        }
+
+        config.winningLines.forEach(line => {
+            let bestWinOnThisLine = { amount: 0, count: 0, symbolId: null, indices: [], multiplier: 0, lineName: line.name || line.id };
+            config.symbols.forEach(symbolToCheck => {
+                if (!symbolToCheck.payouts) return;
+                const checkSymbolId = symbolToCheck.id;
+                const isWildTypeBeingChecked = symbolToCheck.wild;
+
+                for (let len = config.reelCount; len >= 3; len--) {
+                    let startPositions = [0];
+                    if (line.type === 'horizontal') {
+                        startPositions = [];
+                        for (let s = 0; s <= config.reelCount - len; s++) startPositions.push(s);
+                    }
+                    for (const start of startPositions) {
+                        const currentSegmentIndicesOnLine = line.indices.slice(start, start + len);
+                        if (currentSegmentIndicesOnLine.length < len) continue;
+                        const groupSymbolsData = currentSegmentIndicesOnLine.map(globalIndex => finalSymbols[globalIndex]).filter(s => s);
+                        if (groupSymbolsData.length < len) continue;
+
+                        if (checkAdjacentGroup(groupSymbolsData, checkSymbolId, len, isWildTypeBeingChecked)) {
+                            const payoutKey = len.toString();
+                            if (symbolToCheck.payouts[payoutKey]) {
+                                const lineMultiplier = symbolToCheck.payouts[payoutKey];
+                                const amount = currentBet * lineMultiplier;
+                                if (amount > bestWinOnThisLine.amount) {
+                                    bestWinOnThisLine = { amount, count: len, symbolId: checkSymbolId, indices: currentSegmentIndicesOnLine, multiplier: lineMultiplier, lineName: line.name || line.id };
+                                }
+                            }
+                        }
+                    }
+                    if (bestWinOnThisLine.symbolId === checkSymbolId && bestWinOnThisLine.count === len) break;
+                }
+            });
+
+            if (bestWinOnThisLine.amount > 0) {
+                const isDuplicate = combinedWinningLinesInfo.some(ex => ex.symbolId === bestWinOnThisLine.symbolId && ex.count === bestWinOnThisLine.count && ex.indices.every((v,i) => v === bestWinOnThisLine.indices[i]));
+                if (!isDuplicate) {
+                    totalWinningsFromSpin += bestWinOnThisLine.amount;
+                    combinedWinningLinesInfo.push(bestWinOnThisLine);
+                    if (bestWinOnThisLine.multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true;
+                    if (scatterSymbolData && bestWinOnThisLine.symbolId === scatterSymbolData.id && bestWinOnThisLine.count >= 3) {
+                        bonusTriggeredThisSpin = true;
+                        bonusTriggerCount = Math.max(bonusTriggerCount, bestWinOnThisLine.count);
+                    }
+                }
+            }
+        });
+        spinning = false;
+
+        if (bonusTriggeredThisSpin && scatterSymbolData) {
+            playSound(sounds.scatterTrigger);
+            if (totalWinningsFromSpin > 0) money += totalWinningsFromSpin;
+            updateMoneyDisplay();
+            displayMessage(`Treasure Map Found! ${bonusTriggerCount}x ${scatterSymbolData.emoji} on a line triggers Cannonball Barrage!`, true, false);
+            if(combinedWinningLinesInfo.length > 0) {
+                 highlightWinsOnReels(combinedWinningLinesInfo.filter(info => info.indices && info.indices.length > 0));
+                 combinedWinningLinesInfo.forEach(winInfo => { if (winInfo.symbolId) highlightPaytableEntry(winInfo.symbolId, winInfo.count); });
+            }
+            setTimeout(() => triggerCannonballBonus(bonusTriggerCount), 2200);
+            return;
+        }
+        processEndOfSpin(totalWinningsFromSpin, combinedWinningLinesInfo, isBigWinOverall);
+    }
+
+    function processEndOfSpin(currentSpinWinnings, linesInfo, isBigWin) {
+        const isFreeSpinLosing = (money <= 0 && currentBet === 1 && currentSpinWinnings <= 0 && (money + currentBet) === 1);
+        if (currentSpinWinnings > 0) {
+            money += currentSpinWinnings;
+            let winMessageText = "";
+            const uniqueLineWins = linesInfo.filter(info => info.amount > 0);
+            if (uniqueLineWins.length > 0) {
+                winMessageText = isBigWin ? `!!! CAPTAIN'S JACKPOT !!!\n` : "Booty Secured, Arr!\n";
+                uniqueLineWins.forEach(info => {
+                    const displayName = info.symbolId ? info.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Loot";
+                    winMessageText += `${info.count}x ${displayName} (${info.lineName}) = $${info.amount.toLocaleString()}\n`;
+                });
+                winMessageText += `Total This Plunder: $${currentSpinWinnings.toLocaleString()}`;
+            }
+            if (winMessageText) {
+                displayMessage(winMessageText, true, isBigWin);
+                if (isBigWin) playSound(sounds.bigWin); else playSound(sounds.win);
+            }
+            if(linesInfo.length > 0) {
+                highlightWinsOnReels(linesInfo.filter(info => info.indices && info.indices.length > 0));
+                linesInfo.forEach(winInfo => { if (winInfo.symbolId) highlightPaytableEntry(winInfo.symbolId, winInfo.count); });
+            }
+        } else if (!bonusActive && !isFreeSpinLosing) {
+             displayMessage("Davy Jones' Locker... Try again, ye scurvy dog!");
+        }
+        updateMoneyDisplay();
+        if (!bonusActive) disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        spinButton.innerText = "Fire!";
+        if (autoMode && !bonusActive) {
+            let nextBet = parseInt(betInput.value); if(isNaN(nextBet)||nextBet<1) nextBet=1;
+            const canAfford = (money >= nextBet && money > 0) || (money <= 0 && nextBet === 1);
+            if (canAfford) autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+            else {
+                stopAutoSpin();
+                displayMessage(money <= 0 ? "Coffers empty! Auto-Plunder stopped." : "Not enough doubloons for Auto-Plunder.", false, money <= 0);
+            }
+         }
+    }
+
+    function checkAdjacentGroup(groupSymbolsData, checkSymbolId, requiredCount, isWildTypeBeingChecked) {
+        if (groupSymbolsData.length !== requiredCount || groupSymbolsData.some(s => !s)) return false;
+        for (let i = 0; i < requiredCount; i++) {
+            const symbol = groupSymbolsData[i];
+            if (isWildTypeBeingChecked) { if (!symbol.wild) return false; }
+            else { if (symbol.id !== checkSymbolId && !symbol.wild) return false; }
+        }
+        return true;
+    }
+
+    function stopAutoSpin() {
+        autoMode = false; clearTimeout(autoSpinTimeout);
+        autoButton.innerText = "Auto-Plunder"; autoButton.style.background = '';
+        if (!spinning && !bonusActive) disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    }
+
+    function generateSidePayTable() {
+        paytablePanelContent.innerHTML = '';
+        const table = document.createElement('table'); table.classList.add('paytable-table');
+        const thead = table.createTHead(); const headerRow = thead.insertRow();
+        const headers = ['Icon', 'Article o\' Plunder', '3x', '4x', '5x'];
+        headers.forEach(text => { const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th); });
+        const tbody = table.createTBody();
+        config.symbols.forEach(symbolData => {
+            if (symbolData.payouts) {
+                const row = tbody.insertRow(); row.dataset.symbolId = symbolData.id;
+                const emojiCell = row.insertCell(); emojiCell.textContent = symbolData.emoji; emojiCell.classList.add('paytable-symbol-emoji');
+                if (symbolData.wild) emojiCell.classList.add('wild-symbol-animate-pirate');
+                if (symbolData.scatter) emojiCell.classList.add('scatter-symbol-animate-pirate');
+                const nameCell = row.insertCell();
+                let symbolNameText = symbolData.id.replace(/_/g, ' ');
+                if (symbolData.wild) symbolNameText += " (Wild)";
+                if (symbolData.scatter) symbolNameText += " (Scatter)";
+                nameCell.textContent = symbolNameText; nameCell.classList.add('paytable-symbol-name');
+                const p3=symbolData.payouts['3']||0, p4=symbolData.payouts['4']||0, p5=symbolData.payouts['5']||0;
+                const p3Cell = row.insertCell(); p3Cell.textContent = p3>0?`${p3}x`:'-'; if(p3>0)p3Cell.dataset.payoutCount="3";
+                const p4Cell = row.insertCell(); p4Cell.textContent = p4>0?`${p4}x`:'-'; if(p4>0)p4Cell.dataset.payoutCount="4";
+                const p5Cell = row.insertCell(); p5Cell.textContent = p5>0?`${p5}x`:'-'; if(p5>0)p5Cell.dataset.payoutCount="5";
+            }
+        });
+        paytablePanelContent.appendChild(table);
+        const wildSymbol = config.symbols.find(s => s.wild); const scatterSymbol = config.symbols.find(s => s.scatter);
+        const wildInfoDiv = document.createElement('div'); wildInfoDiv.classList.add('paytable-wild-info');
+        let infoText = "";
+        if (wildSymbol) infoText += `<b>${wildSymbol.emoji} ${wildSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> is WILD, substitutes for all symbols.<br>`;
+        if (scatterSymbol) infoText += `<b>${scatterSymbol.emoji} ${scatterSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> (Scatter) 3+ on a line triggers Cannonball Barrage & pays.`;
+        wildInfoDiv.innerHTML = infoText || "The Pirate Code be the law here...";
+        paytablePanelContent.appendChild(wildInfoDiv);
+    }
+
+    function requestFullScreenGame() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) elem.requestFullscreen().catch(err=>console.warn(err.message));
+        else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen().catch(err=>console.warn(err.message));
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen().catch(err=>console.warn(err.message));
+        else if (elem.msRequestFullscreen) elem.msRequestFullscreen().catch(err=>console.warn(err.message));
+    }
+
+    // --- Cannonball Barrage Bonus Functions (from your provided code, verified and integrated) ---
+    function triggerCannonballBonus(scatterCount) {
+        bonusActive = true; disableControls(true);
+        gameLayoutContainer.style.transition = 'opacity 0.6s ease-out';
+        gameLayoutContainer.style.opacity = '0.05';
+        bonusCannonballScreen.style.display = 'flex';
+        bonusCannonballScreen.classList.remove('captain-bounty-active');
+
+        bonusCannonballsLeft = config.cannonballBarrageBonus.cannonballsPerScatter[scatterCount.toString()] || 5;
+        bonusCannonballCurrentWinnings = 0;
+        bonusShipsSunk = 0;
+        bonusCaptainBountyMultiplier = 1;
+
+        bonusCannonballsLeftDisplay.textContent = bonusCannonballsLeft;
+        updateCannonballBonusUI();
+        populateEnemyShips();
+        collectCannonballBonusButton.style.display = 'none';
+    }
+
+    function populateEnemyShips() {
+        enemyShipsContainer.innerHTML = '';
+        let shipPrizesAvailable = [...config.cannonballBarrageBonus.shipPrizes];
+        // Ensure there's a good mix, potentially more gold than misses if desired.
+        // For simplicity, using the provided prize distribution.
+        shuffleArray(shipPrizesAvailable);
+
+        for (let i = 0; i < config.cannonballBarrageBonus.numEnemyShips; i++) {
+            const shipItem = document.createElement('div');
+            shipItem.classList.add('enemy-ship-item');
+            // shipItem.textContent = '🚢'; // Using CSS for ship shape instead
+            shipItem.dataset.id = `ship-${i}`;
+            shipItem.dataset.outcome = JSON.stringify(shipPrizesAvailable[i % shipPrizesAvailable.length]);
+            shipItem.addEventListener('click', handleShipClick, { once: true });
+            enemyShipsContainer.appendChild(shipItem);
+        }
+    }
+
+    function handleShipClick(event) {
+        if (bonusCannonballsLeft <= 0 || !bonusActive) return;
+        const shipElement = event.currentTarget;
+        shipElement.classList.add('picked', 'hit-animation');
+        playSound(sounds.cannonFire); // Placeholder
+
+        const outcome = JSON.parse(shipElement.dataset.outcome);
+        let revealedContent = "";
+        let feedbackMessage = "Direct hit, Cap'n! ";
+        let hitValue = 0;
+
+        if (outcome.type === 'sack_of_gold' || outcome.type === 'jewel_casket') {
+            hitValue = outcome.value * currentBet;
+            bonusCannonballCurrentWinnings += hitValue;
+            revealedContent = `<span style="font-size: 0.8em; display: block;">${outcome.emoji}</span>$${hitValue.toLocaleString()}`;
+            feedbackMessage += `Plundered ${outcome.emoji} worth $${hitValue.toLocaleString()}!`;
+            bonusShipsSunk++;
+            playSound(sounds.shipHit); // Placeholder
+        } else if (outcome.type === 'powder_keg') {
+            hitValue = outcome.value * currentBet; // Small prize for the keg itself
+            bonusCannonballCurrentWinnings += hitValue;
+            revealedContent = `<span style="font-size: 1.2em;">${outcome.emoji}</span>`; // Just the boom
+            feedbackMessage += `Hit a ${outcome.emoji}! KABOOM! +$${hitValue.toLocaleString()}! Chain reaction!`;
+            playSound(sounds.shipHit); // Placeholder for explosion
+            setTimeout(triggerPowderKegChainReaction, 600);
+        } else if (outcome.type === 'miss') {
+            hitValue = outcome.value * currentBet; // Small consolation for a miss
+            bonusCannonballCurrentWinnings += hitValue;
+            revealedContent = outcome.emoji; // Splash
+            feedbackMessage += `A miss! Just a splash... but got $${hitValue.toLocaleString()} for the effort.`;
+            playSound(sounds.shipHit); // Placeholder for splash sound
+        }
+        shipElement.innerHTML = revealedContent;
+        shipElement.style.fontSize = "clamp(1em, 3.5vmin, 1.5em)"; // Adjusted for prize text visibility
+
+        bonusCannonballsLeft--;
+        bonusCannonballsLeftDisplay.textContent = bonusCannonballsLeft;
+        updateCannonballBonusUI();
+        displayMessage(feedbackMessage, true, false);
+
+        if (bonusShipsSunk >= config.cannonballBarrageBonus.shipsToSinkForMultiplier && bonusCaptainBountyMultiplier === 1) {
+            bonusCaptainBountyMultiplier = config.cannonballBarrageBonus.captainBountyMultiplier;
+            displayMessage(`Captain's Bounty! All plunder from this barrage is now x${bonusCaptainBountyMultiplier}! Shiver me timbers!`, true, true);
+            bonusCannonballScreen.classList.add('captain-bounty-active');
+            playSound(sounds.captainBounty); // Placeholder
+        }
+
+        if (bonusCannonballsLeft <= 0) {
+            enemyShipsContainer.querySelectorAll('.enemy-ship-item:not(.picked)').forEach(item => item.style.cursor = 'default');
+            setTimeout(finishCannonballBonus, 1800);
+        }
+    }
+    function triggerPowderKegChainReaction() {
+        const unpickedShips = Array.from(enemyShipsContainer.querySelectorAll('.enemy-ship-item:not(.picked)'));
+        if (unpickedShips.length > 0) {
+            playSound(sounds.cannonFire);
+            const randomShipIndex = Math.floor(Math.random() * unpickedShips.length);
+            const shipToHit = unpickedShips[randomShipIndex];
+            const originalOnClick = shipToHit.onclick; // Save original listener if any (though it's {once: true})
+            shipToHit.removeEventListener('click', handleShipClick); // Prevent recursion issues with simulated click
+            
+            shipToHit.classList.add('picked', 'hit-animation');
+            playSound(sounds.shipHit);
+            const outcome = JSON.parse(shipToHit.dataset.outcome);
+            let revealedContent = "";
+            let feedbackMessage = "Chain reaction hit! ";
+            let hitValue = 0;
+
+            if (outcome.type === 'sack_of_gold' || outcome.type === 'jewel_casket') {
+                hitValue = outcome.value * currentBet;
+                bonusCannonballCurrentWinnings += hitValue;
+                revealedContent = `<span style="font-size: 0.8em; display: block;">${outcome.emoji}</span>$${hitValue.toLocaleString()}`;
+                feedbackMessage += `Extra plunder ${outcome.emoji} worth $${hitValue.toLocaleString()}!`;
+                bonusShipsSunk++;
+            } else if (outcome.type === 'powder_keg') {
+                hitValue = outcome.value * currentBet;
+                bonusCannonballCurrentWinnings += hitValue;
+                revealedContent = `<span style="font-size: 1.2em;">${outcome.emoji}</span>`;
+                feedbackMessage += `Another ${outcome.emoji}! More chaos! +$${hitValue.toLocaleString()}`;
+                setTimeout(triggerPowderKegChainReaction, 600);
+            } else if (outcome.type === 'miss') {
+                hitValue = outcome.value * currentBet;
+                bonusCannonballCurrentWinnings += hitValue;
+                revealedContent = outcome.emoji;
+                feedbackMessage += `Chain reaction splashed... but still $${hitValue.toLocaleString()}.`;
+            }
+            shipToHit.innerHTML = revealedContent;
+            shipToHit.style.fontSize = "clamp(1em, 3.5vmin, 1.5em)";
+
+            updateCannonballBonusUI();
+            displayMessage(feedbackMessage, true, false);
+
+            if (bonusShipsSunk >= config.cannonballBarrageBonus.shipsToSinkForMultiplier && bonusCaptainBountyMultiplier === 1) {
+                bonusCaptainBountyMultiplier = config.cannonballBarrageBonus.captainBountyMultiplier;
+                displayMessage(`Captain's Bounty! All plunder from this barrage is now x${bonusCaptainBountyMultiplier}!`, true, true);
+                bonusCannonballScreen.classList.add('captain-bounty-active');
+                playSound(sounds.captainBounty);
+            }
+             // If this was the last ship AND we are out of cannonballs, end.
+            if (bonusCannonballsLeft <= 0 && enemyShipsContainer.querySelectorAll('.enemy-ship-item:not(.picked)').length === 0) {
+                setTimeout(finishCannonballBonus, 1800);
+            }
+        }
+    }
+
+    function updateCannonballBonusUI() {
+        bonusCannonballWinningsDisplay.textContent = `Loot Plundered: $${(bonusCannonballCurrentWinnings * bonusCaptainBountyMultiplier).toLocaleString()}`;
+        cannonballSpecialDisplay.innerHTML = `Ships Sunk: ${bonusShipsSunk} / ${config.cannonballBarrageBonus.shipsToSinkForMultiplier} ${bonusCaptainBountyMultiplier > 1 ? `(Bounty x${bonusCaptainBountyMultiplier} Active!)` : ''}`;
+    }
+
+    function finishCannonballBonus() {
+        let finalBonusAmount = bonusCannonballCurrentWinnings * bonusCaptainBountyMultiplier;
+        if (bonusCaptainBountyMultiplier > 1) {
+            playSound(sounds.grandPrize);
+            displayMessage(`CAPTAIN'S BOUNTY SECURED! Total Haul: $${finalBonusAmount.toLocaleString()}! (x${bonusCaptainBountyMultiplier} applied)`, true, true);
+            bonusCannonballScreen.classList.add('captain-bounty-active');
+        } else {
+            displayMessage(`Barrage complete! Ye plundered $${finalBonusAmount.toLocaleString()}!`, true, finalBonusAmount > currentBet * 25);
+            bonusCannonballScreen.classList.remove('captain-bounty-active');
+        }
+        money += finalBonusAmount;
+        updateMoneyDisplay();
+        collectCannonballBonusButton.style.display = 'inline-block';
+
+        enemyShipsContainer.querySelectorAll('.enemy-ship-item:not(.picked)').forEach(item => {
+            try {
+                const outcome = JSON.parse(item.dataset.outcome);
+                let unpickedContent = " unscathed";
+                if (outcome.type === 'sack_of_gold' || outcome.type === 'jewel_casket') unpickedContent = `<span style="font-size: 0.8em; display: block;">${outcome.emoji}</span>$${(outcome.value * currentBet)}`;
+                else if (outcome.type === 'powder_keg') unpickedContent = `<span style="font-size: 1.2em;">${outcome.emoji}</span>`;
+                else if (outcome.type === 'miss') unpickedContent = outcome.emoji;
+                item.innerHTML = `<span style="font-size:0.7em; display:block; opacity:0.7;">Escaped:</span>${unpickedContent}`;
+                item.style.fontSize = "clamp(0.8em, 3vmin, 1.2em)";
+            } catch (e) { item.textContent = ' unscathed'; }
+            item.classList.add('picked'); item.style.opacity = 0.8;
+        });
+    }
+
+    collectCannonballBonusButton.addEventListener('click', () => {
+        bonusActive = false;
+        bonusCannonballScreen.style.display = 'none';
+        bonusCannonballScreen.classList.remove('captain-bounty-active');
+        gameLayoutContainer.style.opacity = '1';
+        gameLayoutContainer.style.transition = '';
+        collectCannonballBonusButton.style.display = 'none';
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        spinButton.innerText = "Fire!";
+        displayMessage("Back to yer ship, Captain! Another prize awaits!", false, false);
+        if (autoMode) {
+            let nextBet = parseInt(betInput.value); if(isNaN(nextBet)||nextBet<1) nextBet=1;
+            const canAfford = (money >= nextBet && money > 0) || (money <= 0 && nextBet === 1);
+            if (canAfford) autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+            else { stopAutoSpin(); displayMessage(money <= 0 ? "Coffers empty!" : "Not enough doubloons.", false, money <= 0); }
+         }
+    });
+
+    const startButtonElement = document.getElementById('start-button');
+    startButtonElement.addEventListener('click', () => {
+        playSound(sounds.click); requestFullScreenGame();
+        titleScreen.style.display = 'none';
+        appWrapper.style.display = 'flex';
+        gameLayoutContainer.style.display = 'flex';
+        initializeGame();
+    });
+
+    spinButton.addEventListener('click', () => { if (!spinning && !bonusActive) startSpin(); });
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click); if (!spinning && !bonusActive) { const max = money>0?money:1; betInput.value = max; updateMoneyDisplay();}
+    });
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click); if (bonusActive) return;
+        if (autoMode) { stopAutoSpin(); if (!spinning) displayMessage("Auto-Plunder disengaged."); }
+        else {
+            let betVal = parseInt(betInput.value); if(isNaN(betVal)||betVal<1) betVal=1;
+            const maxAff = money>0?money:1;
+            if(betVal>maxAff && money>0) betVal=maxAff; else if(money<=0 && betVal>1) betVal=1;
+            betInput.value = betVal;
+            const canStart = !spinning && ((money>=betVal && money>0)||(money<=0 && betVal===1));
+            if(canStart){
+                autoMode=true; autoButton.innerText="Stop Plunder"; autoButton.style.background='linear-gradient(to bottom, #ff4500, #d02000)';
+                displayMessage("Auto-Plunder engaged!"); startSpin();
+            } else if (spinning) {
+                 autoMode=true; autoButton.innerText="Stop Plunder"; autoButton.style.background='linear-gradient(to bottom, #ff4500, #d02000)';
+                 displayMessage("Auto-Plunder after this barrage.");
+            } else displayMessage(money<=0 ? "Coffers empty!" : "Not enough Pieces o' Eight!");
+        }
+    });
+    resetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        let msg = "Abandon ship and start anew with 100 Pieces o' Eight? All current plunder will be lost to the depths!";
+        if(bonusActive || spinning) msg = "Mid-battle or mid-plunder! Sure ye want to abandon ship? This resets yer voyage.";
+        if (!confirm(msg)) return;
+        if (document.fullscreenElement) document.exitFullscreen();
+        location.reload();
+    });
+    betInput.addEventListener('blur', () => {
+        if (bonusActive || spinning) return;
+        let n = parseInt(betInput.value); const max = money>0?money:1;
+        if (isNaN(n)||n<1) n=1; if(n>max && money>0) n=max; else if(money<=0 && n>1) n=1;
+        betInput.value = n; updateMoneyDisplay();
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    });
+
+    function initializeGame() {
+        money = config.money;
+        currentBet = parseInt(betInput.value) || 5;
+        let initBet = currentBet;
+        const maxInit = money > 0 ? money : 1;
+        if (initBet > maxInit && money > 0) initBet = maxInit;
+        else if (money <= 0 && initBet > 1) initBet = 1;
+        betInput.value = initBet; currentBet = initBet;
+
+        autoMode = false; spinning = false; bonusActive = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Chart yer course (wager) and fire the cannons!");
+        buildReels(); generateSidePayTable(); updateMoneyDisplay();
+        clearReelHighlights(); clearPaytableHighlights();
+        disableControls(false, money <= 0 && currentBet > 1);
+        autoButton.innerText = "Auto-Plunder"; autoButton.style.background = '';
+        Object.values(sounds).forEach(s => { if (s && s.load) try { s.load(); } catch (e) { console.warn("Sound load error", e); } });
+    }
+  </script>
+</body>
+</html>

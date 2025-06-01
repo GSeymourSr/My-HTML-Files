@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cosmic 5x5 Slots!</title>
+  <style>
+    :root {
+      /* Grid Dimensions */
+      --num-reels: 5;
+      --num-rows: 5;
+      --reel-width: 75px; /* Slightly smaller for 5 reels */
+      --reel-height: 75px;
+      --reel-gap: 8px;
+      --symbol-size: 50px; /* Adjusted for smaller reels */
+
+      /* Layout */
+      --lever-width: 30px;
+      --lever-offset: 60px;
+      --machine-padding: 25px;
+      --reels-padding: 15px;
+      --machine-width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap) + 2 * var(--machine-padding));
+      --reels-container-height: calc(var(--num-rows) * var(--reel-height) + 2 * var(--reels-padding));
+      --reels-container-width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap) + 2 * var(--reels-padding));
+
+
+      /* Cosmic Neon Colors */
+      --color-bg-start: #0f0c29;
+      --color-bg-end: #302b63;
+      --color-machine-bg1: #24243e;
+      --color-machine-bg2: #1a1a2e;
+      --color-border: #a64ac9; /* Bright Purple */
+      --color-accent: #00e5ff; /* Cyan */
+      --color-title-text: #f5f5f5;
+      --color-title-bg1: #533483; /* Dark Purple */
+      --color-title-bg2: #301934; /* Deeper Purple */
+      --color-money: #00ffcc; /* Teal/Cyan Green */
+      --color-reels-bg: #0d0d1a; /* Very Dark Blue/Black */
+      --color-reel-bg: #1a1a2e;
+      --color-button-bg1: #4e4e8e; /* Muted Purple */
+      --color-button-bg2: #2a2a4e;
+      --color-button-border: #8c8cd9;
+      --color-button-hover-bg1: #6a6aac;
+      --color-button-hover-bg2: #40406a;
+      --color-button-hover-border: #a6a6f2;
+      --color-spin-bg1: #00b38f; /* Teal */
+      --color-spin-bg2: #007a63;
+      --color-spin-border: var(--color-accent);
+      --color-lever-handle: linear-gradient(to right, #cccccc, #999999); /* Silver */
+      --color-lever-ball: radial-gradient(circle at 12px 12px, #4ddbff, #0077cc); /* Blue */
+      --color-win-line: rgba(0, 229, 255, 0.75); /* Cyan */
+      --color-win-shadow: rgba(0, 229, 255, 0.9);
+      --color-message-text: #e0e0ff; /* Light Lavender */
+      --color-message-win: #99ff99; /* Light Green */
+      --color-message-bigwin: #ff66cc; /* Bright Pink/Magenta */
+      --color-title-screen-text: #f0f0ff;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif; /* Futuristic font - include link or fallback */
+      background: radial-gradient(circle, var(--color-bg-end), var(--color-bg-start));
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    /* Include Orbitron font */
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+
+    #game-container {
+      position: relative;
+      padding-right: calc(var(--lever-width) + var(--lever-offset) - 20px);
+    }
+
+    #slot-machine {
+      background: linear-gradient(145deg, var(--color-machine-bg1), var(--color-machine-bg2));
+      border: 10px solid var(--color-border);
+      border-radius: 20px;
+      padding: var(--machine-padding);
+      box-shadow: 0 0 40px var(--color-border), inset 0 0 20px rgba(0, 0, 0, 0.7);
+      text-align: center;
+      width: var(--machine-width);
+      position: relative;
+      z-index: 1;
+    }
+
+    #title {
+      font-size: 38px; /* Adjusted */
+      font-weight: bold;
+      color: var(--color-title-text);
+      text-shadow: 2px 2px 6px #000;
+      background: linear-gradient(to bottom, var(--color-title-bg1), var(--color-title-bg2));
+      padding: 18px;
+      margin: calc(-1 * var(--machine-padding)) calc(-1 * var(--machine-padding)) 25px calc(-1 * var(--machine-padding));
+      border-radius: 10px 10px 0 0;
+      border-bottom: 5px solid var(--color-border);
+      line-height: 1.1;
+    }
+
+    #money-display {
+      font-size: 30px; /* Adjusted */
+      margin: 20px 0;
+      color: var(--color-money);
+      text-shadow: 1px 1px 5px rgba(0, 255, 204, 0.7);
+      background-color: rgba(0,0,0,0.6);
+      padding: 8px 15px;
+      border-radius: 8px;
+      display: inline-block;
+      border: 1px solid var(--color-money);
+    }
+
+    #reels-container {
+      display: grid;
+      grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+      grid-gap: var(--reel-gap);
+      justify-content: center;
+      margin-bottom: 25px;
+      background: var(--color-reels-bg);
+      padding: var(--reels-padding);
+      border-radius: 10px;
+      border: 3px inset rgba(255, 255, 255, 0.2);
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+      overflow: hidden;
+      height: var(--reels-container-height);
+      /* width: var(--reels-container-width); */ /* Auto width from grid */
+      position: relative;
+    }
+
+    .reel {
+      width: var(--reel-width);
+      height: calc(var(--num-rows) * var(--reel-height));
+      overflow: hidden;
+      background: var(--color-reel-bg);
+      border-radius: 5px;
+      position: relative;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.4);
+    }
+
+    .symbols-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        transition: transform 0.1s linear; /* Spinning */
+    }
+
+    .reel.stopping .symbols-container {
+      transition: transform 1s cubic-bezier(0.25, 1, 0.5, 1); /* Stopping */
+    }
+
+    .symbol {
+      width: var(--reel-width);
+      height: var(--reel-height);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--symbol-size);
+      position: relative;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+      line-height: 1;
+      color: #fff;
+      user-select: none;
+      filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); /* Subtle glow */
+    }
+
+    /* --- Win Animation --- */
+    @keyframes winFlash {
+      0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
+      50% { transform: scale(1.2); filter: brightness(1.8) drop-shadow(0 0 10px var(--color-accent)); }
+    }
+
+    .symbol.winning {
+      animation: winFlash 0.5s ease-in-out infinite;
+      z-index: 10;
+    }
+
+    /* --- Win Lines --- */
+    .win-line {
+        position: absolute;
+        background-color: var(--color-win-line);
+        box-shadow: 0 0 10px 4px var(--color-win-shadow);
+        z-index: 5;
+        display: none;
+        pointer-events: none;
+        border-radius: 3px;
+    }
+    /* Position lines relative to #reels-container padding (var(--reels-padding)) */
+    .win-line.horizontal {
+        height: 6px;
+        width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap)); /* Full width inside padding */
+        left: var(--reels-padding);
+    }
+    .win-line.vertical {
+        width: 6px;
+        height: calc(var(--num-rows) * var(--reel-height)); /* Full height inside padding */
+        top: var(--reels-padding);
+    }
+    .win-line.diagonal {
+        width: 6px;
+    }
+
+
+    #controls {
+      margin: 25px 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px; /* Increased gap */
+    }
+
+    #controls input, #controls button {
+      font-size: 18px;
+      padding: 12px 18px; /* Slightly larger */
+      margin: 5px;
+      border-radius: 8px;
+      border: 2px solid var(--color-button-border);
+      background: linear-gradient(to bottom, var(--color-button-bg1), var(--color-button-bg2));
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      box-shadow: 0 3px 5px rgba(0,0,0,0.4);
+      text-transform: uppercase; /* Added */
+    }
+     #controls input {
+        width: 90px; /* Wider */
+        text-align: center;
+        background: #eee;
+        color: #333;
+        text-transform: none;
+     }
+
+    #controls button:hover:not(:disabled) {
+      background: linear-gradient(to bottom, var(--color-button-hover-bg1), var(--color-button-hover-bg2));
+      border-color: var(--color-button-hover-border);
+      box-shadow: 0 4px 7px rgba(0,0,0,0.5);
+      transform: translateY(-1px);
+      filter: brightness(1.1);
+    }
+    #controls button:active:not(:disabled) {
+        transform: translateY(1px);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        filter: brightness(0.9);
+    }
+     #controls button:disabled {
+         cursor: not-allowed;
+         opacity: 0.5;
+         filter: grayscale(40%);
+     }
+
+    #spin {
+        background: linear-gradient(to bottom, var(--color-spin-bg1), var(--color-spin-bg2));
+        border-color: var(--color-spin-border);
+        color: #fff;
+        font-weight: bold;
+    }
+    #spin:hover:not(:disabled) {
+        background: linear-gradient(to bottom, #00dbc4, #009c86);
+        border-color: #80fff2;
+    }
+
+    /* Specific button colors can be added if desired (MaxBet, Auto, Reset) */
+
+
+    #message {
+      font-size: 26px; /* Adjusted */
+      margin-top: 20px;
+      min-height: 70px; /* Reserve space */
+      padding: 12px;
+      background-color: rgba(0,0,0,0.7);
+      border-radius: 8px;
+      color: var(--color-message-text);
+      text-shadow: 1px 1px 3px #000;
+      white-space: pre-line;
+      line-height: 1.4;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    #message.win {
+        color: var(--color-message-win);
+        font-weight: bold;
+    }
+    #message.big-win {
+        font-size: 32px;
+        color: var(--color-message-bigwin);
+        animation: bigWinPulse 0.8s infinite alternate;
+        font-weight: bold;
+        text-shadow: 0 0 8px var(--color-message-bigwin), 1px 1px 2px #000;
+    }
+
+    @keyframes bigWinPulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.03); }
+    }
+
+     /* --- Pull Lever --- */
+    #lever-container {
+        position: absolute;
+        top: 120px; /* Adjusted */
+        left: calc(100% - var(--lever-offset) + 30px); /* Position right of game container */
+        width: var(--lever-width);
+        height: 300px; /* Adjusted */
+        z-index: 2;
+    }
+
+    #lever-handle {
+        position: absolute;
+        bottom: 10px;
+        left: 0;
+        width: var(--lever-width);
+        height: 180px; /* Longer handle */
+        background: var(--color-lever-handle);
+        border: 3px solid #666;
+        border-radius: 10px 10px 0 0;
+        cursor: pointer;
+        transition: transform 0.3s ease-out, background 0.3s ease-out;
+        transform-origin: bottom center;
+        box-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+    }
+    #lever-handle::after { /* Ball */
+        content: '';
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 50px; /* Larger ball */
+        height: 50px;
+        background: var(--color-lever-ball);
+        border-radius: 50%;
+        border: 3px solid #004d80;
+        box-shadow: inset -4px -4px 6px rgba(0,0,0,0.4), 1px 1px 3px rgba(255,255,255,0.3);
+    }
+
+    #lever-handle.pulled {
+        transform: translateY(-70px); /* Pull distance */
+        background: linear-gradient(to right, #dddddd, #aaaaaa);
+    }
+
+    #lever-handle.disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+        filter: grayscale(50%);
+    }
+
+
+    /* --- Title Screen --- */
+    #title-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 5, 30, 0.95); /* Darker overlay */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      text-align: center;
+      color: var(--color-title-screen-text);
+    }
+    #title-screen h1 {
+      font-size: calc(2.5em + 3.5vw);
+      color: var(--color-accent);
+      text-shadow: 0 0 15px var(--color-accent), 0 0 25px var(--color-accent), 3px 3px 5px #000;
+      margin-bottom: 30px;
+      letter-spacing: 2px;
+    }
+     #title-screen p {
+         font-size: calc(0.9em + 0.6vw);
+         margin-bottom: 50px;
+         max-width: 80%;
+         line-height: 1.6;
+         color: #ccc;
+     }
+    #start-button {
+      font-size: calc(1.2em + 1.8vw);
+      padding: 18px 40px;
+      border-radius: 15px;
+      background: linear-gradient(to bottom, var(--color-spin-bg1), var(--color-spin-bg2));
+      border: 3px solid var(--color-accent);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 20px var(--color-accent), 0 5px 10px rgba(0,0,0,0.4);
+      text-transform: uppercase;
+    }
+    #start-button:hover {
+      background: linear-gradient(to bottom, #00dbc4, #009c86);
+      box-shadow: 0 0 30px var(--color-accent), 0 8px 15px rgba(0,0,0,0.5);
+      transform: scale(1.05);
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Title Screen -->
+  <div id="title-screen">
+    <h1>COSMIC SLOTS</h1>
+    <p>Journey through the reels! Match 3, 4, or 5 cosmic symbols.<br>Use the SPIN button or pull the mighty LEVER!</p>
+    <button id="start-button">Launch Game</button>
+  </div>
+
+  <!-- Main Game Area -->
+  <div id="game-container" style="display: none;"> <!-- Hidden initially -->
+      <div id="slot-machine">
+        <div id="title">COSMIC 5x5<br><span style="font-size: 16px; color: #ffccff;">Enhanced AI Edition</span></div>
+        <div id="money-display">$100</div> <!-- Simplified text -->
+
+        <div id="reels-container">
+          <!-- Reels Generated by JS -->
+           <!-- Win Line Overlays - Need 12 lines for 5x5 (5H, 5V, 2D) -->
+         <div class="win-line horizontal" id="line-h0"></div>
+         <div class="win-line horizontal" id="line-h1"></div>
+         <div class="win-line horizontal" id="line-h2"></div>
+         <div class="win-line horizontal" id="line-h3"></div>
+         <div class="win-line horizontal" id="line-h4"></div>
+         <div class="win-line vertical" id="line-v0"></div>
+         <div class="win-line vertical" id="line-v1"></div>
+         <div class="win-line vertical" id="line-v2"></div>
+         <div class="win-line vertical" id="line-v3"></div>
+         <div class="win-line vertical" id="line-v4"></div>
+         <div class="win-line diagonal" id="line-d0"></div> <!-- TL-BR -->
+         <div class="win-line diagonal" id="line-d1"></div> <!-- TR-BL -->
+        </div>
+
+        <div id="controls">
+          <label for="bet" style="font-size: 18px; margin-right: -5px; text-transform: uppercase;">Bet:</label>
+          <input type="number" id="bet" value="5" min="1">
+          <button id="maxBet">Max Bet</button>
+          <button id="spin">Spin</button>
+          <button id="auto">Auto</button>
+          <button id="payTable">Pays</button> <!-- Shorter -->
+          <button id="reset">Reset</button>
+        </div>
+        <div id="message">Set your bet and spin the cosmos!</div>
+      </div>
+
+       <!-- Lever -->
+       <div id="lever-container">
+           <div id="lever-handle"></div>
+       </div>
+  </div>
+
+  <!-- Audio Elements (REMEMBER TO REPLACE PATHS!) -->
+  <audio id="spin-sound" src="path/to/spin_sound.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="path/to/win_sound.mp3" preload="auto"></audio>
+  <audio id="big-win-sound" src="path/to/big_win_sound.mp3" preload="auto"></audio>
+  <audio id="reel-stop-sound" src="path/to/reel_stop_sound.mp3" preload="auto"></audio>
+  <audio id="button-click-sound" src="path/to/button_click_sound.mp3" preload="auto"></audio>
+  <audio id="lever-pull-sound" src="path/to/lever_pull_sound.mp3" preload="auto"></audio>
+
+
+  <script>
+    // --- Configuration ---
+    const config = {
+        money: 100,
+        reelCount: 5, // <<< 5 Reels
+        rowCount: 5,  // <<< 5 Rows
+        symbolHeight: 75, // Match CSS --reel-height
+        reelWidth: 75,    // Match CSS --reel-width
+        reelGap: 8,       // Match CSS --reel-gap
+        reelsPadding: 15, // Match CSS --reels-padding
+        spinDurationBase: 1200, // Slightly longer base spin
+        spinDurationVariance: 600,
+        reelStopDelay: 150, // Shorter delay between more reels
+        autoSpinDelay: 1800, // Longer delay for bigger grid results
+        leverPullDuration: 400,
+        bigWinMultiplierThreshold: 25, // Multiplier considered "big win" (e.g., 25x bet)
+
+        symbols: [ // New Cosmic Emojis & Payouts for 3, 4, 5 of a kind
+            { id: 'asteroid', emoji: '☄️', payouts: { 3: 2, 4: 5, 5: 15 } },
+            { id: 'ringed-planet', emoji: '🪐', payouts: { 3: 3, 4: 8, 5: 20 } },
+            { id: 'star', emoji: '⭐', payouts: { 3: 4, 4: 10, 5: 25 } },
+            { id: 'crystal', emoji: '💎', payouts: { 3: 5, 4: 15, 5: 40 } },
+            { id: 'rocket', emoji: '🚀', payouts: { 3: 7, 4: 20, 5: 60 } },
+            { id: 'alien', emoji: '👾', payouts: { 3: 10, 4: 30, 5: 100 } },
+            { id: 'galaxy', emoji: '🌌', payouts: { 3: 15, 4: 50, 5: 200 } } // Swirl/Galaxy
+             // Maybe add a Wild symbol later: { id: 'wild', emoji: '✨', wild: true, payouts: ... }
+        ],
+        winningLines: [
+            // Indices 0-24 for 5x5 grid
+            // Horizontals (5 lines)
+            { id: 'line-h0', indices: [0, 1, 2, 3, 4] },
+            { id: 'line-h1', indices: [5, 6, 7, 8, 9] },
+            { id: 'line-h2', indices: [10, 11, 12, 13, 14] },
+            { id: 'line-h3', indices: [15, 16, 17, 18, 19] },
+            { id: 'line-h4', indices: [20, 21, 22, 23, 24] },
+            // Verticals (5 lines)
+            { id: 'line-v0', indices: [0, 5, 10, 15, 20] },
+            { id: 'line-v1', indices: [1, 6, 11, 16, 21] },
+            { id: 'line-v2', indices: [2, 7, 12, 17, 22] },
+            { id: 'line-v3', indices: [3, 8, 13, 18, 23] },
+            { id: 'line-v4', indices: [4, 9, 14, 19, 24] },
+            // Diagonals (2 main lines)
+            { id: 'line-d0', indices: [0, 6, 12, 18, 24] }, // TL-BR
+            { id: 'line-d1', indices: [4, 8, 12, 16, 20] }  // TR-BL
+            // More complex lines (V, W shapes etc.) could be added here
+        ]
+    };
+
+    // --- Game State ---
+    let money = config.money;
+    let currentBet = 5;
+    let autoMode = false;
+    let spinning = false;
+    let reels = [];
+    let finalSymbols = []; // Flat array [0-24] of final visible symbols
+    let autoSpinTimeout = null;
+    let stopPromises = [];
+
+    // --- DOM Elements ---
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const payTableButton = document.getElementById('payTable');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const startButton = document.getElementById('start-button');
+    const gameContainer = document.getElementById('game-container');
+    const leverHandle = document.getElementById('lever-handle');
+    const winLineElements = {};
+    config.winningLines.forEach(line => {
+        winLineElements[line.id] = document.getElementById(line.id);
+        if (!winLineElements[line.id]) console.error(`Win line element not found: ${line.id}`);
+    });
+
+
+    // --- Audio Elements ---
+    const sounds = {
+        spin: document.getElementById('spin-sound'),
+        win: document.getElementById('win-sound'),
+        bigWin: document.getElementById('big-win-sound'),
+        reelStop: document.getElementById('reel-stop-sound'),
+        click: document.getElementById('button-click-sound'),
+        lever: document.getElementById('lever-pull-sound')
+    };
+
+    // --- Functions ---
+
+    function playSound(sound) {
+        if (sound && typeof sound.play === 'function') {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Sound play failed:", e));
+        }
+    }
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `$${money.toLocaleString()}`; // Just show amount
+      betInput.max = money > 0 ? money : 1;
+      if (parseInt(betInput.value) > money && money > 0) {
+          betInput.value = money;
+      } else if (money <= 0) {
+            betInput.value = 1;
+      }
+       if (money <= 0 && !spinning) {
+            disableControls(true, true);
+            displayMessage("Out of cosmic credits! Reset?", false, true);
+       }
+    }
+
+    function disableControls(disable = true, disableLever = disable) {
+        spinButton.disabled = disable;
+        maxBetButton.disabled = disable;
+        betInput.disabled = disable;
+        if (!spinning) {
+            autoButton.disabled = disable;
+        }
+        if (leverHandle) {
+            leverHandle.classList.toggle('disabled', disableLever);
+        }
+     }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg;
+      messageDisplay.className = 'message'; // Reset classes
+      if (isWin) messageDisplay.classList.add('win');
+      if (isBigWin) messageDisplay.classList.add('big-win');
+    }
+
+    // Create visual symbol element using EMOJI
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.style.height = `${config.symbolHeight}px`;
+        div.dataset.symbolId = symbolData.id;
+        div.textContent = symbolData.emoji;
+        return div;
+    }
+
+    // Build the reels visually
+    function buildReels() {
+      reelsContainer.innerHTML = '';
+      reels = [];
+
+      for (let i = 0; i < config.reelCount; i++) { // Use config.reelCount (5)
+        const reelElement = document.createElement('div');
+        reelElement.classList.add('reel');
+        reelElement.style.height = `${config.rowCount * config.symbolHeight}px`; // Use config.rowCount (5)
+
+        const symbolsContainer = document.createElement('div');
+        symbolsContainer.classList.add('symbols-container');
+
+        const reelSymbolsData = [];
+        const reelSymbolElements = [];
+        // Add more repetitions for a longer visual spin pool on 5x5
+        for (let k=0; k < 15; k++) {
+            const shuffledSymbols = [...config.symbols].sort(() => Math.random() - 0.5);
+            shuffledSymbols.forEach(symbolData => {
+                 const symbolElement = createSymbolElement(symbolData);
+                 symbolsContainer.appendChild(symbolElement);
+                 reelSymbolsData.push(symbolData);
+                 reelSymbolElements.push(symbolElement);
+            });
+        }
+
+        reelElement.appendChild(symbolsContainer);
+        reelsContainer.appendChild(reelElement);
+        reels.push({
+            element: reelElement,
+            symbolsContainer: symbolsContainer,
+            symbols: reelSymbolsData,
+            symbolElements: reelSymbolElements,
+            finalPosition: 0
+        });
+      }
+      // Set initial random positions
+       reels.forEach(reel => {
+          const randomIndex = Math.floor(Math.random() * reel.symbols.length);
+           // Adjust initialY to center the view better if needed, but snapping to symbol top is standard
+          const initialY = -(randomIndex * config.symbolHeight);
+          reel.symbolsContainer.style.transition = 'none';
+          reel.symbolsContainer.style.transform = `translateY(${initialY}px)`;
+          reel.finalPosition = initialY;
+          reel.symbolsContainer.offsetHeight; // Force reflow
+          reel.symbolsContainer.style.transition = '';
+      });
+    }
+
+    // Clear highlights
+    function clearHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+        Object.values(winLineElements).forEach(lineEl => {
+            if(lineEl) lineEl.style.display = 'none';
+        });
+        messageDisplay.className = 'message';
+    }
+
+    // Highlight winning symbols and position lines for 5x5
+    function highlightWins(winningLinesInfo) {
+        const containerPadding = config.reelsPadding;
+        const symbolCenterY = config.symbolHeight / 2;
+        const symbolCenterX = config.reelWidth / 2;
+        const lineThicknessHalf = 3; // Half of line height/width (6px)
+
+        winningLinesInfo.forEach(winInfo => {
+            // Highlight symbols involved in this specific win line & count
+             const indicesToHighlight = winInfo.line.indices.slice(0, winInfo.count); // Only highlight the N matched symbols
+             indicesToHighlight.forEach(flatIndex => {
+                const reelIndex = flatIndex % config.reelCount;
+                const visibleRowIndex = Math.floor(flatIndex / config.reelCount);
+                const reel = reels[reelIndex];
+                const topVisibleIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const targetElementIndex = (topVisibleIndex + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length; // Added length for safety with modulo
+
+                const targetElement = reel.symbolElements[targetElementIndex];
+                 if(targetElement) {
+                     targetElement.classList.add('winning');
+                 }
+            });
+
+            // Show and position win line
+            const lineElement = winLineElements[winInfo.line.id];
+            if (lineElement) {
+                 if (lineElement.classList.contains('horizontal')) {
+                    const rowIndex = Math.floor(winInfo.line.indices[0] / config.reelCount);
+                    lineElement.style.top = `${containerPadding + (rowIndex * config.symbolHeight) + symbolCenterY - lineThicknessHalf}px`;
+                    // Adjust width if we want the line to only cover the winning symbols (e.g., for 3/4 of a kind)
+                    // lineElement.style.width = `${winInfo.count * config.reelWidth + (winInfo.count - 1) * config.reelGap}px`;
+                } else if (lineElement.classList.contains('vertical')) {
+                     const colIndex = winInfo.line.indices[0] % config.reelCount;
+                     lineElement.style.left = `${containerPadding + (colIndex * (config.reelWidth + config.reelGap)) + symbolCenterX - lineThicknessHalf}px`;
+                     // Adjust height similarly if desired
+                     // lineElement.style.height = `${winInfo.count * config.symbolHeight}px`;
+                } else if (lineElement.id === 'line-d0') { // TL-BR Diagonal
+                     const totalHeight = config.rowCount * config.symbolHeight;
+                     const totalWidth = config.reelCount * config.reelWidth + (config.reelCount - 1) * config.reelGap;
+                     const angle = Math.atan2(totalHeight, totalWidth) * (180 / Math.PI);
+                     const length = Math.sqrt(totalWidth * totalWidth + totalHeight * totalHeight);
+
+                     lineElement.style.height = `${length}px`;
+                     lineElement.style.top = `${containerPadding + symbolCenterY - lineThicknessHalf}px`;
+                     lineElement.style.left = `${containerPadding + symbolCenterX - lineThicknessHalf}px`;
+                     lineElement.style.transform = `rotate(${angle}deg)`;
+                     lineElement.style.transformOrigin = `top left`;
+
+                } else if (lineElement.id === 'line-d1') { // TR-BL Diagonal
+                    const totalHeight = config.rowCount * config.symbolHeight;
+                    const totalWidth = config.reelCount * config.reelWidth + (config.reelCount - 1) * config.reelGap;
+                    const angle = Math.atan2(totalHeight, totalWidth) * (180 / Math.PI);
+                    const length = Math.sqrt(totalWidth * totalWidth + totalHeight * totalHeight);
+
+                    lineElement.style.height = `${length}px`;
+                    lineElement.style.top = `${containerPadding + symbolCenterY - lineThicknessHalf}px`;
+                    lineElement.style.left = `calc(${containerPadding + totalWidth + symbolCenterX - lineThicknessHalf}px)`; // Position from right edge essentially
+                    lineElement.style.transform = `rotate(-${angle}deg)`;
+                    lineElement.style.transformOrigin = `top right`;
+                }
+                lineElement.style.display = 'block';
+            }
+        });
+    }
+
+
+    // Evaluate the final 5x5 grid state for 3, 4, or 5 of a kind
+    function evaluateResult() {
+        let totalWinnings = 0;
+        let winningLinesInfo = []; // Stores { line, amount, symbolId, count }
+        let isBigWinOverall = false;
+        let highestMultiplierAchieved = 0;
+
+        // Get final VISIBLE symbols [0-24]
+        finalSymbols = [];
+        for (let r = 0; r < config.rowCount; r++) {
+            for (let c = 0; c < config.reelCount; c++) {
+                const reel = reels[c];
+                const topVisibleIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const symbolIndexInReel = (topVisibleIndex + r + reel.symbols.length) % reel.symbols.length; // Safer modulo
+                finalSymbols.push(reel.symbols[symbolIndexInReel]);
+            }
+        }
+        // console.log("Final Symbols:", finalSymbols.map(s => s?.id ?? '?'));
+
+        config.winningLines.forEach(line => {
+            const symbolsOnLine = line.indices.map(index => finalSymbols[index]);
+            const firstSymbol = symbolsOnLine[0];
+            if (!firstSymbol) return; // Skip if line starts empty
+
+            let matchCount = 0;
+            for(let i = 0; i < symbolsOnLine.length; i++) {
+                if(symbolsOnLine[i] && symbolsOnLine[i].id === firstSymbol.id) {
+                    matchCount++;
+                } else {
+                    break; // Stop counting on mismatch
+                }
+            }
+
+            if (matchCount >= 3) { // Check for 3, 4, or 5
+                 const symbolData = config.symbols.find(s => s.id === firstSymbol.id);
+                 if (symbolData && symbolData.payouts && symbolData.payouts[matchCount]) {
+                    const multiplier = symbolData.payouts[matchCount];
+                    const winAmount = currentBet * multiplier;
+                    totalWinnings += winAmount;
+                    winningLinesInfo.push({
+                        line: line,
+                        amount: winAmount,
+                        symbolId: firstSymbol.id,
+                        count: matchCount // Store how many matched
+                    });
+
+                    if (multiplier > highestMultiplierAchieved) {
+                        highestMultiplierAchieved = multiplier;
+                    }
+                }
+            }
+        });
+
+        // --- Process Results ---
+        if (totalWinnings > 0) {
+            money += totalWinnings;
+            if (highestMultiplierAchieved >= config.bigWinMultiplierThreshold) {
+                 isBigWinOverall = true;
+                 playSound(sounds.bigWin);
+                 displayMessage(`!!! COSMIC WIN !!!\n$${totalWinnings.toLocaleString()}`, true, true);
+             } else {
+                 playSound(sounds.win);
+                 displayMessage(`WIN! $${totalWinnings.toLocaleString()}`, true, false);
+             }
+            highlightWins(winningLinesInfo);
+        } else {
+            displayMessage("Nebula was empty... Spin again!");
+        }
+
+        updateMoneyDisplay();
+        spinning = false;
+        disableControls(false, false); // Re-enable controls and lever
+        spinButton.innerText = "Spin";
+
+        // Handle Auto Spin
+         if (autoMode) {
+             if (money >= currentBet && money > 0) {
+                autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+             } else {
+                 autoMode = false;
+                 autoButton.innerText = "Auto";
+                 autoButton.style.background = '';
+                 autoButton.classList.remove('active');
+                 displayMessage(money <= 0 ? "Out of cosmic credits! Reset?" : "Can't afford bet. Auto stopped.", false, money <= 0);
+             }
+         }
+    }
+
+    // Start the spinning process (mostly unchanged, uses config values)
+    function startSpin() {
+        if (spinning) return;
+
+        clearTimeout(autoSpinTimeout);
+        clearHighlights();
+
+        currentBet = parseInt(betInput.value);
+        if (isNaN(currentBet) || currentBet <= 0) {
+            displayMessage("Enter a valid cosmic bet > 0.");
+            if(autoMode) { autoMode = false; autoButton.innerText = "Auto"; autoButton.classList.remove('active'); }
+            return;
+        }
+        if (currentBet > money) {
+            displayMessage("Insufficient credits for this voyage!");
+             if(autoMode) { autoMode = false; autoButton.innerText = "Auto"; autoButton.classList.remove('active'); }
+            return;
+        }
+
+        spinning = true;
+        money -= currentBet;
+        updateMoneyDisplay();
+        disableControls(true, true);
+        spinButton.innerText = "Spinning...";
+        displayMessage("Launching reels...");
+        playSound(sounds.spin);
+
+        stopPromises = [];
+
+        // --- Animate Reels ---
+        reels.forEach((reel, index) => {
+            const symbolsContainer = reel.symbolsContainer;
+            const currentY = reel.finalPosition;
+            // More revolutions potentially needed for visual effect on bigger grid
+            const extraRevolutions = 5 + Math.floor(Math.random() * 5);
+            const totalSymbolsHeight = reel.symbols.length * config.symbolHeight;
+
+            symbolsContainer.classList.remove('stopping');
+            // Linear spin transition (adjust duration based on base + delay)
+            symbolsContainer.style.transition = `transform ${config.spinDurationBase / 1000 + index * (config.reelStopDelay / 1500)}s linear`; // Slightly vary duration
+            const spinTargetY = currentY - (extraRevolutions * totalSymbolsHeight) - (Math.random() * totalSymbolsHeight) ;
+            symbolsContainer.style.transform = `translateY(${spinTargetY}px)`;
+
+            // Schedule stop
+            const stopDelay = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+
+             const stopPromise = new Promise(resolve => {
+                 setTimeout(() => {
+                    const randomSymbolIndex = Math.floor(Math.random() * reel.symbols.length);
+                    // Calculate final Y to snap to symbol grid, aiming to center the middle row (index 2 for 5 rows)
+                    const finalY = -((randomSymbolIndex - Math.floor(config.rowCount / 2) + reel.symbols.length) % reel.symbols.length) * config.symbolHeight;
+
+                    reel.finalPosition = finalY;
+
+                    reel.element.classList.add('stopping');
+                    symbolsContainer.style.transform = `translateY(${finalY}px)`;
+
+                    playSound(sounds.reelStop);
+
+                    const transitionEndHandler = (event) => {
+                        if (event.propertyName === 'transform') {
+                            symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                            reel.element.classList.remove('stopping');
+                            resolve();
+                        }
+                    };
+                    symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+
+                 }, stopDelay);
+             });
+             stopPromises.push(stopPromise);
+        });
+
+        // --- Wait for all reels to stop ---
+        Promise.all(stopPromises).then(() => {
+             setTimeout(evaluateResult, 150); // Short delay
+        });
+    }
+
+
+    // --- Event Listeners (mostly unchanged logic) ---
+    startButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        titleScreen.style.display = 'none';
+        gameContainer.style.display = 'block';
+        initializeGame();
+    });
+
+    spinButton.addEventListener('click', () => {
+         if (!spinning) {
+             playSound(sounds.click);
+             startSpin();
+         }
+    });
+
+    leverHandle.addEventListener('click', () => {
+        if (!spinning && !leverHandle.classList.contains('disabled')) {
+             playSound(sounds.lever);
+             leverHandle.classList.add('pulled');
+             startSpin();
+             setTimeout(() => { leverHandle.classList.remove('pulled'); }, config.leverPullDuration);
+        }
+    });
+
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (!spinning) {
+             betInput.value = money > 0 ? money : 1;
+             currentBet = parseInt(betInput.value);
+        }
+    });
+
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (spinning && autoMode) {
+             autoMode = false;
+             clearTimeout(autoSpinTimeout);
+             autoButton.innerText = "Auto";
+             autoButton.style.background = '';
+             autoButton.classList.remove('active');
+             displayMessage("Auto-warp cancelled.");
+
+        } else if (!spinning) {
+            autoMode = !autoMode;
+             if (autoMode) {
+                 autoButton.innerText = "Stop Auto";
+                 autoButton.style.background = 'linear-gradient(to bottom, #ff4500, #cc3700)'; // Active color
+                 autoButton.classList.add('active');
+                 displayMessage("Auto-warp engaged!");
+                 startSpin();
+             } else {
+                 autoButton.innerText = "Auto";
+                 autoButton.style.background = '';
+                  autoButton.classList.remove('active');
+                 displayMessage("Auto-warp disengaged.");
+             }
+        }
+    });
+
+    payTableButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        let table = "COSMIC PAYOUTS (Bet x Multiplier):\n\n";
+        table += "Symbol | x3 | x4 | x5\n";
+        table += "----------------------\n";
+        config.symbols.forEach(s => {
+            if (s.payouts) {
+                 table += `${s.emoji} (${s.id}) | ${s.payouts[3] || '-'}x | ${s.payouts[4] || '-'}x | ${s.payouts[5] || '-'}x\n`;
+            }
+        });
+         table += "\nLines: 5 Horizontal, 5 Vertical, 2 Diagonal.";
+        alert(table);
+    });
+
+    resetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (confirm("Reset simulation and return to base credits ($100)?")) {
+            location.reload();
+        }
+    });
+
+    // Bet Input Listeners (unchanged logic)
+    betInput.addEventListener('input', () => {
+        let value = parseInt(betInput.value.replace(/[^0-9]/g, '')) || 1;
+        value = Math.max(1, value);
+        if (money > 0) { value = Math.min(value, money); }
+        betInput.value = value;
+        currentBet = value;
+    });
+     betInput.addEventListener('change', () => {
+         if (parseInt(betInput.value) < 1 || isNaN(parseInt(betInput.value))) { betInput.value = 1; }
+         currentBet = parseInt(betInput.value);
+     });
+
+
+     // --- Initialization ---
+     function initializeGame() {
+        money = config.money;
+        currentBet = parseInt(betInput.value) || 5;
+        autoMode = false;
+        spinning = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Set your bet and spin the cosmos!");
+        buildReels();
+        updateMoneyDisplay();
+        clearHighlights();
+        disableControls(false, false); // Enable controls initially
+         autoButton.innerText = "Auto";
+         autoButton.style.background = '';
+         autoButton.classList.remove('active');
+        leverHandle.classList.remove('disabled', 'pulled');
+     }
+
+  </script>
+</body>
+</html>

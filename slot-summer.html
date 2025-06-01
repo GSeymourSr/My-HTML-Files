@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>5x5 Summer Slots!</title> <!-- Changed Title -->
+  <style>
+    :root {
+      /* --- 5x5 Configuration --- */
+      --num-reels: 5;
+      --num-rows: 5;
+      --reel-width: 75px;
+      --reel-height: 75px;
+      --symbol-size: 55px;
+      --reel-gap: 8px;
+      --machine-width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap) + 40px);
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Roboto Emoji', 'Noto Color Emoji', 'Android Emoji', 'EmojiSymbols', 'EmojiOne Mozilla', 'Twemoji Mozilla', 'Apple Color Emoji', 'Segoe UI Symbol', 'Arial Black', Gadget, sans-serif;
+      /* Brighter background for Summer */
+      background: radial-gradient(circle, #ffcc33, #ff9900); /* Sunny Orange/Yellow */
+      color: #333; /* Darker text for contrast */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #game-container {
+      position: relative;
+    }
+
+    #slot-machine {
+      /* Lighter machine theme */
+      background: linear-gradient(145deg, #f0f0f0, #cccccc); /* Light Gray/Silver */
+      border: 10px solid #0099cc; /* Ocean Blue border */
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 25px rgba(0, 153, 204, 0.5), inset 0 0 15px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      width: var(--machine-width);
+      position: relative;
+      z-index: 1;
+    }
+
+    #title {
+      font-size: 30px;
+      font-weight: bold;
+      color: #ff6600; /* Sunset Orange */
+      text-shadow: 1px 1px 3px #fff; /* Light shadow */
+      background: linear-gradient(to bottom, #ffeb99, #ffd633); /* Sandy Yellow */
+      padding: 15px;
+      margin: -20px -20px 20px -20px;
+      border-radius: 10px 10px 0 0;
+      border-bottom: 5px solid #0099cc;
+      line-height: 1.1;
+    }
+
+     #money-display {
+       font-size: 26px;
+       margin: 15px 0;
+       color: #006633; /* Dark Green */
+       text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+       background-color: rgba(255,255,255,0.6); /* Semi-transparent white */
+       padding: 5px 10px;
+       border-radius: 5px;
+       display: inline-block;
+       border: 1px solid #ccc;
+     }
+
+    #reels-container {
+      display: grid;
+      grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+      gap: var(--reel-gap);
+      justify-content: center;
+      margin-bottom: 20px;
+      background: #e6f7ff; /* Light Sky Blue */
+      padding: 15px;
+      border-radius: 10px;
+      border: 3px inset #b3e0ff; /* Lighter Blue inset */
+      overflow: hidden;
+      height: calc(var(--num-rows) * var(--reel-height));
+      position: relative;
+    }
+
+    .reel {
+      width: var(--reel-width);
+      height: calc(var(--num-rows) * var(--reel-height));
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.3); /* Transparent reel bg */
+      border-radius: 5px;
+      position: relative;
+    }
+
+    .symbols-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        transition: transform 0.1s linear;
+    }
+
+    .reel.stopping .symbols-container {
+      transition: transform 1s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .symbol {
+      width: var(--reel-width);
+      height: var(--reel-height);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--symbol-size);
+      position: relative;
+      line-height: 1;
+      /* Lighter shadow for lighter theme */
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+      user-select: none;
+    }
+
+    /* --- Win Animation --- */
+    @keyframes winFlash {
+      0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(1px 1px 2px rgba(0,0,0,0.3)); opacity: 1; }
+      50% { transform: scale(1.25); filter: brightness(1.5) drop-shadow(3px 3px 5px rgba(255, 102, 0, 0.8)); opacity: 0.9; } /* Orange glow */
+    }
+
+    .symbol.winning {
+      animation: winFlash 0.6s ease-in-out infinite;
+      z-index: 10;
+    }
+    /* Special flash for Wild */
+    .symbol.winning[data-symbol-id="wild_sun"] {
+       animation: winFlashSun 0.6s ease-in-out infinite;
+    }
+    @keyframes winFlashSun {
+        0%, 100% { transform: scale(1); filter: brightness(1.2) drop-shadow(1px 1px 2px rgba(0,0,0,0.3)); }
+        50% { transform: scale(1.3); filter: brightness(2) drop-shadow(3px 3px 8px rgba(255, 255, 0, 1)); } /* Yellow glow */
+    }
+
+    /* --- Win Lines --- */
+    .win-line {
+        position: absolute;
+        background-color: rgba(255, 102, 0, 0.7); /* Orange line */
+        box-shadow: 0 0 8px 2px rgba(255, 102, 0, 0.8);
+        z-index: 5;
+        display: none;
+        pointer-events: none;
+        border-radius: 3px;
+    }
+    .win-line.horizontal { height: 5px; width: calc(100% - 30px); left: 15px; }
+    .win-line.vertical { width: 5px; height: calc(100% - 30px); top: 15px; }
+
+    /* --- Controls --- */
+    #controls {
+      margin: 20px 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    #controls input, #controls button {
+      font-size: 16px;
+      padding: 8px 12px;
+      margin: 5px;
+      border-radius: 8px;
+      border: 2px solid #999; /* Gray border */
+      background: linear-gradient(to bottom, #fff, #ddd); /* White/light gray button */
+      color: #333; /* Dark text on light button */
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+     #controls input {
+        width: 70px;
+        text-align: center;
+        background: #fff;
+        color: #333;
+        border: 2px solid #ccc;
+     }
+
+    #controls button:hover:not(:disabled) {
+      background: linear-gradient(to bottom, #fff, #eee);
+      border-color: #666;
+      box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+      transform: translateY(-1px);
+    }
+    #controls button:active:not(:disabled) {
+        transform: translateY(1px);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+     #controls button:disabled {
+         cursor: not-allowed;
+         opacity: 0.6;
+     }
+
+    #spin {
+        background: linear-gradient(to bottom, #ff9900, #ff6600); /* Orange */
+        border-color: #ffad33;
+        color: #fff; /* White text */
+        font-weight: bold;
+    }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #ffad33, #ff7700); border-color: #ffc266; }
+
+    #maxBet { background: linear-gradient(to bottom, #ff3366, #cc0044); border-color: #ff6699; color: #fff; } /* Pink */
+    #auto { background: linear-gradient(to bottom, #00cc99, #009966); border-color: #33dbc2; color: #fff;} /* Teal */
+    #payTable { background: linear-gradient(to bottom, #cc99ff, #9966cc); border-color: #d9b3ff; color: #fff;} /* Lavender */
+    #reset { background: linear-gradient(to bottom, #999, #666); border-color: #bbb; color: #fff;} /* Gray */
+
+    /* --- Message --- */
+    #message {
+      font-size: 22px;
+      margin-top: 15px;
+      min-height: 50px;
+      padding: 10px;
+      background-color: rgba(255,255,255,0.6); /* Match money display */
+      border-radius: 8px;
+      color: #cc6600; /* Dark Orange/Brown */
+      text-shadow: 1px 1px 1px rgba(255,255,255,0.5);
+      white-space: pre-line;
+      line-height: 1.4;
+      border: 1px solid #ccc;
+    }
+    #message.win {
+        color: #009933; /* Darker Green */
+        font-weight: bold;
+    }
+    #message.big-win {
+        font-size: 26px;
+        color: #cc0033; /* Dark Pink/Red */
+        animation: bigWinPulse 1s infinite alternate;
+    }
+
+    @keyframes bigWinPulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.05); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+      <div id="slot-machine">
+        <div id="title">SUMMER SLOTS! ☀️<br><span style="font-size: 14px; color: #666;">5x5 Fun Version</span></div>
+        <div id="money-display">Money: $100</div>
+
+        <div id="reels-container">
+          <!-- Reels will be generated by JS -->
+        </div>
+
+        <!-- Win Line Overlays (10 lines: 5H, 5V) -->
+         <div class="win-line horizontal" id="line-h0"></div>
+         <div class="win-line horizontal" id="line-h1"></div>
+         <div class="win-line horizontal" id="line-h2"></div>
+         <div class="win-line horizontal" id="line-h3"></div>
+         <div class="win-line horizontal" id="line-h4"></div>
+         <div class="win-line vertical" id="line-v0"></div>
+         <div class="win-line vertical" id="line-v1"></div>
+         <div class="win-line vertical" id="line-v2"></div>
+         <div class="win-line vertical" id="line-v3"></div>
+         <div class="win-line vertical" id="line-v4"></div>
+
+        <div id="controls">
+          <label for="bet" style="font-size: 16px; margin-right: -5px;">Bet:</label>
+          <input type="number" id="bet" value="5" min="1">
+          <button id="maxBet">Max Bet</button>
+          <button id="spin">Spin</button>
+          <button id="auto">Auto</button>
+          <button id="payTable">Pay Table</button>
+          <button id="reset">Reset</button>
+        </div>
+        <div id="message">Set your bet and spin!</div>
+      </div>
+  </div>
+
+  <script>
+    // --- Configuration ---
+    const config = {
+        money: 100,
+        reelCount: 5,
+        rowCount: 5,
+        symbolHeight: 75,
+        spinDurationBase: 1000,
+        spinDurationVariance: 500,
+        reelStopDelay: 150,
+        autoSpinDelay: 1500,
+        symbols: [
+            // *** New SUMMER Theme Symbols & Adjusted Payouts ***
+            // isWild: true marks the wild symbol
+            // Payouts slightly reduced due to Wild increasing win frequency
+            { id: 'wild_sun', display: '☀️', payout: 0, isWild: true }, // WILD! Doesn't pay on its own line
+            { id: 'strawberry', display: '🍓', payout: 10 },
+            { id: 'kiwi', display: '🥝', payout: 15 },
+            { id: 'pineapple', display: '🍍', payout: 30 },
+            { id: 'coconut', display: '🥥', payout: 50 },
+            { id: 'watermelon', display: '🍉', payout: 100 },
+            { id: 'ice_cream', display: '🍦', payout: 250 } // Top paying symbol
+        ],
+        // Winning lines remain the same (10 lines)
+        winningLines: [
+            { id: 'line-h0', indices: [0, 1, 2, 3, 4] }, { id: 'line-h1', indices: [5, 6, 7, 8, 9] },
+            { id: 'line-h2', indices: [10, 11, 12, 13, 14] }, { id: 'line-h3', indices: [15, 16, 17, 18, 19] },
+            { id: 'line-h4', indices: [20, 21, 22, 23, 24] },
+            { id: 'line-v0', indices: [0, 5, 10, 15, 20] }, { id: 'line-v1', indices: [1, 6, 11, 16, 21] },
+            { id: 'line-v2', indices: [2, 7, 12, 17, 22] }, { id: 'line-v3', indices: [3, 8, 13, 18, 23] },
+            { id: 'line-v4', indices: [4, 9, 14, 19, 24] },
+        ],
+        bigWinThreshold: 50 // Payout multiplier threshold (Coconut or higher)
+    };
+
+    // --- Game State ---
+    let money = config.money;
+    let currentBet = 5;
+    let autoMode = false;
+    let spinning = false;
+    let reels = [];
+    let finalSymbols = [];
+    let autoSpinTimeout = null;
+    let stopPromises = [];
+
+    // --- DOM Elements ---
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const payTableButton = document.getElementById('payTable');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const winLineElements = {};
+    config.winningLines.forEach(line => {
+        winLineElements[line.id] = document.getElementById(line.id);
+         if (!winLineElements[line.id]) console.error(`Win line element not found: ${line.id}`);
+    });
+
+    // --- Functions ---
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `Money: $${money.toLocaleString()}`;
+      betInput.max = money > 0 ? money : 1;
+      if (parseInt(betInput.value) > money) {
+          betInput.value = money > 0 ? money : 1;
+          currentBet = money > 0 ? money : 1;
+      }
+       if (money <= 0 && !spinning) {
+            disableControls(true); // Ensure controls are disabled when broke
+            displayMessage("Out of Money! Reset to play again.", false, false); // No win/bigwin class
+            if (autoMode) { // Stop auto mode if out of money
+                autoMode = false;
+                clearTimeout(autoSpinTimeout);
+                autoButton.innerText = "Auto";
+                autoButton.style.background = ''; // Reset style if needed
+            }
+       }
+    }
+
+     function disableControls(disable = true) {
+        spinButton.disabled = disable;
+        maxBetButton.disabled = disable;
+        betInput.disabled = disable;
+        payTableButton.disabled = disable;
+        // Only disable auto fully if not spinning or if broke
+        if (!spinning) {
+            autoButton.disabled = disable || money <= 0;
+        } else if (autoMode && disable) {
+             // Keep auto enabled *if* it's active and we are disabling (so it can be stopped)
+             autoButton.disabled = false;
+        } else {
+             autoButton.disabled = disable;
+        }
+     }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg;
+      messageDisplay.className = 'message';
+      if (isWin) messageDisplay.classList.add('win');
+      if (isBigWin) messageDisplay.classList.add('big-win');
+    }
+
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.style.height = `${config.symbolHeight}px`;
+        div.dataset.symbolId = symbolData.id;
+        div.textContent = symbolData.display;
+        div.setAttribute('role', 'img');
+        div.setAttribute('aria-label', symbolData.id);
+        return div;
+    }
+
+    function buildReels() {
+      reelsContainer.innerHTML = '';
+      reels = [];
+      for (let i = 0; i < config.reelCount; i++) {
+        const reelElement = document.createElement('div');
+        reelElement.classList.add('reel');
+        const symbolsContainer = document.createElement('div');
+        symbolsContainer.classList.add('symbols-container');
+        const reelSymbols = [];
+        const reelSymbolElements = [];
+
+        // Populate reels visually - include Wilds frequently
+        for (let k=0; k < 15; k++) { // More symbols for smooth visual
+            // Ensure Wilds appear visually more often
+            let symbolPool = [...config.symbols];
+            // Add extra wilds to the pool for visual shuffling
+            for(let w=0; w<2; w++) { // Add 2 extra wilds per set
+                symbolPool.push(config.symbols.find(s => s.isWild));
+            }
+            const shuffledSymbols = symbolPool.sort(() => Math.random() - 0.5);
+
+            shuffledSymbols.forEach(symbolData => {
+                 const symbolElement = createSymbolElement(symbolData);
+                 symbolsContainer.appendChild(symbolElement);
+                 reelSymbols.push(symbolData);
+                 reelSymbolElements.push(symbolElement);
+            });
+        }
+
+        reelElement.appendChild(symbolsContainer);
+        reelsContainer.appendChild(reelElement);
+        reels.push({
+            element: reelElement,
+            symbolsContainer: symbolsContainer,
+            symbols: reelSymbols,
+            symbolElements: reelSymbolElements,
+            finalPosition: 0
+        });
+      }
+      reels.forEach(reel => {
+         const initialOffset = Math.floor(Math.random() * reel.symbols.length) * config.symbolHeight;
+         reel.symbolsContainer.style.transform = `translateY(-${initialOffset}px)`;
+      });
+    }
+
+    function clearHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+        Object.values(winLineElements).forEach(lineEl => {
+            if(lineEl) lineEl.style.display = 'none';
+        });
+         messageDisplay.className = 'message';
+    }
+
+    // Highlight winning symbols and lines (includes Wilds)
+     function highlightWins(winningLinesInfo) {
+         winningLinesInfo.forEach(winInfo => {
+             winInfo.line.indices.forEach(index => {
+                 const reelIndex = index % config.reelCount;
+                 const visibleRowIndex = Math.floor(index / config.reelCount);
+                 const reel = reels[reelIndex];
+                 const firstVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                 const targetSymbolIndexInStrip = (firstVisibleSymbolIndex + visibleRowIndex);
+                 const targetElement = reel.symbolElements[targetSymbolIndexInStrip % reel.symbolElements.length];
+
+                  // Ensure the symbol actually shown matches the symbol that won (including Wild)
+                 const symbolOnGrid = finalSymbols[index];
+                 if(targetElement && targetElement.dataset.symbolId === symbolOnGrid.id) {
+                      targetElement.classList.add('winning');
+                 } else {
+                     // This might happen if visual reel strip differs slightly from evaluation logic
+                     // For now, just log it. A more complex sync would be needed for perfection.
+                     console.warn(`Highlight mismatch at index ${index}. Expected ${symbolOnGrid.id}, Found ${targetElement?.dataset?.symbolId}`);
+                     // Still try to highlight based on grid data if element exists
+                     if(targetElement) targetElement.classList.add('winning');
+                 }
+             });
+
+             const lineElement = winLineElements[winInfo.line.id];
+             if (lineElement) {
+                  const symbolHalf = config.symbolHeight / 2;
+                  const reelWidthHalf = config.reelWidth / 2;
+                  const reelGap = 8; // Match CSS
+
+                 if (lineElement.classList.contains('horizontal')) {
+                     const rowIndex = Math.floor(winInfo.line.indices[0] / config.reelCount);
+                     lineElement.style.top = `${rowIndex * config.symbolHeight + symbolHalf - 2.5}px`; // 2.5 is half line height
+                 } else if (lineElement.classList.contains('vertical')) {
+                      const colIndex = winInfo.line.indices[0] % config.reelCount;
+                      lineElement.style.left = `${colIndex * (config.reelWidth + reelGap) + reelWidthHalf - 2.5}px`; // 2.5 is half line width
+                 }
+                 lineElement.style.display = 'block';
+             } else {
+                  console.error(`Missing line element for ID: ${winInfo.line.id}`);
+             }
+         });
+     }
+
+
+    // Evaluate the final grid state WITH WILD SYMBOLS
+    function evaluateResult() {
+        let totalWinnings = 0;
+        let winningLinesInfo = [];
+        let isBigWinOverall = false;
+
+        // Get final VISIBLE symbols in a flat array [0..24]
+        finalSymbols = [];
+        for (let r = 0; r < config.rowCount; r++) {
+            for (let c = 0; c < config.reelCount; c++) {
+                const reel = reels[c];
+                const firstVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                // Get the actual symbol data based on the visual stop position
+                const symbolIndex = (firstVisibleSymbolIndex + r) % reel.symbols.length;
+                finalSymbols.push(reel.symbols[symbolIndex]); // Use the symbol data from the reel strip
+            }
+        }
+        // console.log("Final Grid Symbols:", finalSymbols.map(s => s.display)); // For debugging
+
+        config.winningLines.forEach(line => {
+            const symbolsOnLine = line.indices.map(index => finalSymbols[index]);
+            let wildCount = 0;
+            let potentialWinSymbol = null;
+
+            // Identify the non-wild symbol on the line and count wilds
+            for (const symbol of symbolsOnLine) {
+                if (!symbol) return; // Skip if any symbol is missing (shouldn't happen)
+                if (symbol.isWild) {
+                    wildCount++;
+                } else {
+                    // If we already found a different non-wild symbol, this line can't win
+                    if (potentialWinSymbol && potentialWinSymbol.id !== symbol.id) {
+                        potentialWinSymbol = null; // Not a win
+                        break;
+                    }
+                    potentialWinSymbol = symbol; // Found the potential winning symbol
+                }
+            }
+
+            // Check if the line is a winner
+            // Condition: All symbols are either the same non-wild OR wild
+            // (wildCount + count of potentialWinSymbol == 5)
+            if (wildCount === 5) {
+                 // Line of all wilds - pay as top symbol? Or specific Wild payout?
+                 // Let's pay as top symbol (ice_cream) for simplicity
+                 potentialWinSymbol = config.symbols.find(s => s.id === 'ice_cream');
+            }
+
+            if (potentialWinSymbol && (symbolsOnLine.filter(s => !s.isWild && s.id === potentialWinSymbol.id).length + wildCount === 5)) {
+                 // It's a winning line!
+                 const symbolData = potentialWinSymbol; // Already have the data
+                 if (symbolData && symbolData.payout > 0) {
+                    const winAmount = currentBet * symbolData.payout;
+                    totalWinnings += winAmount;
+                    winningLinesInfo.push({ line: line, amount: winAmount, symbolId: symbolData.id });
+                     if (symbolData.payout >= config.bigWinThreshold) {
+                         isBigWinOverall = true;
+                     }
+                 }
+            }
+        });
+
+        // --- Process Results ---
+        spinning = false;
+
+        if (totalWinnings > 0) {
+            money += totalWinnings;
+            let winMessage = `WIN! $${totalWinnings.toLocaleString()}`;
+            if (isBigWinOverall) {
+                 winMessage = `☀️ SWEET WIN! ☀️\n$${totalWinnings.toLocaleString()}`;
+            }
+            displayMessage(winMessage, true, isBigWinOverall);
+            highlightWins(winningLinesInfo);
+        } else {
+            displayMessage("No win. Spin again!");
+        }
+
+        updateMoneyDisplay(); // Update display AFTER processing wins/losses
+        disableControls(false); // Re-enable controls AFTER spin completes
+        spinButton.innerText = "Spin";
+
+        // Handle Auto Spin
+         if (autoMode) {
+             if (money >= currentBet && money > 0) {
+                autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+             } else {
+                 autoMode = false;
+                 autoButton.innerText = "Auto";
+                 autoButton.style.background = ''; // Reset style
+                 const reason = money <= 0 ? "Out of Money! Auto stopped." : "Can't afford bet. Auto stopped.";
+                  if (totalWinnings <= 0) {
+                     displayMessage(reason, false, false);
+                  }
+                  // Ensure controls reflect state if broke
+                  if (money <= 0) disableControls(true);
+             }
+         } else {
+             // Ensure controls are enabled if not auto-spinning and not broke
+             if (money > 0) disableControls(false);
+         }
+    }
+
+    // Start the spinning process (Unchanged fundamentally)
+    function startSpin() {
+        if (spinning) return;
+        clearTimeout(autoSpinTimeout);
+        clearHighlights();
+
+        currentBet = parseInt(betInput.value);
+        if (isNaN(currentBet) || currentBet <= 0) {
+            displayMessage("Please enter a valid bet > 0.");
+             if(autoMode) { autoMode = false; autoButton.innerText = "Auto"; autoButton.style.background = ''; }
+            return;
+        }
+        if (currentBet > money) {
+            displayMessage("Not enough money to bet!");
+             if(autoMode) { autoMode = false; autoButton.innerText = "Auto"; autoButton.style.background = ''; }
+            return;
+        }
+
+        spinning = true;
+        money -= currentBet;
+        updateMoneyDisplay();
+        disableControls(true);
+        spinButton.innerText = "Spinning...";
+        displayMessage("Spinning...");
+
+        stopPromises = [];
+        reels.forEach((reel, index) => {
+            const symbolsContainer = reel.symbolsContainer;
+            const currentTransform = getComputedStyle(symbolsContainer).transform;
+            const currentY = new DOMMatrix(currentTransform).m42;
+            const spinDistance = (reel.symbols.length * config.symbolHeight * (5 + Math.random() * 4));
+            const targetSpinY = currentY - spinDistance;
+
+            symbolsContainer.classList.remove('stopping');
+            symbolsContainer.style.transition = `transform ${config.spinDurationBase/1000}s linear`;
+            symbolsContainer.style.transform = `translateY(${targetSpinY}px)`;
+
+             const stopDelay = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+             const stopPromise = new Promise(resolve => {
+                 setTimeout(() => {
+                    // Determine final visual stop position randomly
+                    const randomSymbolIndex = Math.floor(Math.random() * reel.symbols.length);
+                    const targetY = -(randomSymbolIndex * config.symbolHeight);
+                    reel.finalPosition = targetY; // Store this visual stop position
+
+                    reel.element.classList.add('stopping');
+                    symbolsContainer.style.transition = `transform 1s cubic-bezier(0.25, 1, 0.5, 1)`;
+                    symbolsContainer.style.transform = `translateY(${targetY}px)`;
+
+                    const transitionEndHandler = (event) => {
+                         if (event.propertyName === 'transform') {
+                             symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                             reel.element.classList.remove('stopping');
+                             resolve();
+                         }
+                    };
+                    symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+                 }, stopDelay);
+             });
+             stopPromises.push(stopPromise);
+        });
+
+        Promise.all(stopPromises).then(() => {
+             setTimeout(evaluateResult, 100); // Evaluate after visual stop
+        }).catch(error => {
+            console.error("Error during spin:", error);
+            spinning = false;
+            disableControls(false);
+            displayMessage("Spin error. Please reset.", false);
+        });
+    }
+
+    // --- Event Listeners ---
+    spinButton.addEventListener('click', () => {
+         if (!spinning && !autoMode) startSpin();
+         else if (!spinning && autoMode) startSpin(); // Allow manual trigger even if auto was stopped (e.g. funds)
+    });
+
+    maxBetButton.addEventListener('click', () => {
+        if (!spinning) {
+             const maxAffordableBet = money > 0 ? money : 1;
+             betInput.value = maxAffordableBet;
+             currentBet = maxAffordableBet;
+        }
+    });
+
+    autoButton.addEventListener('click', () => {
+        if (spinning && autoMode) { // Stop auto if running
+            autoMode = false;
+            clearTimeout(autoSpinTimeout);
+            autoButton.innerText = "Auto";
+            autoButton.style.background = ''; // Reset style
+            // Don't need message here, let spin finish
+        } else if (!spinning) { // Toggle auto if not spinning
+            autoMode = !autoMode;
+             if (autoMode) {
+                 currentBet = parseInt(betInput.value) || 1;
+                 if (currentBet <= money && money > 0) {
+                     autoButton.innerText = "Stop Auto";
+                     autoButton.style.background = 'linear-gradient(to bottom, #ff4500, #cc3700)'; // Active style
+                     displayMessage("Auto spin starting...");
+                     startSpin();
+                 } else {
+                     autoMode = false;
+                     displayMessage(money <= 0 ? "Out of Money!" : "Cannot start Auto: Check bet/funds.");
+                 }
+             } else {
+                 autoButton.innerText = "Auto";
+                 autoButton.style.background = '';
+                 displayMessage("Auto spin stopped.");
+             }
+        }
+        // If spinning but auto is OFF, clicking Auto does nothing until spin finishes
+    });
+
+    payTableButton.addEventListener('click', () => {
+        let table = "Pay Table (Bet x Multiplier for 5x):\n\n";
+        table += `${config.symbols.find(s => s.isWild).display} = WILD (Substitutes for all symbols)\n\n`; // Explain Wild
+        config.symbols.forEach(s => {
+            if (s.payout > 0 && !s.isWild) { // Show only paying symbols
+                 table += `${s.display} ${s.id.padEnd(12)} = ${s.payout}x\n`;
+            }
+        });
+         table += "\nLines: 5 Horizontal, 5 Vertical (10 total).";
+        alert(table);
+    });
+
+    resetButton.addEventListener('click', () => {
+        location.reload();
+    });
+
+    betInput.addEventListener('input', () => {
+        let value = betInput.value.replace(/[^0-9]/g, '');
+        let numValue = parseInt(value);
+         if (isNaN(numValue) || numValue < 1) numValue = 1;
+         // Cap bet at current money, only if money > 0
+         if (money > 0 && numValue > money) numValue = money;
+         else if (money <= 0) numValue = 1; // If broke, allow setting bet to 1
+        betInput.value = numValue;
+        currentBet = numValue;
+    });
+
+     // --- Initialization ---
+     function initializeGame() {
+        money = config.money;
+        currentBet = parseInt(betInput.value) || 5;
+        betInput.value = currentBet;
+        autoMode = false;
+        spinning = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Set your bet and spin!");
+        buildReels();
+        updateMoneyDisplay();
+        clearHighlights();
+        disableControls(false);
+        autoButton.innerText = "Auto";
+        autoButton.style.background = '';
+     }
+
+     initializeGame();
+  </script>
+</body>
+</html>

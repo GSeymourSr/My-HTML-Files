@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Beach Day Bonanza! (5x3 Adjacent Pays - Corrected)</title>
+  <style>
+    :root {
+      /* --- Beach Day Bonanza Theme --- */
+      --reel-width: 90px; --reel-height: 90px; --symbol-size: 60px;
+      --num-reels: 5; --num-rows: 3; --reel-gap: 10px;
+      --bg-color-main: #87CEEB; --bg-color-accent: #FFD700;
+      --machine-bg: linear-gradient(145deg, #F0E68C, #FFEBCD);
+      --machine-border: #4682B4;
+      --title-bg: linear-gradient(to bottom, #FFA500, #FF8C00);
+      --title-text-color: #FFFFFF; --title-shadow: rgba(0,0,0,0.3);
+      --money-color: #2E8B57;
+      --reels-bg: #ADD8E6; --reel-bg: #E0FFFF;
+      --button-bg: linear-gradient(to bottom, #FFC0CB, #FFB6C1);
+      --button-border: #FF69B4;
+      --button-hover-bg: linear-gradient(to bottom, #FFD1DC, #FFC0CB);
+      --spin-button-bg: linear-gradient(to bottom, #FF4500, #FF6347);
+      --spin-button-border: #DC143C;
+      --message-bg: rgba(255, 250, 240, 0.9);
+      --message-text-color: #A0522D; --message-win-color: #FF1493;
+      --message-bigwin-color: #FF0000;
+      --paytable-bg: rgba(255, 239, 213, 0.95);
+      --paytable-text-color: #8B4513;
+      --paytable-header-bg: #FFE4B5;
+    }
+    body { margin: 0; font-family: 'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif; background: radial-gradient(circle, var(--bg-color-accent), var(--bg-color-main)); color: var(--paytable-text-color); display: flex; height: 100vh; overflow: hidden; }
+    #game-layout-container { display: flex; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; gap: 20px; }
+    #paytable-panel { flex: 0 0 330px; background: var(--paytable-bg); border-radius: 15px; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.4); overflow-y: auto; border: 2px solid var(--machine-border); display: flex; flex-direction: column; }
+    #paytable-panel h2 { text-align: center; color: var(--machine-border); font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; font-size: 2.1em; margin-top: 0; margin-bottom: 15px; text-shadow: 1px 1px 2px rgba(255,255,255,0.7); }
+    .paytable-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em;}
+    .paytable-table th, .paytable-table td { border: 1px solid #F0E68C; padding: 7px; text-align: center; vertical-align: middle; transition: background-color 0.3s ease, box-shadow 0.3s ease; }
+    .paytable-table th { background-color: var(--paytable-header-bg); color: var(--message-text-color); font-weight: bold; }
+    .paytable-table td { color: var(--paytable-text-color); }
+    .paytable-symbol-emoji { font-size: 25px; vertical-align: middle; }
+    .paytable-symbol-name { font-weight: bold; text-transform: capitalize; }
+    .paytable-wild-info { margin-top: 15px; font-size: 0.9em; text-align: center; color: #A0522D; line-height: 1.4; }
+
+    /* Paytable Highlighting Styles */
+    .paytable-table tbody tr.paytable-winning-row > td {
+        background-color: #fffacd; /* LemonChiffon - subtle row highlight */
+        font-weight: bold;
+    }
+    .paytable-table tbody td.paytable-winning-cell {
+        background-color: #ffd700 !important; /* Gold - strong cell highlight */
+        color: #8B0000 !important; /* DarkRed for contrast */
+        border: 2px solid #DAA520;
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+        transform: scale(1.05);
+    }
+
+    #main-game-area { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; overflow: hidden; }
+    #slot-machine { background: var(--machine-bg); border: 8px solid var(--machine-border); border-radius: 15px; padding: 20px; box-shadow: 0 0 30px rgba(70, 130, 180, 0.5), inset 0 0 20px rgba(0, 0, 0, 0.2); text-align: center; width: auto; max-width: 750px; position: relative; z-index: 1; box-sizing: border-box; }
+    #title { font-size: 2.6em; font-weight: bold; color: var(--title-text-color); text-shadow: 2px 2px 3px var(--title-shadow); background: var(--title-bg); padding: 15px; margin: -20px -20px 25px -20px; border-radius: 7px 7px 0 0; border-bottom: 4px solid var(--machine-border); line-height: 1.1; letter-spacing: 0.5px; }
+    #title .subtitle { font-size: 0.5em; color: #fff5ee; font-weight: normal; display: block; margin-top: 4px; text-shadow: 1px 1px 2px var(--title-shadow); }
+    #money-display { font-size: 1.9em; margin: 20px 0; color: var(--money-color); text-shadow: 1px 1px 2px rgba(0,0,0,0.3); background-color: rgba(255,255,255,0.7); padding: 10px 18px; border-radius: 8px; display: inline-block; border: 2px solid var(--money-color); font-weight: bold; }
+    #reels-container { display: grid; grid-template-columns: repeat(var(--num-reels), var(--reel-width)); grid-gap: var(--reel-gap); justify-content: center; margin-bottom: 25px; background: var(--reels-bg); padding: 18px; border-radius: 10px; border: 2px inset #87CEFA; overflow: hidden; height: calc(var(--num-rows) * var(--reel-height)); position: relative; }
+    .reel { width: var(--reel-width); height: calc(var(--num-rows) * var(--reel-height)); overflow: hidden; background: var(--reel-bg); border-radius: 5px; position: relative; box-shadow: inset 0 0 6px rgba(0,0,0,0.15); }
+    .symbols-container { position: absolute; top: 0; left: 0; width: 100%; }
+    .reel.spinning .symbols-container { transition: transform 0.09s linear; filter: blur(1.5px); }
+    .reel.stopping .symbols-container { transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.4, 1); filter: blur(0px); }
+    .symbol { width: var(--reel-width); height: var(--reel-height); display: flex; align-items: center; justify-content: center; font-size: var(--symbol-size); position: relative; box-sizing: border-box; line-height: 1; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); user-select: none; color: initial; }
+    @keyframes winFlashBeach { 0%, 100% { transform: scale(1) rotate(0deg); filter: brightness(1) drop-shadow(1px 1px 2px rgba(0,0,0,0.2)); } 25% { transform: scale(1.1) rotate(-2deg); } 50% { transform: scale(1.2) rotate(0deg); filter: brightness(1.4) drop-shadow(2px 2px 5px rgba(255, 215, 0, 0.9)); } 75% { transform: scale(1.1) rotate(2deg); } }
+    .symbol.winning { animation: winFlashBeach 0.75s ease-in-out infinite; z-index: 10; outline: 3px solid #FFD700; outline-offset: -3px; background-color: rgba(255, 223, 0, 0.2); }
+    #controls { margin: 25px 0 15px 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+    #controls input, #controls button { font-family: inherit; font-size: 1em; padding: 11px 16px; margin: 5px; border-radius: 10px; border: 2px solid var(--button-border); background: var(--button-bg); color: #fff; cursor: pointer; transition: all 0.15s ease-out; box-shadow: 0 3px 0px darken(var(--button-border), 10%), 0 4px 6px rgba(0,0,0,0.3); text-shadow: 1px 1px 1px rgba(0,0,0,0.3); font-weight: bold; text-transform: uppercase; }
+    #controls input { width: 80px; text-align: center; background: #fff; color: #444; text-shadow: none; }
+    #controls button:hover:not(:disabled) { background: var(--button-hover-bg); transform: translateY(-1px); box-shadow: 0 4px 0px darken(var(--button-border), 10%), 0 5px 8px rgba(0,0,0,0.35); }
+    #controls button:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0px darken(var(--button-border), 10%), 0 2px 3px rgba(0,0,0,0.3); }
+    #controls button:disabled { cursor: not-allowed; opacity: 0.6; filter: grayscale(40%); box-shadow: 0 1px 0px darken(var(--button-border), 10%), 0 2px 3px rgba(0,0,0,0.2); }
+    #spin { background: var(--spin-button-bg); border-color: var(--spin-button-border); font-size: 1.1em; padding: 11px 22px; }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #FF6347, #FF4500); border-color: #E32636; }
+    #maxBet { background: linear-gradient(to bottom, #00bcd4, #0097a7); border-color: #006064; }
+    #message { font-size: 1.25em; margin-top: 20px; min-height: 55px; padding: 12px; background-color: var(--message-bg); border-radius: 8px; color: var(--message-text-color); text-shadow: 1px 1px 1px rgba(255,255,255,0.6); white-space: pre-line; line-height: 1.4; border: 1px solid #F5DEB3; box-shadow: inset 0 0 6px rgba(0,0,0,0.1); font-weight: bold; }
+    #message.win { color: var(--message-win-color); font-weight: bold; text-shadow: 0 0 4px var(--message-win-color); }
+    #message.big-win { font-size: 1.45em; color: var(--message-bigwin-color); animation: bigWinMsgPulseBeach 0.75s infinite alternate; font-weight: bold; text-shadow: 0 0 6px var(--message-bigwin-color); }
+    @keyframes bigWinMsgPulseBeach { from { transform: scale(1) skew(-1deg, 1deg); } to { transform: scale(1.03) skew(1deg, -1deg); } }
+    #title-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #87CEFA, #FFD700, #FFA07A); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; color: #005A9C; }
+    #title-screen h1 { font-size: clamp(3rem, 8.5vw, 6rem); color: #fff; text-shadow: 3px 3px 0px #0077BE, 5px 5px 0px rgba(0,0,0,0.25); margin-bottom: 30px; letter-spacing: 0.5px; font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; }
+    #title-screen p { font-size: clamp(1.1rem, 3vw, 1.7rem); margin-bottom: 50px; max-width: 80%; line-height: 1.6; color: #004080; text-shadow: 1px 1px 1px rgba(255,255,255,0.5); }
+    #start-button { font-family: inherit; font-size: clamp(1.6rem, 5.5vw, 2.6rem); padding: 18px 40px; border-radius: 10px; background: linear-gradient(145deg, #ff6347, #ff4500); border: 4px solid #fff; color: #fff; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 0 15px #ff6347, 0 5px 10px rgba(0, 0, 0, 0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.4); text-transform: uppercase; }
+    #start-button:hover { transform: scale(1.05); box-shadow: 0 0 25px #ff6347, 0 8px 15px rgba(0, 0, 0, 0.4); }
+  </style>
+</head>
+<body>
+
+  <div id="title-screen">
+    <h1>Beach Day Bonanza!</h1>
+    <p>Soak up the sun and spin for seaside treasures! Match 3, 4, or 5 beachy items<br>
+       adjacently on the lines. The Sunglasses are WILD!</p>
+    <button id="start-button">Hit the Beach!</button>
+  </div>
+
+  <div id="game-layout-container" style="display: none;">
+      <aside id="paytable-panel">
+          <h2>Pay Table</h2>
+          <div id="paytable-content"></div>
+      </aside>
+      <main id="main-game-area">
+          <div id="slot-machine">
+            <div id="title">Beach Day Bonanza<span class="subtitle">5x3 Adjacent Sunny Pays!</span></div>
+            <div id="money-display">Money: $100</div>
+            <div id="reels-container"></div>
+            <div id="controls">
+              <label for="bet">Bet:</label>
+              <input type="number" id="bet" value="5" min="1">
+              <button id="maxBet">Max Bet</button>
+              <button id="spin">Spin</button>
+              <button id="auto">Auto</button>
+              <button id="reset">Reset</button>
+            </div>
+            <div id="message">Place your bet and catch some wins!</div>
+          </div>
+      </main>
+  </div>
+
+  <audio id="spin-sound" src="sounds/beach_waves_spin.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="sounds/beach_chime_win.mp3" preload="auto"></audio>
+  <audio id="big-win-sound" src="sounds/beach_party_win.mp3" preload="auto"></audio>
+  <audio id="reel-stop-sound" src="sounds/water_splash_stop.mp3" preload="auto"></audio>
+  <audio id="button-click-sound" src="sounds/seashell_click.mp3" preload="auto"></audio>
+
+  <script>
+    // --- Configuration ---
+    const config = {
+        money: 100, reelCount: 5, rowCount: 3, symbolHeight: 90,
+        spinDurationBase: 900, spinDurationVariance: 450, reelStopDelay: 120, autoSpinDelay: 1400,
+        symbols: [
+            { id: 'seashell',    emoji: '🐚', payouts: { '3': 2,  '4': 5,  '5': 12 } },
+            { id: 'starfish',    emoji: '⭐', payouts: { '3': 3,  '4': 7,  '5': 15 } },
+            { id: 'flip_flops',  emoji: '🩴', payouts: { '3': 4,  '4': 10, '5': 20 } },
+            { id: 'crab',        emoji: '🦀', payouts: { '3': 6,  '4': 15, '5': 30 } },
+            { id: 'ice_cream',   emoji: '🍦', payouts: { '3': 8,  '4': 20, '5': 50 } },
+            { id: 'beach_ball',  emoji: '⚽', payouts: { '3': 15, '4': 40, '5': 100 } },
+            { id: 'palm_tree',   emoji: '🌴', payouts: { '3': 25, '4': 75, '5': 250 } },
+            { id: 'sunglasses_wild', emoji: '😎', payouts: { '3': 30, '4': 100,'5': 300 }, wild: true },
+        ],
+        winningLines: [
+            { id: 'line-h0', name: 'Top Line', indices: [0, 1, 2, 3, 4] },
+            { id: 'line-h1', name: 'Middle Line', indices: [5, 6, 7, 8, 9] },
+            { id: 'line-h2', name: 'Bottom Line', indices: [10, 11, 12, 13, 14] },
+        ],
+        bigWinThresholdMultiplier: 40,
+    };
+
+    let money = config.money; let currentBet = 5; let autoMode = false; let spinning = false;
+    let reels = []; let finalSymbols = []; let autoSpinTimeout = null;
+
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const startButton = document.getElementById('start-button');
+    const gameLayoutContainer = document.getElementById('game-layout-container');
+    const paytablePanelContent = document.getElementById('paytable-content');
+
+    const sounds = {
+        spin: document.getElementById('spin-sound'), win: document.getElementById('win-sound'),
+        bigWin: document.getElementById('big-win-sound'), reelStop: document.getElementById('reel-stop-sound'),
+        click: document.getElementById('button-click-sound')
+    };
+
+    function playSound(sound) { if (sound && sound.readyState >= 3) { sound.currentTime = 0; sound.play().catch(e => console.warn("Sound play failed:", e.message)); } else if (sound) { sound.load(); }}
+    function updateMoneyDisplay() { moneyDisplay.innerText = `Money: $${money.toLocaleString()}`; betInput.max = money > 0 ? money : 1; if (parseInt(betInput.value) > money && money > 0) { betInput.value = money; currentBet = money; } else if (money <= 0 && parseInt(betInput.value) > 1) { betInput.value = 1; currentBet = 1; } if (money <= 0 && !spinning) { disableControls(true, false); displayMessage("Wiped Out! (No Cash) Reset?", false, false); if (autoMode) stopAutoSpin(); }}
+    function disableControls(disable = true, disableReset = disable) { spinButton.disabled = disable; maxBetButton.disabled = disable; betInput.disabled = disable; if (!spinning) autoButton.disabled = disable; resetButton.disabled = disableReset; }
+    function displayMessage(msg, isWin = false, isBigWin = false) { messageDisplay.innerText = msg; messageDisplay.className = 'message'; if (isBigWin) messageDisplay.classList.add('big-win'); else if (isWin) messageDisplay.classList.add('win'); }
+    function createSymbolElement(symbolData) { const div = document.createElement('div'); div.classList.add('symbol'); div.dataset.symbolId = symbolData.id; div.textContent = symbolData.emoji; div.setAttribute('role', 'img'); div.setAttribute('aria-label', symbolData.id.replace(/_/g, ' ')); return div; }
+
+    function buildReels() {
+      reelsContainer.innerHTML = ''; reels = [];
+      config.symbolHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--reel-height'));
+      for (let i = 0; i < config.reelCount; i++) {
+        const reelElement = document.createElement('div'); reelElement.classList.add('reel');
+        const symbolsContainer = document.createElement('div'); symbolsContainer.classList.add('symbols-container');
+        const reelSymbolsData = []; const reelSymbolElements = [];
+        for (let k = 0; k < 20; k++) {
+            let tempSymbols = [...config.symbols];
+            if (config.symbols.some(s => s.wild)) { for(let w = 0; w < 2; w++) tempSymbols.push(config.symbols.find(s => s.wild)); }
+            const shuffledSymbols = tempSymbols.sort(() => Math.random() - 0.5);
+            shuffledSymbols.forEach(symbolData => {
+                 const symbolElement = createSymbolElement(symbolData); symbolsContainer.appendChild(symbolElement);
+                 reelSymbolsData.push(symbolData); reelSymbolElements.push(symbolElement); });
+        }
+        reelElement.appendChild(symbolsContainer); reelsContainer.appendChild(reelElement);
+        reels.push({ element: reelElement, symbolsContainer: symbolsContainer, symbols: reelSymbolsData, symbolElements: reelSymbolElements, finalPosition: 0 });
+      }
+      reels.forEach(reel => {
+         const maxSafeInitialTopIndex = reel.symbols.length - config.rowCount;
+         let initialTopIndex = 0;
+         if (maxSafeInitialTopIndex >= 0 && reel.symbols.length > 0) {
+             initialTopIndex = Math.floor(Math.random() * (maxSafeInitialTopIndex + 1));
+         }
+         const initialOffset = -(initialTopIndex * config.symbolHeight);
+         reel.symbolsContainer.style.transition = 'none';
+         reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`;
+         reel.finalPosition = initialOffset; void reel.symbolsContainer.offsetWidth;
+         reel.symbolsContainer.style.transition = ''; });
+    }
+
+    function clearHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+        messageDisplay.className = 'message';
+        // Clear paytable highlights
+        document.querySelectorAll('.paytable-table tbody tr.paytable-winning-row').forEach(row => {
+            row.classList.remove('paytable-winning-row');
+        });
+        document.querySelectorAll('.paytable-table tbody td.paytable-winning-cell').forEach(cell => {
+            cell.classList.remove('paytable-winning-cell');
+        });
+    }
+
+    function highlightWins(winningLinesInfo) {
+        winningLinesInfo.forEach(winInfo => {
+            winInfo.indices.forEach(gridIndex => {
+                const reelIndex = gridIndex % config.reelCount;
+                const visibleRowIndex = Math.floor(gridIndex / config.reelCount);
+                if (reelIndex < reels.length) {
+                    const reel = reels[reelIndex];
+                    if (!reel || !reel.symbolElements || !reel.symbolsContainer) { return; }
+                    const topVisibleSymbolStripIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                    const targetSymbolStripIndex = topVisibleSymbolStripIndex + visibleRowIndex;
+                    if (targetSymbolStripIndex >= 0 && targetSymbolStripIndex < reel.symbolElements.length) {
+                        const symbolElement = reel.symbolElements[targetSymbolStripIndex];
+                        if (symbolElement) {
+                            const expectedSymbolData = finalSymbols[gridIndex];
+                            if (expectedSymbolData && symbolElement.dataset.symbolId === expectedSymbolData.id) {
+                                symbolElement.classList.add('winning');
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    function highlightPaytableEntries(winningLinesInfo) {
+        winningLinesInfo.forEach(winInfo => {
+            const symbolId = winInfo.symbolId;
+            const winCount = winInfo.count; // This is 3, 4, or 5
+
+            const paytableRow = document.querySelector(`.paytable-table tbody tr[data-symbol-id="${symbolId}"]`);
+            if (paytableRow) {
+                paytableRow.classList.add('paytable-winning-row');
+
+                // Determine the cell index to highlight based on winCount
+                // Cells in JS are 0-indexed:
+                // Cell 0: Emoji
+                // Cell 1: Name
+                // Cell 2: 3x payout (corresponds to winCount 3)
+                // Cell 3: 4x payout (corresponds to winCount 4)
+                // Cell 4: 5x payout (corresponds to winCount 5)
+                let targetCellIndex;
+                if (winCount === 3) targetCellIndex = 2;
+                else if (winCount === 4) targetCellIndex = 3;
+                else if (winCount === 5) targetCellIndex = 4;
+                else return; // Should not happen for this game's payouts
+
+                if (paytableRow.cells[targetCellIndex]) {
+                    paytableRow.cells[targetCellIndex].classList.add('paytable-winning-cell');
+                }
+            }
+        });
+    }
+
+
+    function startSpin() {
+        if (spinning) return; clearTimeout(autoSpinTimeout); clearHighlights(); playSound(sounds.click);
+        currentBet = parseInt(betInput.value);
+        if (isNaN(currentBet) || currentBet <= 0) { displayMessage("Valid bet needed!"); if (autoMode) stopAutoSpin(); return; }
+        if (currentBet > money) { displayMessage("Not enough shells for this bet!"); if (autoMode) stopAutoSpin(); return; }
+        spinning = true; money -= currentBet; updateMoneyDisplay(); disableControls(true);
+        spinButton.innerText = "Spinning..."; displayMessage("Riding the waves..."); playSound(sounds.spin);
+        let reelsStoppedCount = 0;
+        reels.forEach((reel, index) => {
+            const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element;
+            reelElement.classList.remove('stopping'); reelElement.classList.add('spinning');
+            const maxSafeTopIndex = reel.symbols.length - config.rowCount;
+            let targetTopIndex = 0;
+            if (maxSafeTopIndex >= 0 && reel.symbols.length > 0) {
+                 targetTopIndex = Math.floor(Math.random() * (maxSafeTopIndex + 1));
+            }
+            reel.finalPosition = -(targetTopIndex * config.symbolHeight);
+            const currentY = parseFloat(symbolsContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0;
+            const spinDistance = (reel.symbols.length * config.symbolHeight) * 2;
+            symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`;
+            const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+            setTimeout(() => {
+                reelElement.classList.remove('spinning'); reelElement.classList.add('stopping');
+                symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`; playSound(sounds.reelStop);
+                let transitionHandled = false;
+                const transitionEndHandler = (event) => {
+                    if (event.target === symbolsContainer && event.propertyName === 'transform' && !transitionHandled) {
+                        transitionHandled = true;
+                        symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                        reelElement.classList.remove('stopping');
+                        reelsStoppedCount++;
+                        if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                    }
+                };
+                symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+                setTimeout(() => {
+                     if (!transitionHandled) {
+                        console.warn(`Reel ${index} transitionEnd failsafe (Beach). Forcing stop.`);
+                        symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                        reelElement.classList.remove('stopping');
+                        symbolsContainer.style.transition = 'none';
+                        symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`;
+                        void symbolsContainer.offsetHeight;
+                        symbolsContainer.style.transition = '';
+                        reelsStoppedCount++;
+                        if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                     }
+                }, 1200);
+            }, totalSpinDuration - 900);
+        });
+    }
+
+    function evaluateResult() {
+        let totalWinnings = 0; let combinedWinningLinesInfo = []; let isBigWinOverall = false;
+        finalSymbols = [];
+        for (let r = 0; r < config.rowCount; r++) {
+            for (let c = 0; c < config.reelCount; c++) {
+                const gridIndex = (r * config.reelCount) + c;
+                if (reels[c]) {
+                    const reel = reels[c];
+                    const topVisibleSymbolStripIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                    const symbolDataIndexInStrip = topVisibleSymbolStripIndex + r;
+                    if (symbolDataIndexInStrip >= 0 && symbolDataIndexInStrip < reel.symbols.length) {
+                        finalSymbols[gridIndex] = reel.symbols[symbolDataIndexInStrip];
+                    } else { finalSymbols[gridIndex] = null; }
+                } else { finalSymbols[gridIndex] = null; }
+            }
+        }
+        config.winningLines.forEach(line => {
+            const symbolsOnLine = line.indices.map(gridIndex => finalSymbols[gridIndex]);
+            let bestWinOnThisLine = { amount: 0, count: 0, symbolId: null, indices: [], multiplier: 0, lineName: line.name || line.id };
+            config.symbols.forEach(symbolToCheck => {
+                if (!symbolToCheck.payouts) return;
+                const checkSymbolId = symbolToCheck.id; const isWildCheck = symbolToCheck.wild || false;
+                for (let len = config.reelCount; len >= 3; len--) {
+                    for (let start = 0; start <= config.reelCount - len; start++) {
+                        const groupIndicesOnCurrentLine = line.indices.slice(start, start + len);
+                        const groupSymbolsData = groupIndicesOnCurrentLine.map(globalIndex => finalSymbols[globalIndex]);
+                        if (checkAdjacentGroup(groupSymbolsData, checkSymbolId, len, isWildCheck)) {
+                            const payoutKey = len.toString();
+                            if (symbolToCheck.payouts[payoutKey]) {
+                                const multiplier = symbolToCheck.payouts[payoutKey]; const amount = currentBet * multiplier;
+                                if (amount > bestWinOnThisLine.amount || (amount === bestWinOnThisLine.amount && len > bestWinOnThisLine.count)) {
+                                    bestWinOnThisLine = { amount, count: len, symbolId: checkSymbolId, indices: groupIndicesOnCurrentLine, multiplier, lineName: line.name || line.id };
+                                }
+                            }
+                             break;
+                        }
+                    }
+                     if (bestWinOnThisLine.count === len && bestWinOnThisLine.symbolId === checkSymbolId) break;
+                }
+            });
+            if (bestWinOnThisLine.amount > 0) { totalWinnings += bestWinOnThisLine.amount; combinedWinningLinesInfo.push(bestWinOnThisLine); if (bestWinOnThisLine.multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true; }
+        });
+        spinning = false;
+        if (totalWinnings > 0) {
+            money += totalWinnings;
+            let winMessage = "";
+            if (combinedWinningLinesInfo.length > 1) {
+                winMessage = "Sun-sational Combo!\n";
+                combinedWinningLinesInfo.forEach(info => { const displayName = info.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); winMessage += `${info.count}x ${displayName} = $${info.amount.toLocaleString()}\n`; });
+                winMessage += `Total Win: $${totalWinnings.toLocaleString()}`;
+            } else if (combinedWinningLinesInfo.length === 1) {
+                const winInfo = combinedWinningLinesInfo[0];
+                const displayName = winInfo.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                winMessage = `Sweet Catch! ${winInfo.count}x ${displayName} = $${winInfo.amount.toLocaleString()}`;
+            }
+            if (isBigWinOverall) {
+                const baseMessage = combinedWinningLinesInfo.length > 1 ? winMessage.substring(winMessage.indexOf('\n') + 1) : winMessage;
+                winMessage = `!!! HIGH TIDE WIN !!!\n` + baseMessage;
+                playSound(sounds.bigWin);
+            } else {
+                playSound(sounds.win);
+            }
+            displayMessage(winMessage, true, isBigWinOverall);
+            highlightWins(combinedWinningLinesInfo); // Highlight symbols on reels
+            highlightPaytableEntries(combinedWinningLinesInfo); // Highlight paytable entries
+        } else {
+            displayMessage("No treasures washed ashore...");
+        }
+        updateMoneyDisplay(); disableControls(false, money <= 0); spinButton.innerText = "Spin";
+        if (autoMode) { if (money >= currentBet && money > 0) { autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay); } else { stopAutoSpin(); displayMessage(money <= 0 ? "Wiped Out! (No Cash) Reset?" : "Can't afford bet. Auto stopped.", false, money <= 0); }}
+    }
+    function checkAdjacentGroup(groupSymbolsData, checkSymbolId, requiredCount, isWildCheck) {
+        if (groupSymbolsData.length !== requiredCount) return false;
+        if (groupSymbolsData.some(s => !s)) return false;
+        if (isWildCheck) return groupSymbolsData.every(s => s.wild);
+        else return groupSymbolsData.every(s => s.id === checkSymbolId || s.wild);
+    }
+    function stopAutoSpin() { autoMode = false; clearTimeout(autoSpinTimeout); autoButton.innerText = "Auto"; autoButton.style.background = ''; if (!spinning) disableControls(false, money <= 0); }
+
+    function generateSidePayTable() {
+        paytablePanelContent.innerHTML = '';
+        const table = document.createElement('table'); table.classList.add('paytable-table');
+        const thead = table.createTHead(); const headerRow = thead.insertRow();
+        const headers = ['Item', 'Name', '3x', '4x', '5x'];
+        headers.forEach(text => { const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th); });
+        const tbody = table.createTBody();
+        const wildSymbol = config.symbols.find(s => s.wild);
+        if (wildSymbol) {
+             const wildInfoRow = tbody.insertRow(); // This row does NOT get data-symbol-id
+             const wildEmojiCell = wildInfoRow.insertCell();
+             wildEmojiCell.textContent = wildSymbol.emoji; wildEmojiCell.classList.add('paytable-symbol-emoji');
+             const wildDescCell = wildInfoRow.insertCell(); wildDescCell.colSpan = 4;
+             wildDescCell.innerHTML = `${wildSymbol.id.replace(/_/g, ' ').toUpperCase()}: WILD! Substitutes for all other items!<br>Also pays as shown below.`;
+             wildDescCell.style.textAlign = 'left'; wildDescCell.style.fontStyle = 'italic'; wildDescCell.style.fontSize = '0.8em';
+        }
+        config.symbols.forEach(symbolData => {
+            if (symbolData.payouts) {
+                const row = tbody.insertRow();
+                row.dataset.symbolId = symbolData.id; // Add data attribute for targeting
+                const emojiCell = row.insertCell(); emojiCell.textContent = symbolData.emoji; emojiCell.classList.add('paytable-symbol-emoji');
+                const nameCell = row.insertCell(); nameCell.textContent = symbolData.id.replace(/_/g, ' '); nameCell.classList.add('paytable-symbol-name');
+                const p3 = symbolData.payouts['3'] || 0; const p4 = symbolData.payouts['4'] || 0; const p5 = symbolData.payouts['5'] || 0;
+                row.insertCell().textContent = p3 > 0 ? `${p3}x` : '-'; // Cell for 3x
+                row.insertCell().textContent = p4 > 0 ? `${p4}x` : '-'; // Cell for 4x
+                row.insertCell().textContent = p5 > 0 ? `${p5}x` : '-'; // Cell for 5x
+            }
+        });
+        paytablePanelContent.appendChild(table);
+        const wildInfoDiv = document.createElement('div'); wildInfoDiv.classList.add('paytable-wild-info');
+        if (wildSymbol) { wildInfoDiv.innerHTML = `<b>${wildSymbol.emoji} ${wildSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> is WILD and substitutes for all other symbols.`; }
+        else { wildInfoDiv.textContent = "No wild symbol in this game."; }
+        paytablePanelContent.appendChild(wildInfoDiv);
+    }
+
+    // --- Event Listener Setup ---
+    startButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        titleScreen.style.display = 'none';
+        gameLayoutContainer.style.display = 'flex';
+        initializeGame();
+    });
+
+    spinButton.addEventListener('click', () => { if (!spinning) startSpin(); });
+
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (!spinning) {
+            betInput.value = money > 0 ? money : 1;
+            currentBet = parseInt(betInput.value);
+        }
+    });
+
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (autoMode) {
+            stopAutoSpin();
+            displayMessage("Auto-surf ended.");
+        } else {
+            if (!spinning && money >= currentBet && money > 0) {
+                autoMode = true;
+                autoButton.innerText = "Stop Auto";
+                autoButton.style.background = 'linear-gradient(to bottom, #FF6347, #FF4500)';
+                displayMessage("Auto-surf engaged!");
+                startSpin();
+            } else if (spinning) {
+                displayMessage("Auto-surf will end after this wave.");
+            } else if (money < currentBet || money <= 0) {
+                displayMessage(money <= 0 ? "Wiped Out!" : "Not enough shells for Auto-surf!");
+            }
+        }
+    });
+
+    resetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (confirm("Leave the beach and start over with $100?")) {
+            location.reload();
+        }
+    });
+
+    betInput.addEventListener('input', () => {
+        let v = betInput.value.replace(/[^0-9]/g, ''); let n = parseInt(v);
+        if (isNaN(n) || n < 1) n = 1;
+        if (money > 0 && n > money) n = money;
+        else if (money <= 0 && n > 1) n = 1;
+        betInput.value = n; currentBet = n;
+    });
+    betInput.addEventListener('blur', () => {
+        let n = parseInt(betInput.value);
+        if(isNaN(n) || n < 1) betInput.value = 1;
+        else if (money > 0 && n > money) betInput.value = money;
+        currentBet = parseInt(betInput.value);
+    });
+
+    // --- Initialization ---
+    function initializeGame() {
+        money = config.money;
+        currentBet = parseInt(betInput.value) || 5;
+        autoMode = false;
+        spinning = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Place your bet and catch some wins!");
+        buildReels();
+        generateSidePayTable();
+        updateMoneyDisplay();
+        clearHighlights();
+        disableControls(false, false);
+        autoButton.innerText = "Auto";
+        autoButton.style.background = '';
+        Object.values(sounds).forEach(sound => { if (sound && sound.readyState < 2) sound.load(); });
+    }
+  </script>
+</body>
+</html>

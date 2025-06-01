@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr. Volt's Voltage Wins!</title>
+  <style>
+    :root {
+      /* --- Dr. Volt's Voltage Wins Theme --- */
+      --bg-color-main: #1a052e; /* Deep Purple/Black */
+      --bg-color-accent: #2d0f4d; /* Darker Purple */
+      --machine-border: #00e5ff; /* Neon Cyan Glow */
+      --title-bg: linear-gradient(to bottom, #5e35b1, #311b92); /* Purple Gradient */
+      --title-text-color: #e0e0ff; /* Light Lavender */
+      --title-shadow: rgba(0, 229, 255, 0.5);
+      --money-color: #69f0ae; /* Bright Mint Green */
+      --reels-bg: #2a104f; /* Dark Purple for reel housing */
+      --reel-bg: #391466; /* Slightly Lighter Purple for individual reel */
+      --button-bg: linear-gradient(to bottom, #7e57c2, #512da8); /* Purple Buttons */
+      --button-border: #9575cd; /* Lighter Purple Border */
+      --button-hover-bg: linear-gradient(to bottom, #9575cd, #673ab7);
+      --spin-button-bg: linear-gradient(to bottom, #00e5ff, #00b8d4); /* Cyan Spin Button */
+      --spin-button-border: #0091a7;
+      --message-bg: rgba(15, 5, 30, 0.95); /* Very Dark Transparent Purple */
+      --message-text-color: #c5cae9; /* Light Indigo */
+      --message-win-color: #69f0ae; /* Mint Green */
+      --message-bigwin-color: #00e5ff; /* Bright Cyan */
+      --paytable-bg: rgba(29, 15, 51, 0.97); /* Dark Purple Transparent */
+      --paytable-text-color: #b3b8d9;
+      --paytable-header-bg: rgba(78, 36, 143, 0.9);
+
+      /* Bonus Screen Specific */
+      --bonus-bg: rgba(10, 2, 20, 0.98); /* Almost Black for Bonus */
+      --bonus-text: #d1d8ff; /* Light Blueish */
+      --bonus-console-bg: #260e3b; /* Dark purple console */
+      --bonus-station-bg: #3c1f5c; /* Lighter purple for stations */
+      --bonus-station-border: #7e57c2;
+      --bonus-choice-bg: #5e35b1;
+      --bonus-choice-hover-bg: #6f42c1;
+      --bonus-meter-bg: #1a092d;
+      --bonus-meter-fill-stable: #4caf50; /* Green */
+      --bonus-meter-fill-unstable: #f44336; /* Red */
+      --bonus-meter-fill-neutral: #ffeb3b; /* Yellow */
+
+      --reel-width: 110px;
+      --reel-height: 110px;
+      --symbol-size: 70px;
+      --num-reels: 5;
+      --num-rows: 3;
+      --reel-gap: 15px;
+
+      /* Gradient text colors */
+      --g-color1: #00ffea; --g-color2: #33ceff; --g-color3: #809fff;
+      --g-color4: #ff00ff; --g-color5: #a020f0;
+    }
+
+    @keyframes gradientTextFlowSciFi { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .animated-gradient-text-scifi { background-size: 250% 250%; -webkit-background-clip: text; background-clip: text; color: transparent !important; animation: gradientTextFlowSciFi 7s linear infinite; display: inline-block; }
+
+    @keyframes lightningWildSpark {
+      0%, 100% { filter: drop-shadow(0 0 3px #69f0ae) drop-shadow(0 0 6px #00e5ff) brightness(1.1); transform: skewX(0deg); }
+      50% { filter: drop-shadow(0 0 8px #00e5ff) drop-shadow(0 0 15px #fff) brightness(1.5); transform: skewX(-3deg) skewY(1deg) scale(1.05); }
+    }
+    .wild-symbol-animate-lab { animation: lightningWildSpark 1.2s ease-in-out infinite; }
+
+    @keyframes atomScatterPulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px #ff00ff); }
+      50% { transform: scale(1.08) rotate(5deg); filter: drop-shadow(0 0 6px #ff00ff) drop-shadow(0 0 3px #ff00c4); }
+    }
+    .scatter-symbol-animate-lab { animation: atomScatterPulse 2.2s ease-in-out infinite; display: inline-block; }
+
+    body { margin: 0; font-family: 'Exo 2', 'Rajdhani', sans-serif; background: radial-gradient(circle, var(--bg-color-accent) 0%, var(--bg-color-main) 100%); color: var(--paytable-text-color); display: flex; align-items: center; justify-content: center; min-height: 100vh; width: 100vw; overflow: hidden; box-sizing: border-box; }
+    #app-wrapper { display: flex; width: 100%; height: 100%; padding: 10px; box-sizing: border-box; }
+
+    #title-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; width: 100%; background: linear-gradient(135deg, #240b36, #10041c 60%, #000000); position: fixed; top: 0; left: 0; z-index: 1000; padding: 20px; box-sizing: border-box; }
+    #title-screen .main-title-ts { font-size: clamp(2.5rem, 7vw, 4.5rem); font-weight: 700; margin-bottom: 15px; font-family: 'Orbitron', 'Audiowide', cursive; background-image: linear-gradient(90deg, var(--g-color1), var(--g-color2), var(--g-color3), var(--g-color1)); text-shadow: 2px 2px 5px rgba(0,200,255,0.6); }
+    #title-screen .sub-title-ts { font-size: clamp(1rem, 2.2vw, 1.5rem); color: #c5cae9; margin-bottom: 30px; max-width: 75%; line-height: 1.5; font-family: 'Rajdhani', sans-serif; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+    #title-screen #start-button { font-family: 'Audiowide', cursive; font-size: clamp(1.4rem, 4vw, 2rem); padding: 12px 30px; border-radius: 50px; background: linear-gradient(145deg, var(--spin-button-bg), var(--spin-button-border)); border: 3px solid #80deea; color: #0c031a; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 0 15px var(--spin-button-bg), 0 5px 10px rgba(0,0,0,0.4); text-shadow: 1px 1px 1px rgba(255,255,255,0.2); text-transform: uppercase; font-weight: 700; }
+    #title-screen #start-button:hover { transform: scale(1.05) rotate(-1deg); box-shadow: 0 0 25px var(--spin-button-bg), 0 7px 15px rgba(0,0,0,0.5); background: linear-gradient(145deg, #33ffff, #00cfea); }
+
+    #game-layout-container { display: none; flex-direction: row; width: 100%; height: 100%; gap: 10px; align-items: stretch; box-sizing: border-box; }
+    #paytable-panel { flex: 0 0 280px; background: var(--paytable-bg); border-radius: 10px; padding: 10px; box-shadow: 0 0 10px rgba(0, 229, 255, 0.2); overflow-y: auto; border: 2px solid var(--machine-border); display: flex; flex-direction: column; max-height: calc(100vh - 40px); }
+    #paytable-panel h2 { text-align: center; color: var(--machine-border); font-family: 'Orbitron', cursive; font-size: 1.7em; margin-top: 0; margin-bottom: 6px; text-shadow: 1px 1px 2px var(--title-shadow); }
+    .paytable-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: .7em; }
+    .paytable-table td, .paytable-table th { border: 1px solid var(--machine-border); padding: 3px; text-align: center; vertical-align: middle; }
+    .paytable-table th { background-color: var(--paytable-header-bg); color: #fff; font-weight: 700; font-family: 'Rajdhani', sans-serif; }
+    .paytable-table td { color: var(--paytable-text-color); }
+    .paytable-symbol-emoji { font-size: 18px; vertical-align: middle; }
+    .paytable-symbol-name { font-weight: 700; text-transform: capitalize; font-size: .85em; }
+    .paytable-wild-info { margin-top: 10px; font-size: .75em; text-align: center; color: var(--money-color); line-height: 1.3; }
+    @keyframes paytableWinFlashLab { 0%, 100% { background-color: transparent; transform: scale(1); } 50% { background-color: var(--message-win-color); transform: scale(1.05); color: #0c031a !important; box-shadow: 0 0 8px var(--message-win-color); } }
+    .paytable-table td.paytable-win-flash { animation: paytableWinFlashLab .8s ease-in-out infinite; }
+
+    #main-game-area { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; overflow: hidden; min-width: 0; height: 100%; }
+    #slot-machine { background: linear-gradient(160deg, var(--bg-color-accent) 0%, var(--bg-color-main) 70%, var(--bg-color-accent) 100%); border: 4px solid var(--machine-border); border-radius: 12px; padding: 10px; box-shadow: 0 0 25px rgba(0, 229, 255, 0.4), inset 0 0 15px rgba(0,0,0,0.5); text-align: center; width: 100%; height: auto; max-height: calc(100vh - 40px); box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-around; position: relative; z-index: 1; }
+    #title { font-size: clamp(1.5em, 2.8vw, 2em); font-weight: 700; text-shadow: 1px 1px 3px var(--title-shadow), 0 0 8px var(--machine-border); background: var(--title-bg); padding: 8px; margin: 0 auto 10px; border-radius: 8px 8px 0 0; border-bottom: 3px solid var(--machine-border); line-height: 1.1; letter-spacing: 1px; width: 95%; box-sizing: border-box; font-family: 'Orbitron', 'Audiowide', cursive; }
+    #title .main-title-ingame { background-image: linear-gradient(90deg, var(--g-color1), var(--g-color2), var(--g-color3), var(--g-color1)); }
+    #title .subtitle { font-size: clamp(.45em, 1.1vw, .65em); color: #e0e0ff; font-weight: 400; display: block; margin-top: 5px; text-shadow: 1px 1px 1px rgba(0,0,0,.5); line-height: 1.3; font-family: 'Rajdhani', sans-serif; }
+    #money-display { font-size: clamp(1.3em, 2.1vw, 1.6em); margin: 8px 0; color: var(--money-color); text-shadow: 0 0 5px #000, 0 0 3px var(--money-color); background-color: rgba(5,2,10,0.9); padding: 7px 12px; border-radius: 8px; display: inline-block; border: 1px solid var(--money-color); font-weight: 700; font-family: 'Audiowide', 'Segment7', sans-serif; }
+    #reels-container { display: grid; grid-template-columns: repeat(var(--num-reels),var(--reel-width)); grid-gap: var(--reel-gap); justify-content: center; margin-bottom: 10px; background: var(--reels-bg); padding: 8px; border-radius: 8px; border: 1px solid var(--machine-border); height: calc(var(--num-rows) * var(--reel-height)); position: relative; align-self: center; box-shadow: inset 0 0 12px rgba(0,0,0,.6), 0 0 8px rgba(0, 229, 255, 0.3); }
+    .reel { width: var(--reel-width); height: calc(var(--num-rows) * var(--reel-height)); overflow: hidden; background: var(--reel-bg); border-radius: 5px; position: relative; box-shadow: inset 0 0 6px rgba(0,0,0,.5); }
+    .symbols-container { position: absolute; top: 0; left: 0; width: 100%; }
+    .reel.spinning .symbols-container { transition: transform .07s linear; filter: blur(1.8px) brightness(1.2) contrast(1.1); }
+    .reel.stopping .symbols-container { transition: transform .7s cubic-bezier(.1,.8,.25,1); filter: blur(0); }
+    .symbol { width: var(--reel-width); height: var(--reel-height); display: flex; align-items: center; justify-content: center; font-size: var(--symbol-size); position: relative; box-sizing: border-box; line-height: 1; text-shadow: 0 0 4px rgba(0,229,255,.6), 0 0 8px var(--machine-border); user-select: none; color: #f0f0ff; }
+    @keyframes symbolWinFlashLab { 0%,100% { transform: scale(1) rotate(0deg); opacity: 1; filter: brightness(1) drop-shadow(0 0 3px var(--machine-border)); } 30% { transform: scale(1.15) rotate(-3deg); opacity: .95; filter: brightness(1.5) drop-shadow(0 0 8px var(--message-win-color)) drop-shadow(0 0 12px #fff); } 60% { transform: scale(.9) rotate(3deg); opacity: .9; filter: brightness(1.2) drop-shadow(0 0 5px var(--message-win-color)); } }
+    .symbol.winning { animation: symbolWinFlashLab .6s ease-in-out infinite; z-index: 10; outline: 1.5px solid var(--message-win-color); background-color: rgba(0, 255, 200, 0.12); outline-offset: -1.5px; }
+    #controls { margin: 10px 0 8px; display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(4px,.8vw,8px); }
+    #controls button, #controls input { font-family: 'Audiowide', 'Exo 2', cursive; font-size: clamp(.75em,1.2vw,.9em); padding: clamp(7px,.9vw,9px) clamp(10px,1.5vw,14px); margin: clamp(2px,.4vw,3px); border-radius: 25px; border: 1px solid var(--button-border); background: var(--button-bg); color: #e0e0ff; cursor: pointer; transition: all .15s ease-out; box-shadow: 0 2px 0 #311b92, 0 3px 4px rgba(0,0,0,.5); text-shadow: 1px 1px 1px rgba(0,0,0,.7); font-weight: 700; text-transform: uppercase; }
+    #controls input { width: clamp(55px,8vw,65px); text-align: center; background: #1c0e38; color: #e0e0ff; text-shadow: none; border-color: var(--machine-border); }
+    #controls button:hover:not(:disabled) { background: var(--button-hover-bg); transform: translateY(-2px) scale(1.02); box-shadow: 0 3px 0 #311b92, 0 4px 6px rgba(0,0,0,.6), 0 0 5px var(--button-border); }
+    #spin { font-size: clamp(.85em,1.5vw,1em); padding: clamp(8px,1.2vw,11px) clamp(18px,2.2vw,20px); background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #0c031a; text-shadow: 1px 1px 0 rgba(255,255,255,.4); }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom,#33ffff,#00cfea); border-color: #00b8d4; box-shadow: 0 0 10px var(--spin-button-bg); }
+    #maxBet { background: linear-gradient(to bottom,#ff00ff,#c500c5); border-color: #a020f0; color: #fff; }
+    #message { font-size: clamp(.85em,1.5vw,.95em); margin-top: 8px; min-height: clamp(30px,5.5vh,38px); padding: 7px; background-color: var(--message-bg); border-radius: 5px; color: var(--message-text-color); text-shadow: none; white-space: pre-line; line-height: 1.2; border: 1px solid var(--machine-border); box-shadow: inset 0 0 8px rgba(0, 229, 255, 0.35); font-weight: 700; width: 90%; align-self: center; box-sizing: border-box; font-family: 'Rajdhani', sans-serif; }
+    #message.win { color: var(--message-win-color); font-weight: 700; text-shadow: 0 0 4px var(--message-win-color), 0 0 2px #0c031a; }
+    @keyframes bigWinMessagePulseLab { 0% { transform: scale(1); opacity: .9; text-shadow: 0 0 6px var(--message-bigwin-color), 0 0 12px #fff; } 100% { transform: scale(1.03); opacity: 1; text-shadow: 0 0 10px var(--message-bigwin-color), 0 0 20px #fff, 0 0 5px var(--message-bigwin-color); } }
+    #message.big-win { font-size: clamp(1em,2vw,1.2em); color: var(--message-bigwin-color); animation: bigWinMessagePulseLab .5s infinite alternate; font-weight: 700; }
+
+    /* Bonus Screen: Dr. Volt's Experiment */
+    #bonus-lab-screen { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: var(--bonus-bg); color: var(--bonus-text); z-index: 2000; flex-direction: column; align-items: center; justify-content: space-around; padding: clamp(20px, 4vh, 40px); box-sizing: border-box; text-align: center; font-family: 'Rajdhani', sans-serif; }
+    #bonus-lab-screen h2 { font-family: 'Orbitron', cursive; font-size: clamp(1.8em, 4vw, 2.6em); color: var(--machine-border); text-shadow: 1px 1px 3px var(--title-shadow); margin-bottom: clamp(10px, 2vh, 20px); }
+    
+    /* UPDATED Bonus Instructions HTML structure reference */
+    #bonus-instructions-wrapper { font-size: clamp(0.9em, 2.2vw, 1.3em); margin-bottom: clamp(15px, 3vh, 25px); line-height: 1.5; }
+    #bonus-charges-left { font-weight:bold; color:var(--money-color); } /* Style for the charge count */
+
+    #bonus-lab-status { font-size: clamp(0.8em, 1.8vw, 1.1em); margin-bottom: clamp(10px, 2vh, 15px); }
+    #bonus-lab-status span { display: inline-block; margin: 0 10px; padding: 5px 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; }
+    #bonus-control-stations { display: flex; flex-direction: column; gap: clamp(15px, 3vh, 25px); width: 100%; max-width: 700px; background-color: var(--bonus-console-bg); padding: 15px; border-radius: 10px; box-shadow: inset 0 0 10px #000; }
+    .control-station { background-color: var(--bonus-station-bg); padding: 10px; border-radius: 8px; border: 2px solid var(--bonus-station-border); }
+    .control-station h3 { font-size: clamp(1em, 2.5vw, 1.4em); margin-top: 0; margin-bottom: 8px; color: var(--money-color); }
+    .station-choices { display: flex; justify-content: space-around; gap: 8px; flex-wrap: wrap; }
+    .station-choice-button { background-color: var(--bonus-choice-bg); color: var(--bonus-text); border: 1px solid var(--button-border); padding: 8px 12px; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; font-family: 'Audiowide'; font-size: clamp(0.8em, 1.8vw, 1em); }
+    .station-choice-button:hover:not(:disabled) { background-color: var(--bonus-choice-hover-bg); }
+    .station-choice-button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .control-station.inactive { opacity: 0.4; pointer-events: none; }
+    #activate-experiment-button { margin-top: clamp(15px, 3vh, 25px); background: var(--spin-button-bg); color: #0c031a; border: 2px solid var(--spin-button-border); padding: 10px 20px; font-size: clamp(1em, 2.5vw, 1.3em); border-radius: 8px; cursor: pointer; font-family: 'Audiowide'; text-transform: uppercase; display: none; /* Hidden initially */ }
+    #bonus-lab-winnings-display { font-size: clamp(1.2em, 3vw, 1.8em); color: var(--money-color); font-weight: bold; margin-top: clamp(15px, 3vh, 25px); text-shadow: 0 0 6px var(--money-color); }
+    #collect-lab-bonus-button { margin-top: clamp(15px, 3vh, 20px); padding: 10px 22px; font-size: clamp(0.9em, 2.2vw, 1.2em); font-family: 'Audiowide', cursive; text-transform: uppercase; background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #0c031a; text-shadow: 1px 1px 0px rgba(255,255,255,0.4); cursor: pointer; border-radius: 5px; display: none; }
+    @keyframes experimentPulse { 0%, 100% { box-shadow: 0 0 15px #fff, 0 0 25px var(--machine-border), 0 0 35px var(--g-color4); transform: scale(1); } 50% { box-shadow: 0 0 25px #fff, 0 0 40px var(--machine-border), 0 0 60px var(--g-color4), 0 0 10px #fff inset; transform: scale(1.02); } }
+    #bonus-lab-screen.experiment-active { animation: experimentPulse 0.8s ease-in-out 3; }
+
+    /* Responsive adjustments */
+    @media (max-width:768px){#game-layout-container{flex-direction:column;overflow-y:auto}#paytable-panel{flex:0 0 auto;max-height:250px;margin-bottom:10px}#main-game-area{justify-content:flex-start;padding-top:10px}#title{font-size:clamp(1.3em,4.5vw,1.7em)} #bonus-lab-screen h2 { font-size: clamp(1.4em, 3.5vw, 2em); } .control-station h3 { font-size: clamp(0.9em, 2vw, 1.2em); } .station-choice-button { font-size: clamp(0.7em, 1.5vw, 0.9em); padding: 6px 10px;} }
+    @media (max-height:600px) and (min-width:769px){#slot-machine{padding:5px}#title{font-size:clamp(1.3em,2.2vw,1.6em);padding:6px;margin-bottom:6px}#money-display{font-size:clamp(1.2em,1.9vw,1.5em);margin:5px 0}#reels-container{margin-bottom:6px}}
+    @media (max-height:550px){ #paytable-panel{max-height:140px}#title{display:none}#slot-machine{padding:5px}#controls button{padding:6px 9px;font-size:clamp(.7em,1.1vw,.85em)}#spin{padding:7px 12px} #bonus-lab-screen { padding: clamp(10px, 2vh, 20px); } #bonus-lab-screen h2 { font-size: clamp(1.2em, 3vw, 1.8em); margin-bottom: 8px; } #bonus-instructions-wrapper { font-size: clamp(0.8em, 1.8vw, 1em); margin-bottom: 10px; } #bonus-control-stations { gap: 10px; } .control-station { padding: 8px; } #activate-experiment-button, #collect-lab-bonus-button { font-size: clamp(0.8em, 2vw, 1em); padding: 8px 15px; } }
+
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Exo+2:wght@400;700&family=Rajdhani:wght@400;700&family=Audiowide&family=Nova+Square&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="title-screen">
+        <div class="main-title-ts animated-gradient-text-scifi">Dr. Volt's Voltage Wins!</div>
+        <p class="sub-title-ts">Enter the electrifying lab of Dr. Volt! Mix volatile components, conduct wild experiments, and unlock shocking payouts! The ⚡ Lightning Bolt is WILD!</p>
+        <button id="start-button">Enter Laboratory!</button>
+    </div>
+
+  <div id="app-wrapper" style="display:none;">
+      <div id="game-layout-container">
+          <aside id="paytable-panel">
+              <h2>Lab Notes</h2>
+              <div id="paytable-content"></div>
+          </aside>
+          <main id="main-game-area">
+              <div id="slot-machine">
+                <div id="title">
+                    <span class="main-title-ingame animated-gradient-text-scifi">Dr. Volt's Lab</span>
+                    <span class="subtitle">By Greg Seymour &amp; AI<br>Where Science Meets Fortune!</span>
+                </div>
+                <div id="money-display">Credits: $100</div>
+                <div id="reels-container"></div>
+                <div id="controls">
+                  <label for="bet">Bet:</label>
+                  <input type="number" id="bet" value="5" min="1">
+                  <button id="maxBet">Max Power</button>
+                  <button id="spin">Activate!</button>
+                  <button id="auto">Autocharge</button>
+                  <button id="reset">Shutdown!</button>
+                </div>
+                <div id="message">Set power levels (bet) and conduct experiments!</div>
+              </div>
+          </main>
+      </div>
+  </div>
+
+  <div id="bonus-lab-screen">
+      <h2>The Alchemical Transmutation Chamber</h2>
+      <div id="bonus-instructions-wrapper"> <!-- New Wrapper -->
+          <p>You have <span id="bonus-charges-left">3</span> charges remaining.</p>
+          <p id="bonus-current-action-text">Select components for the experiment!</p>
+      </div>
+      <div id="bonus-lab-status">
+          <span>Winnings: $<span id="current-bonus-value">0</span></span>
+          <span>Multiplier: x<span id="current-bonus-multiplier">1</span></span>
+          <span>Stability: <span id="current-bonus-stability">0</span></span>
+      </div>
+      <div id="bonus-control-stations">
+          <!-- Stations and choices will be populated by JS -->
+      </div>
+      <button id="activate-experiment-button">Conduct Experiment!</button>
+      <p id="bonus-lab-winnings-display">Final Transmutation Value: $0</p>
+      <button id="collect-lab-bonus-button">Collect Discovery!</button>
+  </div>
+
+  <!-- Audio Placeholders -->
+  <audio id="sound-click" preload="auto"></audio>
+  <audio id="sound-spin" preload="auto"></audio>
+  <audio id="sound-reel-stop" preload="auto"></audio>
+  <audio id="sound-win-small" preload="auto"></audio>
+  <audio id="sound-win-big" preload="auto"></audio>
+  <audio id="sound-bonus-trigger" preload="auto"></audio>
+  <audio id="sound-bonus-pick" preload="auto"></audio>
+  <audio id="sound-bonus-outcome-good" preload="auto"></audio>
+  <audio id="sound-bonus-outcome-bad" preload="auto"></audio>
+  <audio id="sound-bonus-jackpot" preload="auto"></audio>
+
+  <script>
+    const config = {
+        money: 100,
+        reelCount: 5, rowCount: 3, symbolHeight: 110,
+        spinDurationBase: 600, spinDurationVariance: 250, reelStopDelay: 70, autoSpinDelay: 1000,
+        symbols: [
+            { id: 'test_tube', emoji: '🧪', payouts: { '3': 2,  '4': 5,   '5': 15  } },
+            { id: 'nut_bolt',  emoji: '🔩', payouts: { '3': 2,  '4': 5,   '5': 15  } },
+            { id: 'light_bulb',emoji: '💡', payouts: { '3': 3,  '4': 8,   '5': 20  } },
+            { id: 'microscope',emoji: '🔬', payouts: { '3': 5,  '4': 12,  '5': 30  } },
+            { id: 'gears',     emoji: '⚙️', payouts: { '3': 5,  '4': 15,  '5': 40  } },
+            { id: 'magnet',    emoji: '🧲', payouts: { '3': 8,  '4': 20,  '5': 60  } },
+            { id: 'brain_jar', emoji: '🧠', payouts: { '3': 10, '4': 30,  '5': 100 } },
+            { id: 'robot',     emoji: '🤖', payouts: { '3': 15, '4': 50,  '5': 150 } },
+            { id: 'atom_scatter',emoji: '⚛️', scatter: true, payouts: { '3': 5, '4': 10, '5': 25} },
+            { id: 'lightning_wild',emoji: '⚡', payouts: { '3': 20, '4': 75, '5': 300 }, wild: true },
+        ],
+        winningLines: [
+            { id: 'line-h0', name: 'Top Circuit', type:'horizontal', indices: [0,1,2,3,4] },
+            { id: 'line-h1', name: 'Middle Conductor', type:'horizontal', indices: [5,6,7,8,9] },
+            { id: 'line-h2', name: 'Bottom Wire', type:'horizontal', indices: [10,11,12,13,14] },
+            { id: 'line-d0', name: 'Positive Diagonal', type:'fixedpath', indices: [0,6,12] },
+            { id: 'line-d1-alt', name: 'Alt Negative Diagonal', type:'fixedpath', indices: [2,6,10] },
+            { id: 'line-v-shape', name: 'V-Zap Up', type:'fixedpath', indices: [0,1,7,13,14] },
+            { id: 'line-m-shape', name: 'Short Circuit', type:'fixedpath', indices: [10,11,7,3,4] },
+        ],
+        bigWinThresholdMultiplier: 25,
+        labBonus: {
+            chargesPerScatter: { '3': 3, '4': 4, '5': 5 },
+            startingMultiplierFor5Scatters: 2,
+            controlStations: [
+                { id: 'mixer_station', name: 'Chemical Mixer', choices: [ { id: 'green_liquid', emoji: '🧪', text: 'Green Goo', baseValue: 5, stability: 1, multiplierShard: 0 }, { id: 'blue_liquid', emoji: '🧪', text: 'Blue Brew', baseValue: 3, stability: 0, multiplierShard: 0.25 }, { id: 'red_liquid', emoji: '🧪', text: 'Red Reactant', baseValue: 8, stability: -1, multiplierShard: 0 }, ] },
+                { id: 'voltage_station', name: 'Voltage Regulator', choices: [ { id: 'low_volt', emoji: '📉', text: 'Low Voltage', baseValue: 2, stability: 2, multiplierShard: 0 }, { id: 'med_volt', emoji: '⚡', text: 'Medium Current', baseValue: 6, stability: 0, multiplierShard: 0.5 }, { id: 'high_volt', emoji: '⚡⚡', text: 'High Voltage!', baseValue: 10, stability: -2, multiplierShard: 0 }, ] },
+                { id: 'stabilizer_station', name: 'Quantum Stabilizer', choices: [ { id: 'crystal_a', emoji: '💎', text: 'Crystal A', baseValue: 4, stability: 1, multiplierShard: 0.25 }, { id: 'crystal_b', emoji: '💠', text: 'Crystal B', baseValue: 4, stability: 1, multiplierShard: 0.25 }, { id: 'unstable_core', emoji: '💥', text: 'Unstable Core', baseValue: 15, stability: -3, multiplierShard: 1.0 }, ] }
+            ],
+            stabilityOutcomes: { catastrophic: { threshold: -2, prizeFactor: 0.5, message: "It's ALIVE... and angry! Partial recovery!" }, unstable: { threshold: 0, prizeFactor: 1.0, message: "Interesting... but needs refinement." }, successful: { threshold: 2, prizeFactor: 1.0, flatBonusFactor: 10, message: "A promising result!" }, groundbreaking: { threshold: Infinity, prizeFactor: 1.0, flatBonusFactor: 50, message: "EUREKA! I'VE DONE IT!" } },
+            joltChance: 0.15
+        }
+    };
+    let money = config.money; let currentBet = 5; let autoMode = false; let spinning = false; let reels = []; let finalSymbols = []; let autoSpinTimeout = null;
+    let bonusActive = false; let bonusChargesLeft = 0; let bonusLabWinnings = 0; let bonusLabStability = 0; let bonusRoundMultiplier = 1; let currentStationIndex = 0; let experimentChoicesMade = [];
+    const moneyDisplay = document.getElementById('money-display'); const reelsContainer = document.getElementById('reels-container'); const betInput = document.getElementById('bet'); const maxBetButton = document.getElementById('maxBet'); const spinButton = document.getElementById('spin'); const autoButton = document.getElementById('auto'); const resetButton = document.getElementById('reset'); const messageDisplay = document.getElementById('message'); const titleScreen = document.getElementById('title-screen'); const appWrapper = document.getElementById('app-wrapper'); const gameLayoutContainer = document.getElementById('game-layout-container'); const paytablePanelContent = document.getElementById('paytable-content');
+    const bonusLabScreen = document.getElementById('bonus-lab-screen');
+    const bonusChargesLeftDisplay = document.getElementById('bonus-charges-left'); // Points to the SPAN for charges
+    const bonusCurrentActionTextDisplay = document.getElementById('bonus-current-action-text'); // Points to the SPAN for action text
+    const currentBonusValueDisplay = document.getElementById('current-bonus-value'); const currentBonusMultiplierDisplay = document.getElementById('current-bonus-multiplier'); const currentBonusStabilityDisplay = document.getElementById('current-bonus-stability'); const bonusControlStationsContainer = document.getElementById('bonus-control-stations'); const activateExperimentButton = document.getElementById('activate-experiment-button'); const bonusLabWinningsOverallDisplay = document.getElementById('bonus-lab-winnings-display'); const collectLabBonusButton = document.getElementById('collect-lab-bonus-button');
+    const sounds = { click: { play: () => console.log("SND: Click") }, spin: { play: () => console.log("SND: Spin") }, reelStop: { play: () => console.log("SND: Reel Stop") }, winSmall: { play: () => console.log("SND: Win Small") }, winBig: { play: () => console.log("SND: Win Big") }, bonusTrigger: { play: () => console.log("SND: Bonus Trigger") }, bonusPick: { play: () => console.log("SND: Bonus Pick") }, bonusOutcomeGood: { play: () => console.log("SND: Bonus Good") }, bonusOutcomeBad: { play: () => console.log("SND: Bonus Bad") }, bonusJackpot: { play: () => console.log("SND: Bonus Jackpot") } };
+    function playSound(soundKey) { if (sounds[soundKey]) sounds[soundKey].play(); }
+    function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[array[i], array[j]] = [array[j], array[i]]; } }
+    function updateMoneyDisplay() { moneyDisplay.innerText = `Credits: $${money.toLocaleString()}`; const maxBetForNextSpin = money > 0 ? money : 1; betInput.max = maxBetForNextSpin; let betValInInput = parseInt(betInput.value); if (isNaN(betValInInput) || betValInInput < 1) betInput.value = 1; else if (betValInInput > maxBetForNextSpin && money > 0) betInput.value = maxBetForNextSpin; else if (money <= 0 && betValInInput > 1) betInput.value = 1; if (money <= 0 && !spinning && !bonusActive) { disableControls(true, false); displayMessage("Fuel depleted! 'Shutdown!' or $1 emergency supply.", false, false); if (autoMode) stopAutoSpin(); } }
+    function disableControls(disable = true, disableReset = disable) { spinButton.disabled = disable; maxBetButton.disabled = disable; betInput.disabled = disable; if (!spinning && !bonusActive) { autoButton.disabled = disable; } else { autoButton.disabled = true; if (autoMode && !disable) { autoButton.disabled = false; } } resetButton.disabled = disableReset; if (money <= 0 && parseInt(betInput.value) === 1 && !spinning && !bonusActive) { spinButton.disabled = false; betInput.disabled = true; maxBetButton.disabled = true; } }
+    function displayMessage(msg, isWin = false, isBigWin = false) { messageDisplay.innerText = msg; messageDisplay.className = 'message'; if (isBigWin) messageDisplay.classList.add('big-win'); else if (isWin) messageDisplay.classList.add('win'); }
+    function createSymbolElement(symbolData) { const div = document.createElement('div'); div.classList.add('symbol'); div.dataset.symbolId = symbolData.id; div.textContent = symbolData.emoji; if (symbolData.wild) div.classList.add('wild-symbol-animate-lab'); if (symbolData.scatter) div.classList.add('scatter-symbol-animate-lab'); return div; }
+    function buildReels() { reelsContainer.innerHTML = ''; reels = []; for (let i = 0; i < config.reelCount; i++) { const reelElement = document.createElement('div'); reelElement.classList.add('reel'); const symbolsContainer = document.createElement('div'); symbolsContainer.classList.add('symbols-container'); const reelSymbolsData = []; const reelSymbolElements = []; for (let k = 0; k < 30; k++) { const shuffledPortion = [...config.symbols].sort(() => Math.random() - 0.5); shuffledPortion.forEach(symbolData => { const symbolElement = createSymbolElement(symbolData); symbolsContainer.appendChild(symbolElement); reelSymbolsData.push(symbolData); reelSymbolElements.push(symbolElement); }); } reelElement.appendChild(symbolsContainer); reelsContainer.appendChild(reelElement); reels.push({ element: reelElement, symbolsContainer, symbols: reelSymbolsData, symbolElements: reelSymbolElements, finalPosition: 0, failsafeTimeout: null }); } reels.forEach(reel => { const initialOffset = -(Math.floor(Math.random() * reel.symbols.length) * config.symbolHeight); reel.symbolsContainer.style.transition = 'none'; reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`; reel.finalPosition = initialOffset; void reel.symbolsContainer.offsetWidth; reel.symbolsContainer.style.transition = ''; }); }
+    function clearReelHighlights() { document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning')); }
+    function clearPaytableHighlights() { document.querySelectorAll('.paytable-table td.paytable-win-flash').forEach(el => el.classList.remove('paytable-win-flash')); }
+    function highlightWinsOnReels(winningLinesInfo) { winningLinesInfo.forEach(winInfo => { if (!winInfo.indices || winInfo.indices.length === 0) return; winInfo.indices.forEach(gridIndex => { const reelIndex = gridIndex % config.reelCount; const visibleRowIndex = Math.floor(gridIndex / config.reelCount); const reel = reels[reelIndex]; if (!reel || !reel.symbolElements || reel.symbolElements.length === 0) return; const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight); const targetSymbolIndexInElementArray = (topVisibleSymbolIndex + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length; const symbolElement = reel.symbolElements[targetSymbolIndexInElementArray]; if (symbolElement) symbolElement.classList.add('winning'); }); }); }
+    function highlightPaytableEntry(symbolId, winCount) { if (!symbolId) return; const row = paytablePanelContent.querySelector(`.paytable-table tr[data-symbol-id="${symbolId}"]`); if (row) { const cell = row.querySelector(`td[data-payout-count="${winCount.toString()}"]`); if (cell) cell.classList.add('paytable-win-flash'); } }
+    function startSpin() { if (spinning || bonusActive) return; let betForThisSpin = parseInt(betInput.value); if (isNaN(betForThisSpin) || betForThisSpin < 1) betForThisSpin = 1; const maxAffordableBet = money > 0 ? money : 1; if (betForThisSpin > maxAffordableBet && money > 0) betForThisSpin = maxAffordableBet; else if (money <= 0 && betForThisSpin > 1) betForThisSpin = 1; betInput.value = betForThisSpin; currentBet = betForThisSpin; const isFreeSpin = (money <= 0 && currentBet === 1); if (!isFreeSpin && currentBet > money) { displayMessage("Insufficient credits for this warp jump!"); if (autoMode) stopAutoSpin(); disableControls(false, money <= 0 && parseInt(betInput.value) > 1); return; } clearTimeout(autoSpinTimeout); clearReelHighlights(); clearPaytableHighlights(); playSound('click'); spinning = true; if (isFreeSpin) displayMessage("Emergency power for one last jump!"); else { money -= currentBet; displayMessage("Engaging hyperdrive..."); } updateMoneyDisplay(); disableControls(true); spinButton.innerText = "Jumping..."; playSound('spin'); let reelsStoppedCount = 0; reels.forEach((reel, index) => { if (reel.failsafeTimeout) clearTimeout(reel.failsafeTimeout); const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element; reelElement.classList.remove('stopping'); reelElement.classList.add('spinning'); const randomSymbolIndexOnStrip = Math.floor(Math.random() * reel.symbols.length); reel.finalPosition = -(randomSymbolIndexOnStrip * config.symbolHeight); const currentY = parseFloat(symbolsContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0; const fullRotations = Math.floor(Math.random() * 2) + 3; const spinDistance = (reel.symbols.length * config.symbolHeight) * fullRotations; symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`; const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance); const stopAnimationDuration = 600; setTimeout(() => { reelElement.classList.remove('spinning'); reelElement.classList.add('stopping'); symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`; playSound('reelStop'); const transitionEndHandler = (event) => { if (event.target === symbolsContainer && event.propertyName === 'transform') { symbolsContainer.removeEventListener('transitionend', transitionEndHandler); clearTimeout(reel.failsafeTimeout); reelElement.classList.remove('stopping'); reelsStoppedCount++; if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100); } }; symbolsContainer.addEventListener('transitionend', transitionEndHandler); reel.failsafeTimeout = setTimeout(() => { if (!reelElement.classList.contains('stopping') && !spinning) return; symbolsContainer.removeEventListener('transitionend', transitionEndHandler); reelElement.classList.remove('stopping'); reelsStoppedCount++; if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100); }, stopAnimationDuration + 200); }, totalSpinDuration - stopAnimationDuration); });}
+    function checkAdjacentGroup(groupSymbolsData, checkSymbolId, requiredCount, isWildTypeBeingChecked) { if (groupSymbolsData.length !== requiredCount || groupSymbolsData.some(s => !s)) return false; for (let i = 0; i < requiredCount; i++) { const symbol = groupSymbolsData[i]; if (isWildTypeBeingChecked) { if (!symbol.wild) return false; } else { if (symbol.id !== checkSymbolId && !symbol.wild) return false; } } return true; }
+    function stopAutoSpin() { autoMode = false; clearTimeout(autoSpinTimeout); autoButton.innerText = "Autocharge"; autoButton.style.background = ''; if (!spinning && !bonusActive) disableControls(false, money <= 0 && parseInt(betInput.value) > 1); }
+    function generateSidePayTable() { paytablePanelContent.innerHTML = ''; const table = document.createElement('table'); table.classList.add('paytable-table'); const thead = table.createTHead(); const headerRow = thead.insertRow(); const headers = ['Signal', 'Specimen/Object', '3x', '4x', '5x']; headers.forEach(text => { const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th); }); const tbody = table.createTBody(); config.symbols.forEach(symbolData => { if (symbolData.payouts) { const row = tbody.insertRow(); row.dataset.symbolId = symbolData.id; const emojiCell = row.insertCell(); emojiCell.textContent = symbolData.emoji; emojiCell.classList.add('paytable-symbol-emoji'); if (symbolData.wild) emojiCell.classList.add('wild-symbol-animate-lab'); if (symbolData.scatter) emojiCell.classList.add('scatter-symbol-animate-lab'); const nameCell = row.insertCell(); let symbolNameText = symbolData.id.replace(/_/g, ' '); if (symbolData.wild) symbolNameText += " (Wild)"; if (symbolData.scatter) symbolNameText += " (Scatter)"; nameCell.textContent = symbolNameText; nameCell.classList.add('paytable-symbol-name'); const p3=symbolData.payouts['3']||0, p4=symbolData.payouts['4']||0, p5=symbolData.payouts['5']||0; const p3Cell = row.insertCell(); p3Cell.textContent = p3>0?`${p3}x`:'-'; if(p3>0)p3Cell.dataset.payoutCount="3"; const p4Cell = row.insertCell(); p4Cell.textContent = p4>0?`${p4}x`:'-'; if(p4>0)p4Cell.dataset.payoutCount="4"; const p5Cell = row.insertCell(); p5Cell.textContent = p5>0?`${p5}x`:'-'; if(p5>0)p5Cell.dataset.payoutCount="5"; } }); paytablePanelContent.appendChild(table); const wildSymbol = config.symbols.find(s => s.wild); const scatterSymbol = config.symbols.find(s => s.scatter); const wildInfoDiv = document.createElement('div'); wildInfoDiv.classList.add('paytable-wild-info'); let infoText = ""; if (wildSymbol) infoText += `<b>${wildSymbol.emoji} ${wildSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> is WILD, substitutes for all symbols.<br>`; if (scatterSymbol) infoText += `<b>${scatterSymbol.emoji} ${scatterSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> (Scatter) 3+ on a line triggers "Conduct Experiment!" Bonus & pays.`; wildInfoDiv.innerHTML = infoText || "Classified Alien Intel..."; paytablePanelContent.appendChild(wildInfoDiv); }
+    function requestFullScreenGame() { const elem = document.documentElement; if (elem.requestFullscreen) elem.requestFullscreen().catch(err=>console.warn(err.message)); else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen().catch(err=>console.warn(err.message)); else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen().catch(err=>console.warn(err.message)); else if (elem.msRequestFullscreen) elem.msRequestFullscreen().catch(err=>console.warn(err.message));}
+    function initializeGame() { money = config.money; let initBet = parseInt(betInput.value); if(isNaN(initBet)||initBet<1)initBet=1; const maxInit = money>0?money:1; if(initBet>maxInit && money>0)initBet=maxInit; else if(money<=0 && initBet>1)initBet=1; betInput.value = initBet; currentBet = initBet; autoMode=false; spinning=false; clearTimeout(autoSpinTimeout); bonusActive = false; bonusChargesLeft = 0; bonusLabWinnings = 0; bonusLabStability = 0; bonusRoundMultiplier = 1; currentStationIndex = 0; experimentChoicesMade = []; displayMessage("Set power levels (bet) and conduct experiments!"); buildReels(); generateSidePayTable(); updateMoneyDisplay(); clearReelHighlights(); clearPaytableHighlights(); disableControls(false, money <= 0 && currentBet > 1); autoButton.innerText = "Autocharge"; autoButton.style.background = ''; }
+
+    function evaluateResult() { let totalWinningsFromSpin = 0; let combinedWinningLinesInfo = []; let isBigWinOverall = false; const scatterSymbolData = config.symbols.find(s => s.scatter); let bonusTriggeredThisSpin = false; let bonusTriggerCount = 0; finalSymbols = []; for (let r = 0; r < config.rowCount; r++) { for (let c = 0; c < config.reelCount; c++) { const reel = reels[c]; if (!reel || !reel.symbols) { finalSymbols.push({id: "error", emoji: "❓"}); continue; } const topVisibleSymbolIndexOnStrip = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight); const symbolIndexInDataArray = (topVisibleSymbolIndexOnStrip + r + reel.symbols.length) % reel.symbols.length; if (reel.symbols[symbolIndexInDataArray]) finalSymbols.push(reel.symbols[symbolIndexInDataArray]); else finalSymbols.push({id: "error", emoji: "❓"}); } } config.winningLines.forEach(line => { let bestWinOnThisLine = { amount: 0, count: 0, symbolId: null, indices: [], multiplier: 0, lineName: line.name || line.id }; config.symbols.forEach(symbolToCheck => { if (!symbolToCheck.payouts) return; const checkSymbolId = symbolToCheck.id; const isWildTypeBeingChecked = symbolToCheck.wild; for (let len = config.reelCount; len >= 3; len--) { let startPositions = [0]; if (line.type === 'horizontal') { startPositions = []; for (let s = 0; s <= config.reelCount - len; s++) startPositions.push(s); } for (const start of startPositions) { const currentSegmentIndicesOnLine = line.indices.slice(start, start + len); if (currentSegmentIndicesOnLine.length < len) continue; const groupSymbolsData = currentSegmentIndicesOnLine.map(globalIndex => finalSymbols[globalIndex]).filter(s => s); if (groupSymbolsData.length < len) continue; if (checkAdjacentGroup(groupSymbolsData, checkSymbolId, len, isWildTypeBeingChecked)) { const payoutKey = len.toString(); if (symbolToCheck.payouts[payoutKey]) { const lineMultiplier = symbolToCheck.payouts[payoutKey]; const amount = currentBet * lineMultiplier; if (amount > bestWinOnThisLine.amount) { bestWinOnThisLine = { amount, count: len, symbolId: checkSymbolId, indices: currentSegmentIndicesOnLine, multiplier: lineMultiplier, lineName: line.name || line.id }; } } } } if (bestWinOnThisLine.symbolId === checkSymbolId && bestWinOnThisLine.count === len) break; } }); if (bestWinOnThisLine.amount > 0) { const isDuplicate = combinedWinningLinesInfo.some(ex => ex.symbolId === bestWinOnThisLine.symbolId && ex.count === bestWinOnThisLine.count && ex.indices.every((v,i) => v === bestWinOnThisLine.indices[i])); if (!isDuplicate) { totalWinningsFromSpin += bestWinOnThisLine.amount; combinedWinningLinesInfo.push(bestWinOnThisLine); if (bestWinOnThisLine.multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true; if (scatterSymbolData && bestWinOnThisLine.symbolId === scatterSymbolData.id && bestWinOnThisLine.count >= 3) { bonusTriggeredThisSpin = true; bonusTriggerCount = Math.max(bonusTriggerCount, bestWinOnThisLine.count); } } } }); spinning = false; if (bonusTriggeredThisSpin && scatterSymbolData) { playSound('bonusTrigger'); if (totalWinningsFromSpin > 0) money += totalWinningsFromSpin; updateMoneyDisplay(); displayMessage(`ATOM SPLIT! ${bonusTriggerCount}x ${scatterSymbolData.emoji} on a line triggers the Experiment!`, true, false); if(combinedWinningLinesInfo.length > 0) { highlightWinsOnReels(combinedWinningLinesInfo.filter(info => info.indices && info.indices.length > 0)); combinedWinningLinesInfo.forEach(winInfo => { if (winInfo.symbolId) highlightPaytableEntry(winInfo.symbolId, winInfo.count); }); } setTimeout(() => triggerLabBonus(bonusTriggerCount), 2200); return; } processEndOfSpin(totalWinningsFromSpin, combinedWinningLinesInfo, isBigWinOverall); }
+    function processEndOfSpin(currentSpinWinnings, linesInfo, isBigWin) { const isFreeSpinLosing = (money <= 0 && currentBet === 1 && currentSpinWinnings <= 0 && (money + currentBet) === 1); if (currentSpinWinnings > 0) { money += currentSpinWinnings; let winMessageText = ""; const uniqueLineWins = linesInfo.filter(info => info.amount > 0); if (uniqueLineWins.length > 0) { winMessageText = isBigWin ? `!!! EUREKA!!!\n` : "Experiment Success!\n"; uniqueLineWins.forEach(info => { const displayName = info.symbolId ? info.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Discovery"; winMessageText += `${info.count}x ${displayName} (${info.lineName}) = $${info.amount.toLocaleString()}\n`; }); winMessageText += `Total This Experiment: $${currentSpinWinnings.toLocaleString()}`; } if (winMessageText) { displayMessage(winMessageText, true, isBigWin); if (isBigWin) playSound('winBig'); else playSound('winSmall'); } if(linesInfo.length > 0) { highlightWinsOnReels(linesInfo.filter(info => info.indices && info.indices.length > 0)); linesInfo.forEach(winInfo => { if (winInfo.symbolId) highlightPaytableEntry(winInfo.symbolId, winInfo.count); }); } } else if (!bonusActive && !isFreeSpinLosing) { displayMessage("Fizzle... The experiment needs recalibration!"); } updateMoneyDisplay(); if (!bonusActive) disableControls(false, money <= 0 && parseInt(betInput.value) > 1); spinButton.innerText = "Activate!"; if (autoMode && !bonusActive) { let nextBetForAuto = parseInt(betInput.value); if(isNaN(nextBetForAuto)||nextBetForAuto<1) nextBetForAuto=1; const canAffordNext = (money >= nextBetForAuto && money > 0) || (money <= 0 && nextBetForAuto === 1); if (canAffordNext) autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay); else { stopAutoSpin(); displayMessage(money <= 0 ? "Fuel depleted! Autocharge stopped." : "Insufficient credits for Autocharge. Stopped.", false, money <= 0); } } }
+
+    // --- Lab Bonus Functions (Refined with Simplified IDs and Clearer Flow) ---
+    function triggerLabBonus(scatterCount) {
+        console.log("Triggering Lab Bonus. Scatter Count:", scatterCount);
+        bonusActive = true; disableControls(true);
+        gameLayoutContainer.style.transition = 'opacity 0.5s ease-out'; gameLayoutContainer.style.opacity = '0.1';
+        bonusLabScreen.style.display = 'flex'; bonusLabScreen.classList.remove('experiment-active');
+        activateExperimentButton.style.display = 'none'; collectLabBonusButton.style.display = 'none';
+
+        bonusChargesLeft = config.labBonus.chargesPerScatter[scatterCount.toString()] || 3;
+        bonusLabWinnings = 0; bonusLabStability = 0;
+        bonusRoundMultiplier = (scatterCount === 5) ? config.labBonus.startingMultiplierFor5Scatters : 1;
+        currentStationIndex = 0; experimentChoicesMade = [];
+
+        bonusChargesLeftDisplay.textContent = bonusChargesLeft;
+        updateLabBonusUI(); // Initial UI update
+        populateControlStations(); // Populates stations and sets initial instruction
+    }
+
+    function populateControlStations() {
+        bonusControlStationsContainer.innerHTML = ''; // Clear previous stations
+        console.log("Populating stations. CurrentStationIndex:", currentStationIndex, "Charges:", bonusChargesLeft);
+
+        config.labBonus.controlStations.forEach((station, index) => {
+            const stationDiv = document.createElement('div');
+            stationDiv.classList.add('control-station');
+            stationDiv.id = station.id; // Use ID from config (e.g., 'mixer_station')
+            stationDiv.classList.toggle('inactive', index !== currentStationIndex);
+
+            const title = document.createElement('h3');
+            title.textContent = station.name;
+            stationDiv.appendChild(title);
+
+            const choicesDiv = document.createElement('div');
+            choicesDiv.classList.add('station-choices');
+            station.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.classList.add('station-choice-button');
+                button.textContent = `${choice.emoji} ${choice.text}`;
+                button.dataset.choiceId = choice.id;
+                button.dataset.stationId = station.id;
+                button.disabled = (index !== currentStationIndex);
+                button.onclick = () => handleIngredientChoice(choice, station.id);
+                choicesDiv.appendChild(button);
+            });
+            stationDiv.appendChild(choicesDiv);
+            bonusControlStationsContainer.appendChild(stationDiv);
+        });
+
+        // Update instruction text after populating
+        if (bonusChargesLeft > 0 && currentStationIndex < config.labBonus.controlStations.length) {
+            bonusCurrentActionTextDisplay.textContent = `Select components for the ${config.labBonus.controlStations[currentStationIndex].name}.`;
+        } else if (bonusChargesLeft <= 0) {
+            bonusCurrentActionTextDisplay.textContent = `No charges left! Time to see the results!`;
+            activateExperimentButton.style.display = 'inline-block';
+        } else { // All stations processed but might have charges left (if fewer stations than charges initially)
+            bonusCurrentActionTextDisplay.textContent = `All components selected! Prepare for transmutation!`;
+            activateExperimentButton.style.display = 'inline-block';
+        }
+    }
+    
+    function handleIngredientChoice(choiceData, pickedStationId) {
+        console.log(`Choice: ${choiceData.id} from Station: ${pickedStationId}. Charges before: ${bonusChargesLeft}, Current Index: ${currentStationIndex}`);
+        if (bonusChargesLeft <= 0 || !bonusActive) {
+            console.warn("Pick attempted with no charges or inactive bonus.");
+            return;
+        }
+        playSound('bonusPick');
+
+        experimentChoicesMade.push(choiceData);
+        bonusLabWinnings += choiceData.baseValue * currentBet;
+        bonusLabStability += choiceData.stability;
+        bonusRoundMultiplier += choiceData.multiplierShard;
+
+        bonusChargesLeft--;
+        bonusChargesLeftDisplay.textContent = bonusChargesLeft; // Update this span directly
+
+        const pickedStationDiv = document.getElementById(pickedStationId);
+        if (pickedStationDiv) {
+            pickedStationDiv.classList.add('inactive');
+            pickedStationDiv.querySelectorAll('.station-choice-button').forEach(b => b.disabled = true);
+        } else {
+            console.error("Error: Could not find picked station div:", pickedStationId);
+        }
+
+        currentStationIndex++;
+        updateLabBonusUI();
+        console.log(`After pick: Charges left: ${bonusChargesLeft}, Next station index: ${currentStationIndex}`);
+
+
+        if (bonusChargesLeft > 0 && currentStationIndex < config.labBonus.controlStations.length) {
+            const nextStationConfig = config.labBonus.controlStations[currentStationIndex];
+            const nextStationDiv = document.getElementById(nextStationConfig.id);
+            if (nextStationDiv) {
+                console.log("Activating next station:", nextStationConfig.id);
+                nextStationDiv.classList.remove('inactive');
+                nextStationDiv.querySelectorAll('.station-choice-button').forEach(b => b.disabled = false);
+                bonusCurrentActionTextDisplay.textContent = `Choose for ${nextStationConfig.name}.`;
+            } else {
+                console.error(`Error: Next station div '${nextStationConfig.id}' not found!`);
+                bonusCurrentActionTextDisplay.textContent = `Error! System preparing for early transmutation!`;
+                activateExperimentButton.style.display = 'inline-block';
+            }
+        } else {
+            console.log("All charges used or all stations processed. Showing Activate button.");
+            bonusCurrentActionTextDisplay.textContent = `All components selected or charges depleted! Prepare for transmutation!`;
+            activateExperimentButton.style.display = 'inline-block';
+            // Ensure all choice buttons are disabled
+            bonusControlStationsContainer.querySelectorAll('.station-choice-button:not(:disabled)').forEach(b => b.disabled = true);
+        }
+    }
+
+
+    activateExperimentButton.addEventListener('click', () => { playSound('bonusOutcomeGood'); bonusLabScreen.classList.add('experiment-active'); activateExperimentButton.style.display = 'none'; displayMessage("Transmuting...!!", true); setTimeout(determineExperimentOutcome, 2500); });
+    function determineExperimentOutcome() { bonusLabScreen.classList.remove('experiment-active'); let finalWinnings = bonusLabWinnings * bonusRoundMultiplier; let outcomeMessage = ""; let outcomeSound = 'bonusOutcomeGood'; let isJackpot = false; const outcomes = config.labBonus.stabilityOutcomes; if (bonusLabStability < outcomes.unstable.threshold) { finalWinnings *= outcomes.catastrophic.prizeFactor; outcomeMessage = outcomes.catastrophic.message; outcomeSound = 'bonusOutcomeBad'; } else if (bonusLabStability <= outcomes.successful.threshold) { finalWinnings *= outcomes.unstable.prizeFactor; outcomeMessage = outcomes.unstable.message; } else if (bonusLabStability < outcomes.groundbreaking.threshold ) { finalWinnings = (finalWinnings * outcomes.successful.prizeFactor) + (currentBet * outcomes.successful.flatBonusFactor); outcomeMessage = outcomes.successful.message; } else { finalWinnings = (finalWinnings * outcomes.groundbreaking.prizeFactor) + (currentBet * outcomes.groundbreaking.flatBonusFactor); outcomeMessage = outcomes.groundbreaking.message; outcomeSound = 'bonusJackpot'; isJackpot = true; } finalWinnings = Math.max(0, Math.round(finalWinnings)); playSound(outcomeSound); bonusLabWinningsOverallDisplay.textContent = `Final Transmutation Value: $${finalWinnings.toLocaleString()}`; displayMessage(`Experiment Complete! ${outcomeMessage} You got $${finalWinnings.toLocaleString()}`, true, isJackpot); money += finalWinnings; updateMoneyDisplay(); collectLabBonusButton.style.display = 'inline-block'; }
+    function updateLabBonusUI() { currentBonusValueDisplay.textContent = (bonusLabWinnings).toLocaleString(); currentBonusMultiplierDisplay.textContent = bonusRoundMultiplier.toFixed(2); currentBonusStabilityDisplay.textContent = bonusLabStability; currentBonusStabilityDisplay.style.color = bonusLabStability < 0 ? 'var(--bonus-meter-fill-unstable)' : bonusLabStability > 0 ? 'var(--bonus-meter-fill-stable)' : 'var(--bonus-meter-fill-neutral)'; }
+    collectLabBonusButton.addEventListener('click', () => { bonusActive = false; bonusLabScreen.style.display = 'none'; gameLayoutContainer.style.opacity = '1'; gameLayoutContainer.style.transition = ''; collectLabBonusButton.style.display = 'none'; disableControls(false, money <= 0 && parseInt(betInput.value) > 1); spinButton.innerText = "Activate!"; displayMessage("Back to the main lab! Ready for another experiment?", false, false); if (autoMode) { let nextBet = parseInt(betInput.value); if(isNaN(nextBet)||nextBet<1) nextBet=1; const canAfford = (money >= nextBet && money > 0) || (money <= 0 && nextBet === 1); if (canAfford) autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay); else { stopAutoSpin(); displayMessage(money <= 0 ? "Fuel depleted!" : "Insufficient credits.", false, money <= 0); } } });
+
+    // --- Event Listeners & Init ---
+    const startButtonElement = document.getElementById('start-button');
+    startButtonElement.addEventListener('click', () => { playSound('click'); requestFullScreenGame(); titleScreen.style.display = 'none'; appWrapper.style.display = 'flex'; gameLayoutContainer.style.display = 'flex'; initializeGame(); });
+    spinButton.addEventListener('click', () => { if (!spinning && !bonusActive) startSpin(); });
+    maxBetButton.addEventListener('click', () => { playSound('click'); if (!spinning && !bonusActive) { const max = money>0?money:1; betInput.value = max; updateMoneyDisplay();} });
+    autoButton.addEventListener('click', () => {
+        playSound('click'); if (bonusActive) return;
+        if (autoMode) { stopAutoSpin(); if (!spinning) displayMessage("Autocharge disengaged."); }
+        else {
+            let betVal = parseInt(betInput.value); if(isNaN(betVal)||betVal<1) betVal=1;
+            const maxAff = money>0?money:1; if(betVal>maxAff && money>0) betVal=maxAff; else if(money<=0 && betVal>1) betVal=1;
+            betInput.value = betVal; const canStart = !spinning && ((money>=betVal && money>0)||(money<=0 && betVal===1));
+            if(canStart){ autoMode=true; autoButton.innerText="Stop Charge"; autoButton.style.background='linear-gradient(to bottom, #ff5252, #c62828)'; displayMessage("Autocharge sequence initiated!"); startSpin();
+            } else if (spinning) { autoMode=true; autoButton.innerText="Stop Charge"; autoButton.style.background='linear-gradient(to bottom, #ff5252, #c62828)'; displayMessage("Autocharge will engage after current cycle.");
+            } else displayMessage(money<=0 ? "Fuel depleted!" : "Insufficient credits!");
+        }
+    });
+    resetButton.addEventListener('click', () => {
+        playSound('click'); let msg = "Shutdown lab and start fresh (100 Credits)? All research data lost!";
+        if(bonusActive || spinning) msg = "Experiment in progress! Sure you want to shutdown? This resets everything.";
+        if (!confirm(msg)) return; if (document.fullscreenElement) document.exitFullscreen(); location.reload();
+    });
+    betInput.addEventListener('blur', () => { if (bonusActive || spinning) return; let n = parseInt(betInput.value); const max = money>0?money:1; if (isNaN(n)||n<1) n=1; if(n>max && money>0) n=max; else if(money<=0 && n>1) n=1; betInput.value = n; updateMoneyDisplay(); disableControls(false, money <= 0 && parseInt(betInput.value) > 1); });
+
+  </script>
+</body>
+</html>

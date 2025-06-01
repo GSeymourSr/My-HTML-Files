@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Liquid Luck Lounge (5x3 Fullscreen)</title>
+  <style>
+    :root {
+      /* --- Liquid Luck Lounge Theme (Fullscreen) --- */
+      /* Grid & Layout (Same as previous) */
+      --reel-width: 110px;
+      --reel-height: 110px;
+      --symbol-size: 70px;
+      --num-reels: 5;
+      --num-rows: 3;
+      --reel-gap: 15px;
+
+      /* Colors - Bar/Lounge Theme! */
+      --bg-color-main: #4A3B31; /* Dark Wood Brown */
+      --bg-color-accent: #3E2723; /* Darker Mahogany */
+      --machine-border: #8D6E63; /* Aged Bronze / Lighter Wood */
+      --title-bg: linear-gradient(to bottom, #FFB300, #E65100); /* Amber Gold to Deep Orange */
+      --title-text-color: #ffffff;
+      --title-shadow: rgba(0,0,0,0.5);
+      --money-color: #FFD700; /* Gold for "Bar Tab" */
+      --reels-bg: #A1887F; /* Brown Gray - like a bar top */
+      --reel-bg: #D7CCC8; /* Light Brown Gray - like aged paper or light wood */
+      --button-bg: linear-gradient(to bottom, #BCAAA4, #795548); /* Light Brown to Darker Brown Wood */
+      --button-border: #5D4037; /* Dark Wood */
+      --button-hover-bg: linear-gradient(to bottom, #CFD8DC, #90A4AE); /* Lighter, slightly metallic hover */
+      --spin-button-bg: linear-gradient(to bottom, #D32F2F, #B71C1C); /* Rich Red / Burgundy */
+      --spin-button-border: #880E4F; /* Darker Red/Purple */
+      --message-bg: rgba(255, 248, 225, 0.95); /* Cornsilk/Parchment message box */
+      --message-text-color: #5D4037; /* Dark brown text */
+      --message-win-color: #66BB6A; /* Bottle Green for win */
+      --message-bigwin-color: #FFEE58; /* Bright Gold for big win */
+      --paytable-bg: rgba(245, 222, 179, 0.95); /* Wheat/Parchment paytable */
+      --paytable-text-color: #4E342E; /* Darker Brown for paytable text */
+      --paytable-header-bg: rgba(78, 52, 46, 0.8); /* Darkest Brown header */
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Lato', 'Arial', sans-serif;
+      background: linear-gradient(135deg, var(--bg-color-accent) 0%, var(--bg-color-main) 100%);
+      color: var(--paytable-text-color);
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    #game-layout-container {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        padding: 15px;
+        box-sizing: border-box;
+        gap: 15px;
+    }
+
+    #paytable-panel {
+        flex: 0 0 330px;
+        background: var(--paytable-bg);
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        overflow-y: auto;
+        border: 2px solid var(--machine-border);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 30px);
+    }
+    #paytable-panel h2 {
+        text-align: center; color: var(--machine-border);
+        font-family: 'Georgia', 'Times New Roman', serif; /* More classic font for menu */
+        font-size: 1.9em; margin-top: 0; margin-bottom: 10px;
+        text-shadow: 1px 1px 1px rgba(255,255,255,0.1);
+    }
+    .paytable-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85em;}
+    .paytable-table th, .paytable-table td { border: 1px solid var(--button-border); padding: 6px; text-align: center; vertical-align: middle; }
+    .paytable-table th { background-color: var(--paytable-header-bg); color: #fff; font-weight: bold; }
+    .paytable-table td { color: var(--paytable-text-color); }
+    .paytable-symbol-emoji { font-size: 24px; vertical-align: middle; }
+    .paytable-symbol-name { font-weight: bold; text-transform: capitalize; }
+    .paytable-wild-info { margin-top: 15px; font-size: 0.85em; text-align: center; color: #5D4037; line-height: 1.4; }
+
+    @keyframes paytableWinFlashBar {
+        0%, 100% { background-color: transparent; color: var(--paytable-text-color); transform: scale(1); }
+        50% { background-color: var(--message-win-color); color: #fff; transform: scale(1.05); }
+    }
+    .paytable-table td.paytable-win-flash {
+        animation: paytableWinFlashBar 0.8s ease-in-out infinite;
+        font-weight: bold; position: relative; z-index: 1;
+    }
+
+
+    #main-game-area {
+        flex-grow: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 0; overflow: hidden; min-width: 0;
+    }
+
+    #slot-machine {
+      background: linear-gradient(145deg, #C5A47F, #A1887F); /* Wood Grain Machine */
+      border: 6px solid var(--machine-border);
+      border-radius: 6px; padding: 15px;
+      box-shadow: 0 0 15px rgba(109,76,65,0.5), inset 0 0 10px rgba(0,0,0,0.2);
+      text-align: center; width: 100%; height: 100%;
+      max-width: calc(100vw - 330px - 30px - 30px);
+      max-height: calc(100vh - 30px);
+      box-sizing: border-box; display: flex; flex-direction: column;
+      justify-content: space-around; position: relative; z-index: 1;
+    }
+
+    #title {
+      font-size: clamp(1.7em, 3.3vw, 2.4em); font-weight: bold; color: var(--title-text-color);
+      text-shadow: 1px 1px 2px var(--title-shadow); background: var(--title-bg);
+      padding: 10px; margin: 0 0 10px 0;
+      border-radius: 4px 4px 0 0; border-bottom: 3px solid var(--machine-border);
+      line-height: 1.1; letter-spacing: 1px; width: 100%; box-sizing: border-box;
+      font-family: 'Georgia', serif; /* More thematic title font */
+    }
+     #title .subtitle { font-size: clamp(0.4em, 1vw, 0.55em); color: #FFF3E0; font-weight: normal; display: block; margin-top: 3px; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); }
+
+    #money-display {
+      font-size: clamp(1.5em, 2.5vw, 1.9em); margin: 10px 0; color: var(--money-color);
+      text-shadow: 0 0 5px #000; background-color: rgba(40,30,20,0.7); /* Dark screen for gold text */
+      padding: 8px 15px; border-radius: 4px; display: inline-block; border: 1px solid var(--money-color);
+      font-weight: bold;
+    }
+
+    #reels-container {
+      display: grid; grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+      grid-gap: var(--reel-gap); justify-content: center;
+      margin-bottom: 15px; background: var(--reels-bg);
+      padding: 15px; border-radius: 4px;
+      border: 1px solid #795548; /* Darker wood border */
+      height: calc(var(--num-rows) * var(--reel-height)); position: relative;
+      align-self: center;
+    }
+
+    .reel { width: var(--reel-width); height: calc(var(--num-rows) * var(--reel-height)); overflow: hidden; background: var(--reel-bg); border-radius: 3px; position: relative; box-shadow: inset 0 0 4px rgba(0,0,0,0.2); }
+    .symbols-container { position: absolute; top: 0; left: 0; width: 100%; }
+    .reel.spinning .symbols-container { transition: transform 0.08s linear; filter: blur(1.5px); }
+    .reel.stopping .symbols-container { transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.3, 1); filter: blur(0px); }
+    .symbol { width: var(--reel-width); height: var(--reel-height); display: flex; align-items: center; justify-content: center; font-size: var(--symbol-size); position: relative; box-sizing: border-box; line-height: 1; text-shadow: 1px 1px 1px rgba(0,0,0,0.15); user-select: none; color: #6A1B9A; } /* Purple for cocktail, could be varied */
+
+    @keyframes symbolWinFlashBar {
+        0%,100%{transform:scale(1); opacity: 1; box-shadow: none;}
+        50%{transform:scale(1.15) rotate(3deg); opacity: 0.9; box-shadow: 0 0 10px var(--message-win-color);}
+    }
+    .symbol.winning { animation: symbolWinFlashBar 0.7s ease-in-out infinite; z-index: 10; outline: 2px solid var(--message-win-color); background-color: rgba(102, 187, 106, 0.15); outline-offset: -2px; }
+
+
+    #controls {
+      margin: 15px 0 10px 0; display: flex; flex-wrap: wrap; justify-content: center;
+      gap: clamp(5px, 1vw, 10px);
+    }
+    #controls input, #controls button {
+      font-family: inherit;
+      font-size: clamp(0.9em, 1.5vw, 1em);
+      padding: clamp(8px, 1.2vw, 10px) clamp(12px, 1.8vw, 15px);
+      margin: clamp(2px, 0.5vw, 4px);
+      border-radius: 3px; border: 1px solid var(--button-border);
+      background: var(--button-bg); color: #fff; cursor: pointer;
+      transition: all 0.15s ease-out; box-shadow: 0 2px 0px #4E342E, 0 3px 4px rgba(0,0,0,0.25);
+      text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+      font-weight: bold; text-transform: uppercase;
+    }
+    #controls input { width: clamp(70px, 10vw, 80px); text-align: center; background: #fff; color: #333; text-shadow: none; }
+    #controls button:hover:not(:disabled) { background: var(--button-hover-bg); color: #333; transform: translateY(-1px); box-shadow: 0 3px 0px #616161, 0 4px 6px rgba(0,0,0,0.35); }
+    #controls button:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0px #616161, 0 1px 2px rgba(0,0,0,0.25); }
+    #controls button:disabled { cursor: not-allowed; opacity: 0.5; filter: grayscale(50%); box-shadow: 0 1px 0px #4E342E, 0 1px 2px rgba(0,0,0,0.15); }
+
+    #spin {
+        font-size: clamp(1em, 1.8vw, 1.1em);
+        padding: clamp(10px, 1.5vw, 12px) clamp(20px, 2.5vw, 22px);
+        background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #fff;
+    }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #E53935, #C62828); border-color: #7B1FA2; }
+    #maxBet { background: linear-gradient(to bottom, #FFD54F, #FFC107); border-color: #FFA000; color: #4E342E;} /* Gold for Max Bet */
+
+    #message {
+      font-size: clamp(1em, 2vw, 1.2em); margin-top: 10px;
+      min-height: clamp(40px, 8vh, 50px); padding: 10px;
+      background-color: var(--message-bg); border-radius: 4px;
+      color: var(--message-text-color); text-shadow: none;
+      white-space: pre-line; line-height: 1.3; border: 1px solid #BCAAA4; /* Light wood border for message */
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.1); font-weight: bold;
+      width: 90%; align-self: center; box-sizing: border-box;
+    }
+    #message.win { color: var(--message-win-color); font-weight: bold; text-shadow: 0 0 5px var(--message-win-color); }
+    @keyframes bigWinMessagePulseBar {0%{transform:scale(1);opacity:.9}100%{transform:scale(1.03);opacity:1}}
+    #message.big-win { font-size: clamp(1.2em, 2.5vw, 1.4em); color: var(--message-bigwin-color); animation: bigWinMessagePulseBar 0.7s infinite alternate; font-weight: bold; text-shadow: 0 0 8px var(--message-bigwin-color); }
+
+
+    #title-screen {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(135deg, #5D4037, #3E2723 70%, #212121); /* Dark Wood to almost Black */
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 100; text-align: center; color: #FFCA28; /* Amber/Gold Text */
+    }
+    #title-screen h1 {
+        font-size: clamp(3rem, 9vw, 6.5rem); color: #FFAB00; /* Bright Gold */
+        text-shadow: 3px 3px 0px #4E342E, 0 0 15px rgba(255,171,0,0.7);
+        margin-bottom: 30px; letter-spacing: 1px;
+        font-family: 'Lobster', 'Georgia', cursive; /* Thematic font */
+    }
+    #title-screen p { font-size: clamp(1.1rem, 3vw, 1.8rem); margin-bottom: 50px; max-width: 80%; line-height: 1.7; color: #D7CCC8; text-shadow: 1px 1px 1px rgba(0,0,0,0.7); }
+    #start-button {
+        font-family: 'Lato', sans-serif; font-size: clamp(1.6rem, 5.5vw, 2.8rem); padding: 18px 45px;
+        border-radius: 8px; background: linear-gradient(145deg, #FFB300, #FF8F00); /* Gold/Amber */
+        border: 4px solid #fff; color: #4E342E; cursor: pointer; transition: all 0.3s ease;
+        box-shadow: 0 0 20px #FFB300, 0 6px 12px rgba(0, 0, 0, 0.4);
+        text-shadow: 1px 1px 2px rgba(255,255,255,0.3); text-transform: uppercase; font-weight: bold;
+    }
+    #start-button:hover { transform: scale(1.05); box-shadow: 0 0 30px #FFB300, 0 10px 20px rgba(0, 0, 0, 0.5); }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Lobster&family=Roboto:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="title-screen">
+    <h1>Liquid Luck Lounge</h1>
+    <p>Step up to the bar and try your luck! Spin for a winning mix of your favorite drinks.<br>
+       The Golden Shaker is WILD and pours out the prizes!</p>
+    <button id="start-button">Enter the Lounge!</button>
+  </div>
+
+  <div id="game-layout-container" style="display: none;">
+      <aside id="paytable-panel">
+          <h2>Drinks Menu</h2>
+          <div id="paytable-content">
+              <!-- Paytable will be generated here by JS -->
+          </div>
+      </aside>
+
+      <main id="main-game-area">
+          <div id="slot-machine">
+            <div id="title">Liquid Luck Lounge<span class="subtitle">Spin the Spirits, Win the Winnings!</span></div>
+            <div id="money-display">Bar Tab: $100</div>
+            <div id="reels-container"></div>
+            <div id="controls">
+              <label for="bet">Bet:</label>
+              <input type="number" id="bet" value="5" min="1">
+              <button id="maxBet">Top Shelf</button>
+              <button id="spin">Pour!</button>
+              <button id="auto">Keep 'Em Coming</button>
+              <button id="reset">Last Call</button>
+            </div>
+            <div id="message">Place your order and spin the reels!</div>
+          </div>
+      </main>
+  </div>
+
+  <!-- UPDATE AUDIO SRCs with bar/alcohol themed sounds -->
+  <audio id="spin-sound" src="sounds/liquid_pour_shaker.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="sounds/glass_clink_short.mp3" preload="auto"></audio>
+  <audio id="big-win-sound" src="sounds/champagne_pop_cheer.mp3" preload="auto"></audio>
+  <audio id="reel-stop-sound" src="sounds/ice_cube_clink.mp3" preload="auto"></audio>
+  <audio id="button-click-sound" src="sounds/cork_pop_light.mp3" preload="auto"></audio>
+
+  <script>
+    // --- Configuration ---
+    const config = {
+        money: 100,
+        reelCount: 5,
+        rowCount: 3,
+        symbolHeight: 110, // Corresponds to --reel-height CSS var
+        spinDurationBase: 800,
+        spinDurationVariance: 350,
+        reelStopDelay: 100,
+        autoSpinDelay: 1300,
+        symbols: [ // Alcohol themed symbols! 🧊🍺🍷🍹🍸🥃🍾✨
+            { id: 'ice_cube',         emoji: '🧊', payouts: { '3': 2,  '4': 5,  '5': 10 } },
+            { id: 'beer_mug',         emoji: '🍺', payouts: { '3': 3,  '4': 8,  '5': 20 } },
+            { id: 'wine_glass',       emoji: '🍷', payouts: { '3': 5,  '4': 10, '5': 25 } },
+            { id: 'cocktail',         emoji: '🍹', payouts: { '3': 8,  '4': 15, '5': 40 } },
+            { id: 'martini',          emoji: '🍸', payouts: { '3': 10, '4': 25, '5': 60 } },
+            { id: 'whiskey_glass',    emoji: '🥃', payouts: { '3': 15, '4': 40, '5': 100 } },
+            { id: 'champagne_bottle', emoji: '🍾', payouts: { '3': 20, '4': 60, '5': 150 } },
+            { id: 'gold_shaker_wild', emoji: '✨', payouts: { '3': 30, '4': 100, '5': 300 }, wild: true }, // Golden Shaker as Wild
+        ],
+        winningLines: [
+            { id: 'line-h0', name: 'Top Shelf', indices: [0, 1, 2, 3, 4] },
+            { id: 'line-h1', name: 'Middle Bar', indices: [5, 6, 7, 8, 9] },
+            { id: 'line-h2', name: 'Bottom Pour', indices: [10, 11, 12, 13, 14] },
+        ],
+        bigWinThresholdMultiplier: 25, // Adjusted for potentially higher wild payouts
+    };
+
+    // --- JavaScript (largely the same logic, minor text updates) ---
+    let money = config.money;
+    let currentBet = 5;
+    let autoMode = false;
+    let spinning = false;
+    let reels = [];
+    let finalSymbols = [];
+    let autoSpinTimeout = null;
+
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const startButton = document.getElementById('start-button');
+    const gameLayoutContainer = document.getElementById('game-layout-container');
+    const paytablePanelContent = document.getElementById('paytable-content');
+
+    const sounds = {
+        spin: document.getElementById('spin-sound'),
+        win: document.getElementById('win-sound'),
+        bigWin: document.getElementById('big-win-sound'),
+        reelStop: document.getElementById('reel-stop-sound'),
+        click: document.getElementById('button-click-sound')
+    };
+
+    function playSound(sound) {
+        if (sound && sound.readyState >= 3) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Sound play failed:", e.message, e.name));
+        } else if (sound) {
+            sound.load();
+        }
+    }
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `Bar Tab: $${money.toLocaleString()}`;
+      const maxBetForNextSpin = money > 0 ? money : 1;
+      betInput.max = maxBetForNextSpin;
+
+      let betValInInput = parseInt(betInput.value);
+      if (isNaN(betValInInput) || betValInInput < 1) {
+          betInput.value = 1;
+      } else if (betValInInput > maxBetForNextSpin) {
+          betInput.value = maxBetForNextSpin;
+      }
+
+       if (money <= 0 && !spinning) {
+            if (parseInt(betInput.value) > 1) betInput.value = 1;
+            disableControls(true, false);
+            displayMessage("Tab's run dry! 'Last Call' or try a $1 house shot.", false, false);
+            if (autoMode) stopAutoSpin();
+       }
+    }
+
+    function disableControls(disable = true, disableReset = disable) {
+        spinButton.disabled = disable;
+        maxBetButton.disabled = disable;
+        betInput.disabled = disable;
+        if (!spinning) autoButton.disabled = disable;
+        resetButton.disabled = disableReset;
+
+        if (money <= 0 && parseInt(betInput.value) === 1 && !spinning) {
+            spinButton.disabled = false;
+        }
+     }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg; messageDisplay.className = 'message';
+      if (isBigWin) messageDisplay.classList.add('big-win');
+      else if (isWin) messageDisplay.classList.add('win');
+    }
+
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.dataset.symbolId = symbolData.id;
+        div.textContent = symbolData.emoji;
+        // Example: Style symbols based on ID if needed
+        // if (symbolData.id === 'gold_shaker_wild') div.style.color = 'gold';
+        // else if (symbolData.id === 'champagne_bottle') div.style.color = '#D4AF37'; // More specific gold
+        return div;
+    }
+
+    function buildReels() {
+      reelsContainer.innerHTML = ''; reels = [];
+      config.symbolHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--reel-height')) || 110;
+      for (let i = 0; i < config.reelCount; i++) {
+        const reelElement = document.createElement('div'); reelElement.classList.add('reel');
+        const symbolsContainer = document.createElement('div'); symbolsContainer.classList.add('symbols-container');
+        const reelSymbolsData = []; const reelSymbolElements = [];
+        for (let k = 0; k < 20; k++) {
+            const shuffledSymbols = [...config.symbols].sort(() => Math.random() - 0.5);
+            shuffledSymbols.forEach(symbolData => {
+                 const symbolElement = createSymbolElement(symbolData);
+                 symbolsContainer.appendChild(symbolElement);
+                 reelSymbolsData.push(symbolData); reelSymbolElements.push(symbolElement);
+            });
+        }
+        reelElement.appendChild(symbolsContainer); reelsContainer.appendChild(reelElement);
+        reels.push({ element: reelElement, symbolsContainer: symbolsContainer, symbols: reelSymbolsData,
+            symbolElements: reelSymbolElements, finalPosition: 0, failsafeTimeout: null });
+      }
+      reels.forEach(reel => {
+         const initialOffset = -(Math.floor(Math.random() * reel.symbols.length) * config.symbolHeight);
+         reel.symbolsContainer.style.transition = 'none';
+         reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`;
+         reel.finalPosition = initialOffset;
+         void reel.symbolsContainer.offsetWidth;
+         reel.symbolsContainer.style.transition = '';
+      });
+    }
+
+    function clearReelHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+    }
+
+    function clearPaytableHighlights() {
+        document.querySelectorAll('.paytable-table td.paytable-win-flash').forEach(el => {
+            el.classList.remove('paytable-win-flash');
+        });
+    }
+
+    function highlightWinsOnReels(winningLinesInfo) {
+        winningLinesInfo.forEach(winInfo => {
+            winInfo.indices.forEach(gridIndex => {
+                 const reelIndex = gridIndex % config.reelCount;
+                 const visibleRowIndex = Math.floor(gridIndex / config.reelCount);
+                 const reel = reels[reelIndex];
+                 const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                 const targetSymbolIndexInElementArray = (topVisibleSymbolIndex + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length;
+                 const symbolElement = reel.symbolElements[targetSymbolIndexInElementArray];
+                 if (symbolElement) symbolElement.classList.add('winning');
+            });
+        });
+    }
+
+    function highlightPaytableEntry(symbolId, winCount) {
+        const row = paytablePanelContent.querySelector(`.paytable-table tr[data-symbol-id="${symbolId}"]`);
+        if (row) {
+            const cell = row.querySelector(`td[data-payout-count="${winCount}"]`);
+            if (cell) cell.classList.add('paytable-win-flash');
+        }
+    }
+
+    function startSpin() {
+        if (spinning) return;
+
+        let betForThisSpin = parseInt(betInput.value);
+        if (isNaN(betForThisSpin) || betForThisSpin < 1) {
+            betForThisSpin = 1;
+        }
+
+        const maxAffordableBet = money > 0 ? money : 1;
+        if (betForThisSpin > maxAffordableBet && money > 0) {
+            betForThisSpin = maxAffordableBet;
+        } else if (money <= 0 && betForThisSpin > 1) {
+             betForThisSpin = 1;
+        }
+        betInput.value = betForThisSpin;
+        currentBet = betForThisSpin;
+
+        if (currentBet > money && money > 0) {
+            displayMessage("Not enough on your tab for that round!");
+            if (autoMode) stopAutoSpin();
+            disableControls(false, money <= 0);
+            return;
+        }
+
+        clearTimeout(autoSpinTimeout);
+        clearReelHighlights();
+        clearPaytableHighlights();
+        playSound(sounds.click);
+
+        spinning = true;
+
+        if (money > 0) {
+            money -= currentBet;
+        } else if (money <= 0 && currentBet === 1) {
+            displayMessage("On the house! One last shot.");
+        }
+
+        updateMoneyDisplay();
+        disableControls(true);
+        spinButton.innerText = "Pouring...";
+        if (!(money <= 0 && currentBet === 1 && (money + currentBet) <=0 )) {
+            displayMessage("Mixing your drink...");
+        }
+        playSound(sounds.spin);
+
+        let reelsStoppedCount = 0;
+        reels.forEach((reel, index) => {
+            if (reel.failsafeTimeout) clearTimeout(reel.failsafeTimeout);
+
+            const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element;
+            reelElement.classList.remove('stopping'); reelElement.classList.add('spinning');
+            const randomSymbolIndex = Math.floor(Math.random() * reel.symbols.length);
+            const middleRowIndex = Math.floor(config.rowCount / 2);
+            const targetTopIndex = (randomSymbolIndex - middleRowIndex + reel.symbols.length) % reel.symbols.length;
+            reel.finalPosition = -(targetTopIndex * config.symbolHeight);
+            const currentY = parseFloat(symbolsContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0;
+            const spinDistance = (reel.symbols.length * config.symbolHeight) * 3;
+            symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`;
+            const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+
+            setTimeout(() => {
+                reelElement.classList.remove('spinning'); reelElement.classList.add('stopping');
+                symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`;
+                playSound(sounds.reelStop);
+
+                const transitionEndHandler = (event) => {
+                    if (event.target === symbolsContainer && event.propertyName === 'transform') {
+                        symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                        clearTimeout(reel.failsafeTimeout);
+                        reelElement.classList.remove('stopping');
+                        reelsStoppedCount++;
+                        if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                    }
+                };
+                symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+
+                reel.failsafeTimeout = setTimeout(() => {
+                     if (!reelElement.classList.contains('stopping')) return;
+                     console.warn(`Reel ${index} transitionEnd failsafe. Forcing stop.`);
+                     symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                     reelElement.classList.remove('stopping');
+                     reelsStoppedCount++;
+                     if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                }, 1200);
+
+            }, totalSpinDuration - 800);
+        });
+    }
+
+    function evaluateResult() {
+        let totalWinnings = 0; let combinedWinningLinesInfo = []; let isBigWinOverall = false;
+        finalSymbols = [];
+         for (let r = 0; r < config.rowCount; r++) {
+            for (let c = 0; c < config.reelCount; c++) {
+                const reel = reels[c];
+                const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const symbolIndexInDataArray = (topVisibleSymbolIndex + r + reel.symbols.length) % reel.symbols.length;
+                finalSymbols.push(reel.symbols[symbolIndexInDataArray]);
+            }
+        }
+
+        config.winningLines.forEach(line => {
+            let bestWinOnThisLine = { amount: 0, count: 0, symbolId: null, indices: [], multiplier: 0, lineName: line.name || line.id };
+            config.symbols.forEach(symbolToCheck => {
+                if (!symbolToCheck.payouts) return;
+                const checkSymbolId = symbolToCheck.id; const isWildCheck = symbolToCheck.wild;
+                for (let len = config.reelCount; len >= 3; len--) {
+                    for (let start = 0; start <= config.reelCount - len; start++) {
+                        const groupIndicesOnCurrentLine = line.indices.slice(start, start + len);
+                        const groupSymbolsData = groupIndicesOnCurrentLine.map(globalIndex => finalSymbols[globalIndex]);
+
+                        if (checkAdjacentGroup(groupSymbolsData, checkSymbolId, len, isWildCheck)) {
+                            const payoutKey = len.toString();
+                            if (symbolToCheck.payouts[payoutKey]) {
+                                const multiplier = symbolToCheck.payouts[payoutKey];
+                                const amount = currentBet * multiplier;
+                                if (amount > bestWinOnThisLine.amount) {
+                                    bestWinOnThisLine = { amount, count: len, symbolId: checkSymbolId, indices: groupIndicesOnCurrentLine, multiplier, lineName: line.name || line.id };
+                                }
+                            }
+                             break;
+                        }
+                    }
+                     if (bestWinOnThisLine.count === len && bestWinOnThisLine.symbolId === checkSymbolId) break;
+                }
+            });
+            if (bestWinOnThisLine.amount > 0) {
+                totalWinnings += bestWinOnThisLine.amount; combinedWinningLinesInfo.push(bestWinOnThisLine);
+                if (bestWinOnThisLine.multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true;
+            }
+        });
+
+        spinning = false;
+
+        if (totalWinnings > 0) {
+            money += totalWinnings;
+            let winMessage = "";
+            if (combinedWinningLinesInfo.length > 1) {
+                winMessage = "Happy Hour! Multiple winning combos!\n";
+                combinedWinningLinesInfo.forEach(info => {
+                    const displayName = info.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    winMessage += `${info.count}x ${displayName} (${info.lineName}) = $${info.amount.toLocaleString()}\n`;});
+                winMessage += `Total Bar Tab: $${totalWinnings.toLocaleString()}`;
+            } else if (combinedWinningLinesInfo.length === 1) {
+                const winInfo = combinedWinningLinesInfo[0];
+                const displayName = winInfo.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                winMessage = `Cheers! You mixed ${winInfo.count}x ${displayName} on ${winInfo.lineName} = $${winInfo.amount.toLocaleString()}`;
+            }
+            if (isBigWinOverall) {
+                 const baseMessage = combinedWinningLinesInfo.length > 1 ? winMessage.substring(winMessage.indexOf('\n') + 1) : winMessage;
+                 winMessage = `!!! JACKPOT ON TAP !!!\n` + baseMessage;
+                 playSound(sounds.bigWin);
+            } else { playSound(sounds.win); }
+
+            displayMessage(winMessage, true, isBigWinOverall);
+            highlightWinsOnReels(combinedWinningLinesInfo);
+            combinedWinningLinesInfo.forEach(winInfo => {
+                highlightPaytableEntry(winInfo.symbolId, winInfo.count);
+            });
+        } else {
+            const moneyBeforeThisSpin = money + currentBet;
+            if (!(moneyBeforeThisSpin <= 0 && currentBet === 1)) {
+                displayMessage("Dry spin... Try another round!");
+            }
+        }
+
+        updateMoneyDisplay();
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        spinButton.innerText = "Pour!";
+
+        if (autoMode) {
+            let nextBetForAuto = parseInt(betInput.value);
+            if(isNaN(nextBetForAuto) || nextBetForAuto < 1) nextBetForAuto = 1;
+
+             if ((money >= nextBetForAuto && money > 0) || (money <= 0 && nextBetForAuto === 1) ) {
+                autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+             } else {
+                stopAutoSpin();
+                displayMessage(money <= 0 ? "Tab's run dry! 'Last Call'?" : "Not enough on the tab for 'Keep 'Em Coming'. Mode off.", false, money <= 0);
+             }
+         }
+    }
+
+    function checkAdjacentGroup(groupSymbolsData, checkSymbolId, requiredCount, isWildTypeBeingChecked) {
+        if (groupSymbolsData.length !== requiredCount) return false;
+        if (groupSymbolsData.some(s => !s)) return false;
+        if (isWildTypeBeingChecked) return groupSymbolsData.every(s => s.wild);
+        else return groupSymbolsData.every(s => s.id === checkSymbolId || s.wild);
+    }
+
+    function stopAutoSpin() {
+        autoMode = false; clearTimeout(autoSpinTimeout);
+        autoButton.innerText = "Keep 'Em Coming"; autoButton.style.background = '';
+        if (!spinning) disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    }
+
+    function generateSidePayTable() {
+        paytablePanelContent.innerHTML = '';
+        const table = document.createElement('table'); table.classList.add('paytable-table');
+        const thead = table.createTHead(); const headerRow = thead.insertRow();
+        const headers = ['Icon', 'Drink', '3x', '4x', '5x'];
+        headers.forEach(text => { const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th); });
+        const tbody = table.createTBody();
+        config.symbols.forEach(symbolData => {
+            if (symbolData.payouts) {
+                const row = tbody.insertRow(); row.dataset.symbolId = symbolData.id;
+                const emojiCell = row.insertCell(); emojiCell.textContent = symbolData.emoji; emojiCell.classList.add('paytable-symbol-emoji');
+                const nameCell = row.insertCell();
+                let symbolNameText = symbolData.id.replace(/_/g, ' ');
+                if (symbolData.wild) symbolNameText += " (Wild)";
+                nameCell.textContent = symbolNameText; nameCell.classList.add('paytable-symbol-name');
+                const p3 = symbolData.payouts['3'] || 0, p4 = symbolData.payouts['4'] || 0, p5 = symbolData.payouts['5'] || 0;
+                const p3Cell = row.insertCell(); p3Cell.textContent = p3 > 0 ? `${p3}x` : '-'; if (p3 > 0) p3Cell.dataset.payoutCount = "3";
+                const p4Cell = row.insertCell(); p4Cell.textContent = p4 > 0 ? `${p4}x` : '-'; if (p4 > 0) p4Cell.dataset.payoutCount = "4";
+                const p5Cell = row.insertCell(); p5Cell.textContent = p5 > 0 ? `${p5}x` : '-'; if (p5 > 0) p5Cell.dataset.payoutCount = "5";
+            }
+        });
+        paytablePanelContent.appendChild(table);
+        const wildSymbol = config.symbols.find(s => s.wild);
+        const wildInfoDiv = document.createElement('div'); wildInfoDiv.classList.add('paytable-wild-info');
+        if (wildSymbol) wildInfoDiv.innerHTML = `<b>${wildSymbol.emoji} ${wildSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> is WILD, substitutes for all drinks, and pours out the biggest wins!`;
+        else wildInfoDiv.textContent = "No wild card in this deck.";
+        paytablePanelContent.appendChild(wildInfoDiv);
+    }
+
+    function requestFullScreenGame() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) elem.requestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+        else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+        else if (elem.msRequestFullscreen) elem.msRequestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+    }
+
+    startButton.addEventListener('click', () => {
+        playSound(sounds.click); requestFullScreenGame();
+        titleScreen.style.display = 'none'; gameLayoutContainer.style.display = 'flex';
+        initializeGame();
+    });
+
+    spinButton.addEventListener('click', () => { if (!spinning) startSpin(); });
+
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (!spinning) {
+            const maxBetValue = money > 0 ? money : 1;
+            betInput.value = maxBetValue;
+        }
+    });
+
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (autoMode) {
+            stopAutoSpin();
+            if (!spinning) displayMessage("'Keep 'Em Coming' OFF.");
+        } else {
+            let betForAuto = parseInt(betInput.value);
+            if (isNaN(betForAuto) || betForAuto < 1) betForAuto = 1;
+
+            const maxAffordableAuto = money > 0 ? money : 1;
+            if (betForAuto > maxAffordableAuto && money > 0) betForAuto = maxAffordableAuto;
+            else if (money <= 0 && betForAuto > 1) betForAuto = 1;
+            betInput.value = betForAuto;
+
+            if (!spinning && ((money >= betForAuto && money > 0) || (money <= 0 && betForAuto === 1))) {
+                autoMode = true; autoButton.innerText = "Stop Pouring";
+                autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #c62828)';
+                displayMessage("'Keep 'Em Coming' ON! The drinks are flowing!"); startSpin();
+            } else if (spinning) {
+                autoMode = true; autoButton.innerText = "Stop Pouring";
+                autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #c62828)';
+                displayMessage("'Keep 'Em Coming' will start after this round.");
+            } else {
+                displayMessage(money <= 0 ? "Tab's run dry! 'Last Call'?" : "Not enough on the tab for 'Keep 'Em Coming'!");
+            }
+        }
+    });
+
+    resetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (confirm("Settle the tab and start fresh with $100?")) {
+            if (document.fullscreenElement) document.exitFullscreen();
+            else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            else if (document.msExitFullscreen) document.msExitFullscreen();
+            location.reload();
+        }
+    });
+
+    betInput.addEventListener('input', () => { /* Deferred validation */ });
+
+    betInput.addEventListener('blur', () => {
+        let n = parseInt(betInput.value);
+        const maxBetForNext = money > 0 ? money : 1;
+
+        if (isNaN(n) || n < 1) n = 1;
+
+        if (n > maxBetForNext && money > 0) n = maxBetForNext;
+        else if (money <= 0 && n > 1) n = 1;
+
+        betInput.value = n;
+        updateMoneyDisplay();
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    });
+
+    function initializeGame() {
+        money = config.money;
+        let initialBetVal = parseInt(betInput.value);
+        if (isNaN(initialBetVal) || initialBetVal < 1) initialBetVal = 1;
+
+        const maxInitial = money > 0 ? money : 1;
+        if (initialBetVal > maxInitial && money > 0) initialBetVal = maxInitial;
+        else if (money <=0 && initialBetVal > 1) initialBetVal = 1;
+
+        betInput.value = initialBetVal;
+        currentBet = initialBetVal;
+
+        autoMode = false; spinning = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Place your order and spin the reels!");
+        buildReels(); generateSidePayTable();
+        updateMoneyDisplay();
+        clearReelHighlights(); clearPaytableHighlights();
+        disableControls(false, money <= 0 && currentBet > 1);
+        autoButton.innerText = "Keep 'Em Coming"; autoButton.style.background = '';
+        Object.values(sounds).forEach(sound => { if (sound.readyState < 2) sound.load(); });
+    }
+  </script>
+</body>
+</html>

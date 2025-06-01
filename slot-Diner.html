@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Diner Delights 3x3 Slots!</title>
+  <style>
+    :root {
+      /* Grid Dimensions */
+      --num-reels: 3; /* <<< CHANGED */
+      --num-rows: 3;  /* <<< CHANGED */
+      --reel-width: 110px; /* Larger for 3 reels */
+      --reel-height: 110px;
+      --reel-gap: 12px;
+      --symbol-size: 75px; /* Larger symbols */
+
+      /* Layout */
+      --lever-width: 30px; /* Standard lever */
+      --lever-offset: 60px;
+      --machine-padding: 35px; /* More padding */
+      --reels-padding: 25px;
+      /* Recalculated for 3x3 */
+      --machine-width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap) + 2 * var(--machine-padding));
+      --reels-container-height: calc(var(--num-rows) * var(--reel-height) + 2 * var(--reels-padding));
+      --reels-container-width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap) + 2 * var(--reels-padding));
+
+
+      /* Diner Delights Colors - NEW PALETTE */
+      --color-bg-start: #ffebee; /* Very Light Red */
+      --color-bg-end: #ffcdd2; /* Light Red/Pink */
+      --color-machine-bg1: #f1f1f1; /* Light Grey */
+      --color-machine-bg2: #e0e0e0; /* Medium Grey */
+      --color-border: #b71c1c; /* Dark Red */
+      --color-accent: #ffeb3b; /* Bright Yellow */
+      --color-title-text: #ffffff; /* White */
+      --color-title-bg1: #d32f2f; /* Medium Red */
+      --color-title-bg2: #b71c1c; /* Dark Red */
+      --color-money: #1b5e20; /* Dark Green (like cash) */
+      --color-reels-bg: #fffde7; /* Creamy Yellow */
+      --color-reel-bg: #ffffff;
+      --color-button-bg1: #ffc107; /* Amber/Yellow */
+      --color-button-bg2: #ffa000; /* Orange/Yellow */
+      --color-button-border: #c66900;
+      --color-button-hover-bg1: #ffca28;
+      --color-button-hover-bg2: #ffab00;
+      --color-button-hover-border: #a15200;
+      --color-spin-bg1: #d32f2f; /* Red */
+      --color-spin-bg2: #b71c1c; /* Darker Red */
+      --color-spin-border: var(--color-accent);
+      --color-lever-handle: linear-gradient(to right, #e0e0e0, #bdbdbd); /* Chrome/Silver */
+      --color-lever-ball: radial-gradient(circle at 12px 12px, #ef5350, #c62828); /* Red */
+      --color-win-line: rgba(255, 235, 59, 0.85); /* Yellow Transparent */
+      --color-win-shadow: rgba(255, 193, 7, 0.9); /* Amber Shadow */
+      --color-message-text: #4e342e; /* Dark Brown */
+      --color-message-win: #d32f2f; /* Red */
+      --color-message-bigwin: #ff6f00; /* Amber/Orange */
+      --color-title-screen-text: #b71c1c; /* Dark Red */
+    }
+
+    body {
+      margin: 0;
+      /* Retro/Diner font */
+      font-family: 'Lobster', cursive; /* Include link or fallback */
+      background: var(--color-bg-end); /* Solid light red background */
+      /* Optional: Add checkered pattern background */
+      /* background-image: linear-gradient(45deg, #fce4ec 25%, transparent 25%), linear-gradient(-45deg, #fce4ec 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #fce4ec 75%), linear-gradient(-45deg, transparent 75%, #fce4ec 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px; */
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    /* Include Lobster font */
+    @import url('https://fonts.googleapis.com/css2?family=Lobster&display=swap');
+    /* Fallback font & Readable font for controls/messages */
+    #controls button, #controls input, #controls label, #message, #money-display, #title span, #title-screen p, #title-screen button, button#payTable, button#reset {
+        font-family: 'Arial', sans-serif;
+    }
+    h1, #title { /* Only apply Lobster to main titles */
+         font-family: 'Lobster', cursive;
+    }
+
+
+    #game-container {
+      position: relative;
+      padding-right: calc(var(--lever-width) + var(--lever-offset) - 10px); /* Adjust offset */
+    }
+
+    #slot-machine {
+      background: linear-gradient(145deg, var(--color-machine-bg1), var(--color-machine-bg2));
+      border: 15px ridge #c0c0c0; /* Simulate Chrome Ridge */
+      border-radius: 25px;
+      padding: var(--machine-padding);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), inset 0 0 15px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      width: var(--machine-width);
+      position: relative;
+      z-index: 1;
+    }
+
+    #title {
+      font-size: 48px; /* Larger Title */
+      font-weight: normal;
+      color: var(--color-title-text);
+      text-shadow: 2px 2px 0px #8a0000, 4px 4px 0px rgba(0,0,0,0.3); /* Retro Shadow */
+      background: linear-gradient(to bottom, var(--color-title-bg1), var(--color-title-bg2));
+      padding: 15px;
+      margin: calc(-1 * var(--machine-padding) - 10px) calc(-1 * var(--machine-padding)) 30px calc(-1 * var(--machine-padding)); /* Pull up slightly */
+      border-radius: 15px 15px 0 0;
+      border-bottom: 8px solid #8a0000; /* Darker red bottom border */
+      line-height: 1.1;
+      letter-spacing: 1px;
+    }
+     #title span { /* Subtitle styling */
+        display: block;
+        font-size: 16px;
+        margin-top: 0px;
+        color: var(--color-accent); /* Yellow */
+        font-weight: bold;
+        text-shadow: 1px 1px 1px #000;
+        letter-spacing: normal;
+     }
+
+    #money-display {
+      font-size: 30px; /* Larger */
+      margin: 25px 0;
+      color: var(--color-money);
+      text-shadow: 1px 1px 1px rgba(255,255,255,0.5);
+      background-color: #ffffff; /* White */
+      padding: 8px 20px;
+      border-radius: 8px;
+      display: inline-block;
+      border: 3px solid var(--color-money);
+      font-weight: bold;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+    }
+
+    #reels-container {
+      display: grid;
+      grid-template-columns: repeat(var(--num-reels), var(--reel-width)); /* Uses 3 */
+      grid-gap: var(--reel-gap);
+      justify-content: center;
+      margin-bottom: 30px;
+      background: var(--color-reels-bg);
+      padding: var(--reels-padding);
+      border-radius: 10px;
+      border: 5px groove #c0c0c0; /* Chrome Groove */
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.25);
+      overflow: hidden;
+      height: var(--reels-container-height); /* Uses 3 */
+      position: relative;
+    }
+
+    .reel {
+      width: var(--reel-width);
+      height: calc(var(--num-rows) * var(--reel-height)); /* Uses 3 */
+      overflow: hidden;
+      background: var(--color-reel-bg);
+      border-radius: 5px;
+      position: relative;
+      box-shadow: inset 0 0 6px rgba(0,0,0,0.2);
+    }
+
+    .symbols-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        transition: transform 0.1s linear; /* Spinning */
+    }
+
+    .reel.stopping .symbols-container {
+      transition: transform 0.9s cubic-bezier(0.2, 0.9, 0.4, 1); /* Stopping - slightly different ease */
+    }
+
+    .symbol {
+      width: var(--reel-width);
+      height: var(--reel-height);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--symbol-size);
+      position: relative;
+      text-shadow: 2px 2px 3px rgba(0,0,0,0.15);
+      line-height: 1;
+      color: #333;
+      user-select: none;
+    }
+
+    /* --- Win Animation (Brighter Flash) --- */
+    @keyframes winFlash {
+      0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 3px rgba(0,0,0,0.2)); }
+      50% { transform: scale(1.2); filter: brightness(1.5) drop-shadow(0 0 12px var(--color-accent)); } /* Yellow flash */
+    }
+
+    .symbol.winning {
+      animation: winFlash 0.5s ease-in-out infinite;
+      z-index: 10;
+    }
+
+    /* --- Win Lines (Yellow) --- */
+    .win-line {
+        position: absolute;
+        background-color: var(--color-win-line);
+        box-shadow: 0 0 10px 4px var(--color-win-shadow);
+        z-index: 5;
+        display: none;
+        pointer-events: none;
+        border-radius: 4px; /* Thicker lines */
+    }
+    /* Adjusted for 3x3 */
+    .win-line.horizontal {
+        height: 8px; /* Thicker */
+        width: calc(var(--num-reels) * var(--reel-width) + (var(--num-reels) - 1) * var(--reel-gap)); /* Full width (3 reels) */
+        left: var(--reels-padding);
+    }
+    .win-line.vertical {
+        width: 8px; /* Thicker */
+        height: calc(var(--num-rows) * var(--reel-height)); /* Full height (3 rows) */
+        top: var(--reels-padding);
+    }
+    .win-line.diagonal {
+        width: 8px; /* Thickness */
+    }
+
+
+    #controls {
+      margin: 30px 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 18px; /* Wider gap */
+    }
+
+    #controls label {
+        font-weight: bold;
+        color: #333;
+        font-size: 18px;
+        align-self: center;
+        margin-right: -8px;
+        text-transform: uppercase;
+    }
+
+    #controls input, #controls button {
+      font-size: 18px;
+      padding: 12px 20px; /* Bigger buttons */
+      margin: 5px;
+      border-radius: 8px; /* Less rounded */
+      border: 2px solid var(--color-button-border);
+      background: linear-gradient(to bottom, var(--color-button-bg1), var(--color-button-bg2));
+      color: #4e342e; /* Dark Brown text */
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-weight: bold;
+      box-shadow: 0 5px 0px #c66900, 0 6px 8px rgba(0,0,0,0.2); /* Button depth */
+      text-transform: uppercase;
+      text-shadow: 1px 1px 0px rgba(255,255,255,0.3);
+    }
+     #controls input {
+        width: 80px; /* Adjusted width */
+        text-align: center;
+        background: #fff;
+        color: #333;
+        text-transform: none;
+        text-shadow: none;
+        border: 2px solid #aaa;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.15); /* Inset shadow */
+     }
+
+    #controls button:hover:not(:disabled) {
+      background: linear-gradient(to bottom, var(--color-button-hover-bg1), var(--color-button-hover-bg2));
+      border-color: var(--color-button-hover-border);
+      box-shadow: 0 5px 0px #a15200, 0 7px 9px rgba(0,0,0,0.25);
+      transform: translateY(-1px);
+    }
+    #controls button:active:not(:disabled) {
+        transform: translateY(3px); /* Push button down */
+        box-shadow: 0 2px 0px #a15200, 0 3px 4px rgba(0,0,0,0.2); /* Reduced shadow */
+        filter: brightness(0.95);
+    }
+     #controls button:disabled {
+         cursor: not-allowed;
+         opacity: 0.6;
+         filter: grayscale(60%);
+         box-shadow: 0 3px 0px #999, 0 4px 5px rgba(0,0,0,0.1); /* Disabled shadow */
+     }
+
+    #spin {
+        background: linear-gradient(to bottom, var(--color-spin-bg1), var(--color-spin-bg2));
+        border-color: #8a0000;
+        color: #fff;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        box-shadow: 0 5px 0px #8a0000, 0 6px 8px rgba(0,0,0,0.25);
+    }
+    #spin:hover:not(:disabled) {
+        background: linear-gradient(to bottom, #e53935, #c62828); /* Lighter red hover */
+        border-color: #7f0000;
+        box-shadow: 0 5px 0px #7f0000, 0 7px 9px rgba(0,0,0,0.3);
+    }
+    #spin:active:not(:disabled) {
+         box-shadow: 0 2px 0px #7f0000, 0 3px 4px rgba(0,0,0,0.25);
+    }
+
+
+    #message {
+      font-size: 26px;
+      margin-top: 25px;
+      min-height: 60px;
+      padding: 12px;
+      background-color: #ffffff; /* White */
+      border-radius: 8px;
+      color: var(--color-message-text);
+      text-shadow: none;
+      white-space: pre-line;
+      line-height: 1.3;
+      border: 2px solid #ccc;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    #message.win {
+        color: var(--color-message-win); /* Red */
+        font-weight: bold;
+    }
+    #message.big-win {
+        font-size: 30px;
+        color: var(--color-message-bigwin); /* Amber */
+        animation: bigWinPulse 0.6s infinite alternate;
+        font-weight: bold;
+        text-shadow: 1px 1px 0px rgba(255,255,255,0.5);
+    }
+
+    @keyframes bigWinPulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.04); }
+    }
+
+     /* --- Restyled Pull Lever (Chrome/Red) --- */
+    #lever-container {
+        position: absolute;
+        top: 140px; /* Adjusted */
+        left: calc(100% - var(--lever-offset) + 25px); /* Adjust position */
+        width: var(--lever-width);
+        height: 250px; /* Adjusted height */
+        z-index: 2;
+    }
+
+    #lever-handle {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%); /* Center handle base */
+        width: var(--lever-width);
+        height: 140px; /* Adjusted handle length */
+        background: var(--color-lever-handle); /* Chrome gradient */
+        border: 3px solid #9e9e9e; /* Grey border */
+        border-radius: 6px 6px 0 0;
+        cursor: pointer;
+        transition: transform 0.25s ease-out, background 0.25s ease-out;
+        transform-origin: bottom center;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }
+    #lever-handle::after { /* Ball - Red */
+        content: '';
+        position: absolute;
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 40px;
+        background: var(--color-lever-ball); /* Red gradient */
+        border-radius: 50%;
+        border: 3px solid #a01010; /* Darker red border */
+        box-shadow: inset -3px -3px 5px rgba(0,0,0,0.4), 1px 1px 2px rgba(255,255,255,0.5);
+    }
+
+    #lever-handle.pulled {
+        transform: translateX(-50%) translateY(-50px); /* Pull distance includes centering */
+        background: linear-gradient(to right, #f5f5f5, #cccccc); /* Lighter chrome */
+    }
+
+    #lever-handle.disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+        filter: grayscale(50%);
+    }
+
+
+    /* --- Title Screen (Diner Theme) --- */
+    #title-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 235, 59, 0.9); /* Semi-transparent Yellow */
+       /* Add diner pattern */
+       background-image:
+         linear-gradient(rgba(211, 47, 47, 0.8) 50%, transparent 50%), /* Red overlay */
+         linear-gradient(45deg, #ffffff 25%, transparent 25%),
+         linear-gradient(-45deg, #ffffff 25%, transparent 25%),
+         linear-gradient(45deg, transparent 75%, #ffffff 75%),
+         linear-gradient(-45deg, transparent 75%, #ffffff 75%);
+       background-size: 100%, 40px 40px, 40px 40px, 40px 40px, 40px 40px;
+       background-position: 0 0, 0 0, 0 20px, 20px -20px, -20px 0px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      text-align: center;
+      color: var(--color-title-screen-text);
+    }
+    #title-screen h1 {
+      font-size: calc(3.5em + 4vw); /* Big Title */
+      color: #fff; /* White */
+      background-color: var(--color-border); /* Dark Red Background */
+      padding: 10px 30px;
+      border-radius: 10px;
+      border: 5px solid var(--color-accent); /* Yellow Border */
+      text-shadow: 3px 3px 0px #5a0000, 6px 6px 0px rgba(0,0,0,0.3);
+      margin-bottom: 30px;
+      letter-spacing: 2px;
+    }
+     #title-screen p {
+         font-size: calc(1.1em + 0.8vw);
+         margin-bottom: 50px;
+         max-width: 90%;
+         line-height: 1.6;
+         color: #fff; /* White */
+         background: rgba(0,0,0,0.6); /* Dark overlay for text */
+         padding: 15px;
+         border-radius: 5px;
+         font-weight: bold;
+         text-shadow: 1px 1px 2px #000;
+     }
+    #start-button {
+      font-size: calc(1.5em + 2vw);
+      padding: 15px 35px;
+      border-radius: 10px;
+      background: linear-gradient(to bottom, var(--color-spin-bg1), var(--color-spin-bg2)); /* Red */
+      border: 4px solid var(--color-accent); /* Yellow Border */
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 6px 0px #8a0000, 0 8px 10px rgba(0,0,0,0.3);
+      text-transform: uppercase;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    #start-button:hover {
+      background: linear-gradient(to bottom, #e53935, #c62828); /* Lighter red */
+      box-shadow: 0 6px 0px #7f0000, 0 9px 12px rgba(0,0,0,0.35);
+      transform: translateY(-2px);
+    }
+     #start-button:active {
+          transform: translateY(2px);
+          box-shadow: 0 3px 0px #7f0000, 0 4px 6px rgba(0,0,0,0.3);
+     }
+
+
+  </style>
+</head>
+<body>
+
+  <!-- Title Screen -->
+  <div id="title-screen">
+    <h1>Diner Delights!</h1>
+    <p>Spin the tasty reels for delicious wins! Match 3 yummy items.<br>Use the SPIN button or pull the classic LEVER!</p>
+    <button id="start-button">Order Up!</button>
+  </div>
+
+  <!-- Main Game Area -->
+  <div id="game-container" style="display: none;"> <!-- Hidden initially -->
+      <div id="slot-machine">
+        <div id="title">Diner Delights<span>3x3 Slots</span></div>
+        <div id="money-display">$100</div>
+
+        <div id="reels-container">
+          <!-- Reels Generated by JS -->
+           <!-- Win Line Overlays - Need 8 lines for 3x3 (3H, 3V, 2D) -->
+         <div class="win-line horizontal" id="line-h0"></div> <!-- Top Row -->
+         <div class="win-line horizontal" id="line-h1"></div> <!-- Middle Row -->
+         <div class="win-line horizontal" id="line-h2"></div> <!-- Bottom Row -->
+         <div class="win-line vertical" id="line-v0"></div> <!-- Left Col -->
+         <div class="win-line vertical" id="line-v1"></div> <!-- Middle Col -->
+         <div class="win-line vertical" id="line-v2"></div> <!-- Right Col -->
+         <div class="win-line diagonal" id="line-d0"></div> <!-- TL-BR -->
+         <div class="win-line diagonal" id="line-d1"></div> <!-- TR-BL -->
+        </div>
+
+        <div id="controls">
+          <label for="bet">Bet:</label>
+          <input type="number" id="bet" value="5" min="1">
+          <button id="maxBet">Max Bet</button>
+          <button id="spin">Spin</button>
+          <button id="auto">Auto</button>
+          <button id="payTable">Menu</button> <!-- Themed button -->
+          <button id="reset">Reset</button>
+        </div>
+        <div id="message">Place your bet and spin for a tasty treat!</div>
+      </div>
+
+       <!-- Lever -->
+       <div id="lever-container">
+           <div id="lever-handle"></div>
+       </div>
+  </div>
+
+  <!-- Audio Elements (REPLACE PATHS!) -->
+  <audio id="spin-sound" src="path/to/diner_spin.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="path/to/cash_register.mp3" preload="auto"></audio>
+  <audio id="big-win-sound" src="path/to/diner_jingle.mp3" preload="auto"></audio>
+  <audio id="reel-stop-sound" src="path/to/clunk_stop.mp3" preload="auto"></audio>
+  <audio id="button-click-sound" src="path/to/button_press.mp3" preload="auto"></audio>
+  <audio id="lever-pull-sound" src="path/to/lever_crank.mp3" preload="auto"></audio>
+
+
+  <script>
+    // --- Configuration ---
+    const config = {
+        money: 100,
+        reelCount: 3, // <<< 3 Reels
+        rowCount: 3,  // <<< 3 Rows
+        symbolHeight: 110, // Match CSS --reel-height
+        reelWidth: 110,    // Match CSS --reel-width
+        reelGap: 12,       // Match CSS --reel-gap
+        reelsPadding: 25,  // Match CSS --reels-padding
+        spinDurationBase: 800,  // Faster base spin for 3x3
+        spinDurationVariance: 400,
+        reelStopDelay: 150, // Shorter delay between reels
+        autoSpinDelay: 1200, // Faster auto spin for 3x3 results
+        leverPullDuration: 350,
+        bigWinMultiplierThreshold: 15, // Lower threshold for 3-symbol wins
+
+        symbols: [ // Food Emojis & Payouts for 3 of a kind ONLY
+            // Lower Value
+            { id: 'fries', emoji: '🍟', payouts: { 3: 3 } },
+            { id: 'hotdog', emoji: '🌭', payouts: { 3: 4 } },
+            { id: 'taco', emoji: '🌮', payouts: { 3: 5 } },
+            // Medium Value
+            { id: 'donut', emoji: '🍩', payouts: { 3: 8 } },
+            { id: 'pizza', emoji: '🍕', payouts: { 3: 10 } },
+             // Higher Value
+            { id: 'burger', emoji: '🍔', payouts: { 3: 20 } },
+            // Wild Symbol
+            { id: 'drink', emoji: '🥤', wild: true, payouts: { 3: 50 } } // Drink is Wild & pays top
+        ],
+        winningLines: [
+            // Indices 0-8 for 3x3 grid
+            // Horizontals (3 lines)
+            { id: 'line-h0', indices: [0, 1, 2] }, // Top row
+            { id: 'line-h1', indices: [3, 4, 5] }, // Middle row
+            { id: 'line-h2', indices: [6, 7, 8] }, // Bottom row
+            // Verticals (3 lines)
+            { id: 'line-v0', indices: [0, 3, 6] }, // Left column
+            { id: 'line-v1', indices: [1, 4, 7] }, // Middle column
+            { id: 'line-v2', indices: [2, 5, 8] }, // Right column
+            // Diagonals (2 lines)
+            { id: 'line-d0', indices: [0, 4, 8] }, // TL-BR
+            { id: 'line-d1', indices: [2, 4, 6] }  // TR-BL
+        ]
+    };
+
+    // --- Game State ---
+    let money = config.money;
+    let currentBet = 5;
+    let autoMode = false;
+    let spinning = false;
+    let reels = [];
+    let finalSymbols = []; // Flat array [0-8] of final visible symbols
+    let autoSpinTimeout = null;
+    let stopPromises = [];
+
+    // --- DOM Elements ---
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const payTableButton = document.getElementById('payTable');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const startButton = document.getElementById('start-button');
+    const gameContainer = document.getElementById('game-container');
+    const leverHandle = document.getElementById('lever-handle');
+    const winLineElements = {};
+    // Get the 8 win line elements
+    config.winningLines.forEach(line => {
+        winLineElements[line.id] = document.getElementById(line.id);
+        if (!winLineElements[line.id]) console.error(`Win line element not found: ${line.id}`);
+    });
+
+
+    // --- Audio Elements ---
+    const sounds = {
+        spin: document.getElementById('spin-sound'),
+        win: document.getElementById('win-sound'),
+        bigWin: document.getElementById('big-win-sound'),
+        reelStop: document.getElementById('reel-stop-sound'),
+        click: document.getElementById('button-click-sound'),
+        lever: document.getElementById('lever-pull-sound')
+    };
+
+    // --- Functions (Many are similar, key changes noted) ---
+
+    function playSound(sound) {
+        if (sound && typeof sound.play === 'function') {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Sound play failed:", e));
+        }
+    }
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `$${money.toLocaleString()}`;
+      betInput.max = money > 0 ? money : 1;
+      if (parseInt(betInput.value) > money && money > 0) {
+          betInput.value = money;
+      } else if (money <= 0 && !spinning) {
+            betInput.value = 1;
+            betInput.disabled = true;
+            maxBetButton.disabled = true;
+      } else if (!spinning) {
+          betInput.disabled = false;
+          maxBetButton.disabled = false;
+      }
+
+       if (money <= 0 && !spinning) {
+            disableControls(true, true);
+            displayMessage("Kitchen's closed! (Out of cash) Reset?", false, true);
+       }
+    }
+
+
+    function disableControls(disable = true, disableLever = disable) {
+        spinButton.disabled = disable;
+        // Max bet and bet input handling tied to money in updateMoneyDisplay
+        if (!spinning) {
+            autoButton.disabled = disable;
+            betInput.disabled = disable || money <= 0; // Also disable input if broke
+            maxBetButton.disabled = disable || money <= 0; // Also disable max bet if broke
+        } else if (!autoMode && disable) {
+            autoButton.disabled = true;
+             betInput.disabled = true; // Disable bet changes mid-spin
+             maxBetButton.disabled = true;
+        }
+
+        if (leverHandle) {
+            leverHandle.classList.toggle('disabled', disableLever || money <= 0); // Disable lever if broke too
+        }
+     }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg;
+      messageDisplay.className = 'message';
+      if (isWin) messageDisplay.classList.add('win');
+      if (isBigWin) messageDisplay.classList.add('big-win');
+    }
+
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.style.height = `${config.symbolHeight}px`;
+        div.dataset.symbolId = symbolData.id;
+        div.textContent = symbolData.emoji;
+        return div;
+    }
+
+    // Build the 3x3 reels
+    function buildReels() {
+      reelsContainer.innerHTML = ''; // Clear previous reels/lines if any
+      reels = [];
+
+      for (let i = 0; i < config.reelCount; i++) { // Uses 3
+        const reelElement = document.createElement('div');
+        reelElement.classList.add('reel');
+        reelElement.style.height = `${config.rowCount * config.symbolHeight}px`; // Uses 3 rows
+
+        const symbolsContainer = document.createElement('div');
+        symbolsContainer.classList.add('symbols-container');
+
+        const reelSymbolsData = [];
+        const reelSymbolElements = [];
+        // Add repetitions (adjust count for 3x3 visual)
+        for (let k=0; k < 10; k++) { // Fewer repetitions needed
+            const shuffledSymbols = [...config.symbols].sort(() => Math.random() - 0.5);
+            shuffledSymbols.forEach(symbolData => {
+                 const symbolElement = createSymbolElement(symbolData);
+                 symbolsContainer.appendChild(symbolElement);
+                 reelSymbolsData.push(symbolData);
+                 reelSymbolElements.push(symbolElement);
+            });
+        }
+
+        reelElement.appendChild(symbolsContainer);
+        document.getElementById('reels-container').appendChild(reelElement); // Append reel
+        reels.push({
+            element: reelElement,
+            symbolsContainer: symbolsContainer,
+            symbols: reelSymbolsData,
+            symbolElements: reelSymbolElements,
+            finalPosition: 0
+        });
+      }
+
+      // Append win lines AFTER reels
+      config.winningLines.forEach(line => {
+            const lineEl = winLineElements[line.id];
+            if (lineEl) {
+                lineEl.style.display = 'none'; // Ensure hidden initially
+                 document.getElementById('reels-container').appendChild(lineEl);
+            }
+      });
+
+      // Set initial random positions
+       reels.forEach(reel => {
+          const randomIndex = Math.floor(Math.random() * reel.symbols.length);
+          // For 3 rows, middle row is index 1. Target randomIndex to be visible at row 1.
+          const initialY = -((randomIndex - 1 + reel.symbols.length) % reel.symbols.length) * config.symbolHeight;
+          reel.symbolsContainer.style.transition = 'none';
+          reel.symbolsContainer.style.transform = `translateY(${initialY}px)`;
+          reel.finalPosition = initialY;
+          reel.symbolsContainer.offsetHeight; // eslint-disable-line no-unused-expressions
+          reel.symbolsContainer.style.transition = '';
+      });
+    }
+
+
+    function clearHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+        Object.values(winLineElements).forEach(lineEl => {
+            if(lineEl) lineEl.style.display = 'none';
+        });
+        messageDisplay.className = 'message';
+    }
+
+    // Highlight winning symbols and position lines for 3x3
+    function highlightWins(winningLinesInfo) {
+        const containerPadding = config.reelsPadding;
+        const symbolCenterY = config.symbolHeight / 2;
+        const symbolCenterX = config.reelWidth / 2;
+        const lineThicknessHalf = 4; // Half of line height/width (8px)
+
+        winningLinesInfo.forEach(winInfo => {
+            // Highlight symbols
+             // For 3-of-a-kind, count is always 3. Indices are fixed.
+             winInfo.line.indices.forEach(flatIndex => {
+                const reelIndex = flatIndex % config.reelCount; // 0-2
+                const visibleRowIndex = Math.floor(flatIndex / config.reelCount); // 0-2
+                if (reelIndex < reels.length) {
+                    const reel = reels[reelIndex];
+                    const topVisibleIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                    const targetElementIndex = (topVisibleIndex + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length;
+                    const targetElement = reel.symbolElements[targetElementIndex];
+                    if(targetElement) {
+                        targetElement.classList.add('winning');
+                    }
+                }
+            });
+
+            // Show and position win line
+            const lineElement = winLineElements[winInfo.line.id];
+            if (lineElement) {
+                 const totalReelWidth = config.reelCount * config.reelWidth + (config.reelCount - 1) * config.reelGap;
+                 const totalReelHeight = config.rowCount * config.symbolHeight;
+
+                 if (lineElement.classList.contains('horizontal')) {
+                    const rowIndex = Math.floor(winInfo.line.indices[0] / config.reelCount);
+                    lineElement.style.top = `${containerPadding + (rowIndex * config.symbolHeight) + symbolCenterY - lineThicknessHalf}px`;
+                } else if (lineElement.classList.contains('vertical')) {
+                     const colIndex = winInfo.line.indices[0] % config.reelCount;
+                     lineElement.style.left = `${containerPadding + (colIndex * (config.reelWidth + config.reelGap)) + symbolCenterX - lineThicknessHalf}px`;
+                } else { // Diagonals
+                     const angle = Math.atan2(totalReelHeight, totalReelWidth) * (180 / Math.PI);
+                     const length = Math.sqrt(totalReelWidth * totalReelWidth + totalReelHeight * totalReelHeight);
+                     lineElement.style.height = `${length}px`;
+
+                     if (lineElement.id === 'line-d0') { // TL-BR
+                        lineElement.style.top = `${containerPadding + symbolCenterY - lineThicknessHalf}px`;
+                        lineElement.style.left = `${containerPadding + symbolCenterX - lineThicknessHalf}px`;
+                        lineElement.style.transform = `rotate(${angle}deg)`;
+                        lineElement.style.transformOrigin = `top left`;
+                     } else if (lineElement.id === 'line-d1') { // TR-BL
+                        lineElement.style.top = `${containerPadding + symbolCenterY - lineThicknessHalf}px`;
+                        lineElement.style.left = `calc(${containerPadding + totalReelWidth + symbolCenterX - lineThicknessHalf}px)`;
+                        lineElement.style.transform = `rotate(-${angle}deg)`;
+                        lineElement.style.transformOrigin = `top right`;
+                     }
+                }
+                lineElement.style.display = 'block';
+            }
+        });
+    }
+
+
+    // Evaluate the final 3x3 grid state for 3 of a kind, considering Wilds
+    function evaluateResult() {
+        let totalWinnings = 0;
+        let winningLinesInfo = [];
+        let isBigWinOverall = false;
+        let highestMultiplierAchieved = 0;
+
+        // Get final VISIBLE symbols [0-8]
+        finalSymbols = [];
+        for (let r = 0; r < config.rowCount; r++) { // 0-2
+            for (let c = 0; c < config.reelCount; c++) { // 0-2
+                const reel = reels[c];
+                const topVisibleIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const symbolIndexInReel = (topVisibleIndex + r + reel.symbols.length) % reel.symbols.length;
+                finalSymbols.push(reel.symbols[symbolIndexInReel]);
+            }
+        }
+        // console.log("Final Symbols:", finalSymbols.map(s => s?.id ?? '?'));
+
+        config.winningLines.forEach(line => {
+            const symbolsOnLineData = line.indices.map(index => finalSymbols[index]);
+            if (!symbolsOnLineData[0] || !symbolsOnLineData[1] || !symbolsOnLineData[2]) return; // Need all 3 symbols
+
+            // Determine the winning symbol (Wilds substitute)
+            let lineSymbolToMatch = null;
+            let firstSymbol = symbolsOnLineData[0];
+            let secondSymbol = symbolsOnLineData[1];
+            let thirdSymbol = symbolsOnLineData[2];
+
+            // Logic: Find the first non-wild symbol, or use wild if all are wild.
+            if (!firstSymbol.wild) {
+                lineSymbolToMatch = firstSymbol;
+            } else if (!secondSymbol.wild) {
+                lineSymbolToMatch = secondSymbol;
+            } else { // If first two are wild, or first is wild and second isn't, the third determines win OR wild pays
+                 lineSymbolToMatch = thirdSymbol; // This will be wild if all 3 are wild
+            }
+
+            // Check if all 3 symbols match the determined symbol (or are wild)
+            if ( (firstSymbol.id === lineSymbolToMatch.id || firstSymbol.wild) &&
+                 (secondSymbol.id === lineSymbolToMatch.id || secondSymbol.wild) &&
+                 (thirdSymbol.id === lineSymbolToMatch.id || thirdSymbol.wild) )
+            {
+                 // It's a 3-of-a-kind win!
+                 const symbolData = config.symbols.find(s => s.id === lineSymbolToMatch.id);
+                 if (symbolData && symbolData.payouts && symbolData.payouts[3]) { // Check payout for 3
+                    const multiplier = symbolData.payouts[3];
+                    const winAmount = currentBet * multiplier;
+                    totalWinnings += winAmount;
+                    winningLinesInfo.push({
+                        line: line,
+                        amount: winAmount,
+                        symbolId: lineSymbolToMatch.id,
+                        count: 3 // Always 3 for 3x3 wins
+                    });
+
+                    if (multiplier > highestMultiplierAchieved) {
+                        highestMultiplierAchieved = multiplier;
+                    }
+                }
+            }
+        });
+
+        // --- Process Results ---
+        spinning = false;
+
+        if (totalWinnings > 0) {
+            money += totalWinnings;
+             // Use lower threshold for big win due to only 3-symbol payouts
+            if (highestMultiplierAchieved >= config.bigWinMultiplierThreshold) {
+                 isBigWinOverall = true;
+                 playSound(sounds.bigWin);
+                 displayMessage(`!!! SPECIAL ORDER !!!\n$${totalWinnings.toLocaleString()}`, true, true);
+             } else {
+                 playSound(sounds.win);
+                 displayMessage(`YUM! Win: $${totalWinnings.toLocaleString()}`, true, false);
+             }
+            highlightWins(winningLinesInfo);
+        } else {
+            displayMessage("Order up... next time!");
+        }
+
+        updateMoneyDisplay();
+        disableControls(false, false); // Re-enable controls (unless broke)
+        spinButton.innerText = "Spin";
+
+
+        // Handle Auto Spin
+         if (autoMode) {
+             if (money >= currentBet && money > 0) {
+                autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+             } else {
+                 autoMode = false;
+                 autoButton.innerText = "Auto";
+                 autoButton.style.background = '';
+                 autoButton.classList.remove('active');
+                 displayMessage(money <= 0 ? "Out of cash! Auto stopped." : "Can't afford bet. Auto stopped.", false, money <= 0);
+                 updateMoneyDisplay();
+                 disableControls(money <= 0, money <= 0);
+             }
+         }
+    }
+
+    // Start the spinning process (adjusted for 3x3)
+    function startSpin() {
+        if (spinning) return;
+
+        clearTimeout(autoSpinTimeout);
+        clearHighlights();
+
+        currentBet = parseInt(betInput.value);
+        if (isNaN(currentBet) || currentBet <= 0) {
+            displayMessage("Please enter a valid bet > 0.");
+             if(autoMode) { autoMode = false; autoButton.innerText = "Auto"; autoButton.style.background = ''; autoButton.classList.remove('active'); }
+            return;
+        }
+        if (currentBet > money) {
+            displayMessage("Not enough dough for this order!");
+             if(autoMode) { autoMode = false; autoButton.innerText = "Auto"; autoButton.style.background = ''; autoButton.classList.remove('active'); }
+            return;
+        }
+
+        spinning = true;
+        money -= currentBet;
+        updateMoneyDisplay();
+        disableControls(true, true);
+        spinButton.innerText = "Spinning...";
+        displayMessage("Cooking up the reels...");
+        playSound(sounds.spin);
+
+        stopPromises = [];
+
+        // --- Animate Reels ---
+        reels.forEach((reel, index) => {
+            const symbolsContainer = reel.symbolsContainer;
+            const currentY = reel.finalPosition || 0;
+            const extraRevolutions = 3 + Math.floor(Math.random() * 3); // Fewer revs for 3x3
+            const totalSymbolsHeight = reel.symbols.length * config.symbolHeight;
+
+            reel.element.classList.remove('stopping');
+            symbolsContainer.classList.remove('stopping');
+
+            const dynamicSpinDuration = (config.spinDurationBase + index * (config.reelStopDelay / 2)) / 1000;
+            symbolsContainer.style.transition = `transform ${dynamicSpinDuration}s linear`;
+
+            const spinTargetY = currentY - (extraRevolutions * totalSymbolsHeight) - (Math.random() * totalSymbolsHeight) ;
+            symbolsContainer.offsetHeight; // eslint-disable-line no-unused-expressions
+            symbolsContainer.style.transform = `translateY(${spinTargetY}px)`;
+
+
+            // --- Schedule Stop ---
+             const stopDelay = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+
+             const stopPromise = new Promise(resolve => {
+                 setTimeout(() => {
+                    const randomSymbolIndex = Math.floor(Math.random() * reel.symbols.length);
+                     // Calculate final Y to snap. Target middle row (index 1) to show randomSymbolIndex.
+                     // finalY = - ( (targetIndex - desiredVisibleRowIndex + totalSymbols) % totalSymbols ) * symbolHeight
+                    const finalY = -((randomSymbolIndex - 1 + reel.symbols.length) % reel.symbols.length) * config.symbolHeight;
+
+                    reel.finalPosition = finalY;
+
+                    reel.element.classList.add('stopping');
+                    symbolsContainer.classList.add('stopping');
+                    symbolsContainer.style.transform = `translateY(${finalY}px)`;
+
+                    playSound(sounds.reelStop);
+
+                    const transitionEndHandler = (event) => {
+                        if (event.target === symbolsContainer && event.propertyName === 'transform') {
+                            symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                            reel.element.classList.remove('stopping');
+                            symbolsContainer.classList.remove('stopping');
+                            resolve();
+                        }
+                    };
+                    symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+                    // Optional: Add failsafe timeout like in previous example if needed
+
+                 }, stopDelay);
+             });
+             stopPromises.push(stopPromise);
+        });
+
+        // --- Wait for all reels to stop ---
+        Promise.all(stopPromises).then(() => {
+             setTimeout(evaluateResult, 150); // Short delay
+        }).catch(error => {
+            console.error("Error during reel stopping:", error);
+            spinning = false;
+            updateMoneyDisplay();
+            disableControls(false, false);
+            displayMessage("Spin cycle error. Please try again.", false);
+        });
+    }
+
+
+    // --- Event Listeners (Mostly standard, check funding) ---
+    startButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        titleScreen.style.display = 'none';
+        gameContainer.style.display = 'block';
+        initializeGame();
+    });
+
+    spinButton.addEventListener('click', () => {
+         if (!spinning && money >= (parseInt(betInput.value) || 1) ) {
+             playSound(sounds.click);
+             startSpin();
+         } else if (!spinning && money < (parseInt(betInput.value) || 1)) {
+             playSound(sounds.click);
+             displayMessage("Not enough dough for this order!");
+         }
+    });
+
+    leverHandle.addEventListener('click', () => {
+        if (!spinning && !leverHandle.classList.contains('disabled') && money >= (parseInt(betInput.value) || 1)) {
+             playSound(sounds.lever);
+             leverHandle.classList.add('pulled');
+             startSpin();
+             setTimeout(() => { leverHandle.classList.remove('pulled'); }, config.leverPullDuration);
+        } else if (!spinning && money < (parseInt(betInput.value) || 1)) {
+            playSound(sounds.click);
+             displayMessage("Not enough cash to pull the lever!");
+        }
+    });
+
+
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (!spinning) {
+             const maxPossibleBet = money > 0 ? money : 1;
+             betInput.value = maxPossibleBet;
+             currentBet = maxPossibleBet;
+        }
+    });
+
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (spinning && autoMode) {
+             // --- STOP AUTO ---
+             autoMode = false;
+             clearTimeout(autoSpinTimeout);
+             autoButton.innerText = "Auto";
+             autoButton.style.background = '';
+             autoButton.classList.remove('active');
+             autoButton.disabled = false; // Ensure clickable later
+             displayMessage("Auto-spin stopping...");
+
+        } else if (!spinning) {
+             if (money <= 0) {
+                 displayMessage("Out of cash! Can't start auto."); return;
+             }
+             if (money < (parseInt(betInput.value) || 1)) {
+                  displayMessage("Not enough for current bet! Can't start auto."); return;
+             }
+            autoMode = !autoMode;
+             if (autoMode) {
+                 // --- START AUTO ---
+                 autoButton.innerText = "Stop Auto";
+                 autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #d32f2f)'; // Active Red
+                 autoButton.classList.add('active');
+                 displayMessage("Auto-spin ON!");
+                 startSpin();
+             } else {
+                 // --- STOP AUTO (when idle) ---
+                 autoButton.innerText = "Auto";
+                 autoButton.style.background = '';
+                 autoButton.classList.remove('active');
+                 displayMessage("Auto-spin OFF.");
+             }
+        }
+    });
+
+
+    payTableButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        let table = "DINER MENU (Bet x Multiplier):\n\n";
+        table += "Item       | Payout (x3)\n";
+        table += "--------------------------\n";
+        config.symbols.forEach(s => {
+            if (s.payouts && s.payouts[3]) {
+                 const idPad = (s.id + (s.wild ? ' (WILD)' : '')).padEnd(10, ' ');
+                 const p3 = (s.payouts[3] + 'x').padStart(4, ' ');
+                 table += `${s.emoji} ${idPad} | ${p3}\n`;
+            }
+        });
+         table += "\n🥤 Wild substitutes for all food items.";
+         table += "\nLines: 3 Horizontal, 3 Vertical, 2 Diagonal (8 Total).";
+        alert(table);
+    });
+
+    resetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (confirm("Start a new tab? (Reset game with $100)")) {
+             autoMode = false;
+             clearTimeout(autoSpinTimeout);
+             initializeGame();
+        }
+    });
+
+    // Bet Input Listeners (Standard)
+    betInput.addEventListener('input', () => {
+        let value = parseInt(betInput.value.replace(/[^0-9]/g, '')) || 1;
+        value = Math.max(1, value);
+        betInput.value = value;
+        currentBet = value;
+    });
+     betInput.addEventListener('change', () => {
+         let value = parseInt(betInput.value) || 1;
+         value = Math.max(1, value);
+         betInput.value = value;
+         currentBet = value;
+     });
+
+
+     // --- Initialization ---
+     function initializeGame() {
+        money = config.money;
+        currentBet = parseInt(betInput.value) || 5;
+        currentBet = Math.max(1, currentBet);
+        betInput.value = currentBet;
+        spinning = false;
+        autoMode = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Place your bet and spin for a tasty treat!");
+        buildReels(); // Build 3x3 reels
+        updateMoneyDisplay();
+        clearHighlights();
+        disableControls(false, false); // Enable controls (unless broke)
+        if (money <=0) disableControls(true, true);
+
+         autoButton.innerText = "Auto";
+         autoButton.style.background = '';
+         autoButton.classList.remove('active');
+         autoButton.disabled = (money <= 0);
+
+        if(leverHandle) {
+            leverHandle.classList.remove('disabled', 'pulled');
+            leverHandle.classList.toggle('disabled', money <= 0);
+        }
+     }
+
+     // Initial setup: Wait for Start button click in the HTML.
+
+  </script>
+</body>
+</html>

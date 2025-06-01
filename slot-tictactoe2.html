@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Rainbow Tic-Tac-Toe Reels (4x4)</title>
+  <style>
+    :root {
+      /* --- Rainbow Tic-Tac-Toe Reels Theme (4x4) --- */
+      /* Grid & Layout */
+      --reel-width: 75px;  /* Adjusted for 4x4 */
+      --reel-height: 75px; /* Adjusted for 4x4 */
+      --symbol-size: 55px;   /* Adjusted for 4x4 */
+      --num-reels: 4;
+      --num-rows: 4;
+      --reel-gap: 8px;     /* Slightly smaller gap for 4x4 */
+
+      /* Base Colors (can be themed further) */
+      --bg-color-main: #E8DAEF; /* Light Lilac */
+      --bg-color-accent: #D2B4DE; /* Medium Lilac */
+      --machine-border: #8E44AD; /* Purple */
+      --title-bg: linear-gradient(to bottom, #F8C471, #F39C12); /* Orange/Yellow */
+      --title-text-color: #6C3483; /* Dark Purple */
+      --title-shadow: rgba(255,255,255,0.4);
+      --money-color: #AF7AC5; /* Lighter Purple for "Credits" */
+      --reels-bg: #FDEDEC; /* Very Light Pink */
+      --reel-bg: #FEF9E7; /* Creamy */
+      --button-bg: linear-gradient(to bottom, #A9DFBF, #7DCEA0); /* Greens */
+      --button-border: #27AE60;
+      --button-hover-bg: linear-gradient(to bottom, #D5F5E3, #A9DFBF);
+      --spin-button-bg: linear-gradient(to bottom, #85C1E9, #3498DB); /* Blues */
+      --spin-button-border: #2E86C1;
+      --message-bg: rgba(249, 231, 231, 0.97); /* Light pink message box */
+      --message-text-color: #9B59B6; /* Purple text */
+      --message-win-color: #2ECC71;
+      --message-bigwin-color: #F1C40F;
+      --paytable-bg: rgba(245, 245, 245, 0.97); /* Light grey */
+      --paytable-text-color: #512E5F; /* Dark Purple */
+      --paytable-header-bg: rgba(142, 68, 173, 0.85); /* Purple header */
+
+      /* Rainbow Symbol Colors */
+      --red-color: #E74C3C;
+      --orange-color: #E67E22;
+      --yellow-color: #F1C40F;
+      --green-color: #2ECC71;
+      --blue-color: #3498DB;
+      --indigo-color: #3F51B5; /* Using a standard Indigo */
+      --violet-color: #8E44AD; /* Purple for Violet */
+      --mixed-color-display: #7F8C8D; /* Grey for mixed in paytable */
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Quicksand', 'Arial Rounded MT Bold', sans-serif;
+      background: linear-gradient(135deg, var(--bg-color-accent) 0%, var(--bg-color-main) 100%);
+      color: var(--paytable-text-color);
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    #game-layout-container {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        padding: 10px; /* Reduced padding */
+        box-sizing: border-box;
+        gap: 10px;
+    }
+
+    #paytable-panel {
+        flex: 0 0 340px; /* Wider for more complex paytable */
+        background: var(--paytable-bg);
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        overflow-y: auto;
+        border: 2px solid var(--machine-border);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 20px);
+    }
+    #paytable-panel h2 {
+        text-align: center; color: var(--machine-border);
+        font-family: 'Pacifico', cursive;
+        font-size: 1.7em; margin-top: 0; margin-bottom: 8px;
+        text-shadow: 1px 1px 1px rgba(255,255,255,0.3);
+    }
+    .paytable-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.75em;} /* Smaller font for dense table */
+    .paytable-table th, .paytable-table td { border: 1px solid var(--bg-color-accent); padding: 4px; text-align: center; vertical-align: middle; }
+    .paytable-table th { background-color: var(--paytable-header-bg); color: #fff; font-weight: bold; }
+    .paytable-table td { color: var(--paytable-text-color); }
+    .paytable-symbol-emoji { font-size: 20px; vertical-align: middle; font-weight: bold;}
+    .paytable-symbol-name { font-weight: bold; text-transform: capitalize; font-size: 0.95em; }
+    .paytable-section-header {
+        font-weight: bold;
+        background-color: var(--bg-color-accent);
+        color: var(--title-text-color);
+        text-align: left;
+        padding-left: 10px;
+        font-size: 0.9em;
+    }
+
+    @keyframes paytableWinFlashRainbow {
+        0%, 100% { background-color: transparent; color: var(--paytable-text-color); transform: scale(1); }
+        50% { background-color: var(--message-win-color); color: #fff; transform: scale(1.03); }
+    }
+    .paytable-table td.paytable-win-flash {
+        animation: paytableWinFlashRainbow 0.8s ease-in-out infinite;
+        font-weight: bold; position: relative; z-index: 1;
+    }
+
+
+    #main-game-area {
+        flex-grow: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 0; overflow: hidden; min-width: 0;
+    }
+
+    #slot-machine {
+      background: linear-gradient(145deg, #FADBD8, #F5B7B1); /* Light Rose / Pink */
+      border: 5px solid var(--machine-border);
+      border-radius: 10px; padding: 10px;
+      box-shadow: 0 0 12px rgba(142, 68, 173,0.4), inset 0 0 8px rgba(0,0,0,0.1);
+      text-align: center; width: 100%; height: 100%;
+      max-width: calc( (var(--num-reels) * var(--reel-width)) + ((var(--num-reels) - 1) * var(--reel-gap)) + (2 * 10px) + (2 * 5px) + 30px);
+      max-height: calc(100vh - 20px);
+      box-sizing: border-box; display: flex; flex-direction: column;
+      justify-content: space-around; position: relative; z-index: 1;
+    }
+
+    #title {
+      font-size: clamp(1.5em, 2.8vw, 2em); font-weight: bold; color: var(--title-text-color);
+      text-shadow: 1px 1px 1px var(--title-shadow); background: var(--title-bg);
+      padding: 8px; margin: 0 0 8px 0;
+      border-radius: 6px 6px 0 0; border-bottom: 3px solid var(--machine-border);
+      line-height: 1.1; letter-spacing: 1px; width: 100%; box-sizing: border-box;
+      font-family: 'Lobster Two', cursive;
+    }
+     #title .subtitle { font-size: clamp(0.35em, 0.8vw, 0.5em); color: #9B59B6; font-weight: normal; display: block; margin-top: 2px; text-shadow: 1px 1px 1px rgba(255,255,255,0.2); }
+
+    #money-display {
+      font-size: clamp(1.3em, 2.2vw, 1.7em); margin: 8px 0; color: var(--money-color);
+      text-shadow: 0 0 3px #fff; background-color: rgba(243, 243, 243, 0.9);
+      padding: 6px 12px; border-radius: 4px; display: inline-block; border: 1px solid var(--money-color);
+      font-weight: bold;
+    }
+
+    #reels-container {
+      display: grid; grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+      grid-gap: var(--reel-gap); justify-content: center;
+      margin-bottom: 10px; background: var(--reels-bg);
+      padding: 8px; border-radius: 5px;
+      border: 1px solid var(--bg-color-accent);
+      height: calc(var(--num-rows) * var(--reel-height) + 2 * 8px); /* rows height + padding */
+      position: relative;
+      align-self: center;
+      max-height: calc(var(--num-rows) * var(--reel-height) + 2 * 8px);
+    }
+
+    .reel {
+        width: var(--reel-width);
+        height: calc(var(--num-rows) * var(--reel-height)); /* Shows 4 symbols for 4x4 */
+        overflow: hidden;
+        background: var(--reel-bg);
+        border-radius: 3px;
+        position: relative;
+        box-shadow: inset 0 0 3px rgba(0,0,0,0.05);
+    }
+    .symbols-container { position: absolute; top: 0; left: 0; width: 100%; }
+    .reel.spinning .symbols-container { transition: transform 0.07s linear; filter: blur(1px); }
+    .reel.stopping .symbols-container { transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.3, 1); filter: blur(0px); }
+    .symbol {
+        width: var(--reel-width);
+        height: var(--reel-height);
+        display: flex; align-items: center; justify-content: center;
+        font-size: var(--symbol-size);
+        font-weight: bold;
+        position: relative; box-sizing: border-box; line-height: 1;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.1); user-select: none;
+    }
+
+    @keyframes symbolWinFlashRainbow {
+        0%,100%{transform:scale(1); opacity: 1; box-shadow: none;}
+        50%{transform:scale(1.12) rotate(1deg); opacity: 0.95; box-shadow: 0 0 8px var(--message-win-color);}
+    }
+    .symbol.winning { animation: symbolWinFlashRainbow 0.7s ease-in-out infinite; z-index: 10; outline: 2px solid var(--message-win-color); background-color: rgba(46, 204, 113, 0.08); outline-offset: -2px; }
+
+    #controls {
+      margin: 10px 0 8px 0; display: flex; flex-wrap: wrap; justify-content: center;
+      gap: clamp(4px, 0.8vw, 8px);
+    }
+    #controls input, #controls button {
+      font-family: inherit;
+      font-size: clamp(0.8em, 1.2vw, 0.9em);
+      padding: clamp(6px, 1vw, 8px) clamp(8px, 1.4vw, 11px);
+      margin: clamp(2px, 0.4vw, 3px);
+      border-radius: 3px; border: 1px solid var(--button-border);
+      background: var(--button-bg); color: #145A32; cursor: pointer;
+      transition: all 0.15s ease-out; box-shadow: 0 1.5px 0px #1E8449, 0 2px 3px rgba(0,0,0,0.15);
+      text-shadow: 1px 1px 0px rgba(255,255,255,0.3);
+      font-weight: bold; text-transform: uppercase;
+    }
+    #controls input { width: clamp(50px, 8vw, 60px); text-align: center; background: #fff; color: #333; text-shadow: none; }
+    #controls button:hover:not(:disabled) { background: var(--button-hover-bg); transform: translateY(-1px); box-shadow: 0 2.5px 0px #1E8449, 0 3px 5px rgba(0,0,0,0.2); }
+    #controls button:active:not(:disabled) { transform: translateY(0.5px); box-shadow: 0 1px 0px #1E8449, 0 1px 1.5px rgba(0,0,0,0.15); }
+    #controls button:disabled { cursor: not-allowed; opacity: 0.5; filter: grayscale(50%); box-shadow: 0 1px 0px #1E8449, 0 1px 1.5px rgba(0,0,0,0.1); }
+
+    #spin {
+        font-size: clamp(0.85em, 1.5vw, 0.95em);
+        padding: clamp(7px, 1.2vw, 9px) clamp(15px, 2vw, 18px);
+        background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #1B4F72; text-shadow: 1px 1px 1px rgba(255,255,255,0.25);
+    }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #AED6F1, #85C1E9); border-color: #1A5276; }
+    #maxBet { background: linear-gradient(to bottom, #F5B041, #E67E22 ); border-color: #BA4A00; color: #783405;} /* Orange for Max Bet */
+
+    #message {
+      font-size: clamp(0.9em, 1.6vw, 1em); margin-top: 8px;
+      min-height: clamp(30px, 6vh, 40px); padding: 7px;
+      background-color: var(--message-bg); border-radius: 4px;
+      color: var(--message-text-color); text-shadow: none;
+      white-space: pre-line; line-height: 1.25; border: 1px solid #E5B4F1;
+      box-shadow: inset 0 0 4px rgba(0,0,0,0.08); font-weight: bold;
+      width: 90%; align-self: center; box-sizing: border-box;
+    }
+    #message.win { color: var(--message-win-color); font-weight: bold; text-shadow: 0 0 4px var(--message-win-color); }
+    @keyframes bigWinMessagePulseRainbow {0%{transform:scale(1);opacity:.9}100%{transform:scale(1.02);opacity:1}}
+    #message.big-win { font-size: clamp(1em, 2vw, 1.15em); color: var(--message-bigwin-color); animation: bigWinMessagePulseRainbow 0.7s infinite alternate; font-weight: bold; text-shadow: 0 0 6px var(--message-bigwin-color); }
+
+
+    #title-screen {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(135deg, #D2B4DE, #A569BD 50%, #8E44AD); /* Purples */
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 100; text-align: center; color: #FDFEFE;
+    }
+    #title-screen h1 {
+        font-size: clamp(2.8rem, 8vw, 5.5rem); color: #FCF3CF; /* Pale Yellow */
+        text-shadow: 3px 3px 0px #6C3483, 0 0 15px rgba(255,255,255,0.5);
+        margin-bottom: 25px; letter-spacing: 1px;
+        font-family: 'Lilita One', 'Carter One', cursive;
+    }
+    #title-screen p { font-size: clamp(1rem, 2.5vw, 1.6rem); margin-bottom: 40px; max-width: 85%; line-height: 1.6; color: #EAECEE; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); }
+    #start-button {
+        font-family: 'Quicksand', sans-serif; font-size: clamp(1.4rem, 5vw, 2.5rem); padding: 15px 40px;
+        border-radius: 8px; background: linear-gradient(145deg, #FAD7A0, #F5B041); /* Warm Yellow */
+        border: 3px solid #fff; color: #AF601A; /* Brown text for contrast */
+        cursor: pointer; transition: all 0.3s ease;
+        box-shadow: 0 0 18px #F5B041, 0 5px 10px rgba(0, 0, 0, 0.25);
+        text-shadow: 1px 1px 2px rgba(255,255,255,0.3); text-transform: uppercase; font-weight: bold;
+    }
+    #start-button:hover { transform: scale(1.04); box-shadow: 0 0 25px #F5B041, 0 8px 16px rgba(0, 0, 0, 0.35); }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Pacifico&family=Lobster+Two:wght@700&family=Lilita+One&family=Carter+One&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="title-screen">
+    <h1>Rainbow XOXO!</h1>
+    <p>Match 3 or 4 X's or O's in a row, column, or diagonal.<br>
+       Same-color matches pay more - Violet is the best!<br>
+       Even mixed-color X's or O's can win!</p>
+    <button id="start-button">Play Now!</button>
+  </div>
+
+  <div id="game-layout-container" style="display: none;">
+      <aside id="paytable-panel">
+          <h2>Payouts</h2>
+          <div id="paytable-content">
+              <!-- Paytable will be generated here by JS -->
+          </div>
+      </aside>
+
+      <main id="main-game-area">
+          <div id="slot-machine">
+            <div id="title">Rainbow XOXO Reels<span class="subtitle">4x4 Color Match Madness!</span></div>
+            <div id="money-display">Credits: $100</div>
+            <div id="reels-container"></div>
+            <div id="controls">
+              <label for="bet">Bet:</label>
+              <input type="number" id="bet" value="1" min="1">
+              <button id="maxBet">Max Bet</button>
+              <button id="spin">Spin</button>
+              <button id="auto">Auto Spin</button>
+              <button id="reset">New Game</button>
+            </div>
+            <div id="message">Place your bet and spin for rainbow wins!</div>
+          </div>
+      </main>
+  </div>
+
+  <audio id="spin-sound" src="sounds/rainbow_spin.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="sounds/color_chime.mp3" preload="auto"></audio>
+  <audio id="big-win-sound" src="sounds/rainbow_jackpot.mp3" preload="auto"></audio>
+  <audio id="reel-stop-sound" src="sounds/plink_stop.mp3" preload="auto"></audio>
+  <audio id="button-click-sound" src="sounds/soft_click.mp3" preload="auto"></audio>
+
+  <script>
+    // --- Color Definitions ---
+    const C = { // Color definitions for convenience and central management
+        RED:    { name: 'Red',    cssVar: '--red-color',    payTier: 1, weight: 10 },
+        ORANGE: { name: 'Orange', cssVar: '--orange-color', payTier: 2, weight: 9 },
+        YELLOW: { name: 'Yellow', cssVar: '--yellow-color', payTier: 3, weight: 8 },
+        GREEN:  { name: 'Green',  cssVar: '--green-color',  payTier: 4, weight: 6 },
+        BLUE:   { name: 'Blue',   cssVar: '--blue-color',   payTier: 5, weight: 5 },
+        INDIGO: { name: 'Indigo', cssVar: '--indigo-color', payTier: 6, weight: 3 },
+        VIOLET: { name: 'Violet', cssVar: '--violet-color', payTier: 7, weight: 2 }
+    };
+    const COLOR_ORDER_FOR_PAYTABLE = [C.RED, C.ORANGE, C.YELLOW, C.GREEN, C.BLUE, C.INDIGO, C.VIOLET];
+
+    // --- Configuration ---
+    const config = {
+        money: 100,
+        reelCount: 4,
+        rowCount: 4,
+        symbolHeight: 75, // Matches CSS --reel-height
+        spinDurationBase: 650,
+        spinDurationVariance: 200,
+        reelStopDelay: 90,
+        autoSpinDelay: 1100,
+        // Symbols define winning categories and their base payouts
+        // Actual visual symbols are { baseType: 'X'/'O', color: C.COLOR_NAME, ... }
+        symbols: [
+            // Mixed type wins (lower payouts)
+            { id: 'X_MIXED', name: 'Mixed X\'s', emoji: 'X', isMixed: true, baseType: 'X', paytableOrder: 1,
+              payouts: { '3': 1, '4': 2 } },
+            { id: 'O_MIXED', name: 'Mixed O\'s', emoji: 'O', isMixed: true, baseType: 'O', paytableOrder: 2,
+              payouts: { '3': 1, '4': 2 } },
+
+            // Same Color Wins base payouts (will be multiplied by color.payTier)
+            // For X
+            { id: 'X_RED',    name: 'Red X',    emoji: 'X', baseType: 'X', color: C.RED,    paytableOrder: 10, payouts: { '3': 2,  '4': 5  } },
+            { id: 'X_ORANGE', name: 'Orange X', emoji: 'X', baseType: 'X', color: C.ORANGE, paytableOrder: 11, payouts: { '3': 3,  '4': 7  } },
+            { id: 'X_YELLOW', name: 'Yellow X', emoji: 'X', baseType: 'X', color: C.YELLOW, paytableOrder: 12, payouts: { '3': 4,  '4': 10 } },
+            { id: 'X_GREEN',  name: 'Green X',  emoji: 'X', baseType: 'X', color: C.GREEN,  paytableOrder: 13, payouts: { '3': 6,  '4': 15 } },
+            { id: 'X_BLUE',   name: 'Blue X',   emoji: 'X', baseType: 'X', color: C.BLUE,   paytableOrder: 14, payouts: { '3': 8,  '4': 20 } },
+            { id: 'X_INDIGO', name: 'Indigo X', emoji: 'X', baseType: 'X', color: C.INDIGO, paytableOrder: 15, payouts: { '3': 12, '4': 30 } },
+            { id: 'X_VIOLET', name: 'Violet X', emoji: 'X', baseType: 'X', color: C.VIOLET, paytableOrder: 16, payouts: { '3': 20, '4': 50 } },
+            // For O (can have same or different payouts than X)
+            { id: 'O_RED',    name: 'Red O',    emoji: 'O', baseType: 'O', color: C.RED,    paytableOrder: 20, payouts: { '3': 2,  '4': 5  } },
+            { id: 'O_ORANGE', name: 'Orange O', emoji: 'O', baseType: 'O', color: C.ORANGE, paytableOrder: 21, payouts: { '3': 3,  '4': 7  } },
+            { id: 'O_YELLOW', name: 'Yellow O', emoji: 'O', baseType: 'O', color: C.YELLOW, paytableOrder: 22, payouts: { '3': 4,  '4': 10 } },
+            { id: 'O_GREEN',  name: 'Green O',  emoji: 'O', baseType: 'O', color: C.GREEN,  paytableOrder: 23, payouts: { '3': 6,  '4': 15 } },
+            { id: 'O_BLUE',   name: 'Blue O',   emoji: 'O', baseType: 'O', color: C.BLUE,   paytableOrder: 24, payouts: { '3': 8,  '4': 20 } },
+            { id: 'O_INDIGO', name: 'Indigo O', emoji: 'O', baseType: 'O', color: C.INDIGO, paytableOrder: 25, payouts: { '3': 12, '4': 30 } },
+            { id: 'O_VIOLET', name: 'Violet O', emoji: 'O', baseType: 'O', color: C.VIOLET, paytableOrder: 26, payouts: { '3': 20, '4': 50 } },
+        ],
+        winningLines: [ // 10 Winning lines for a 4x4 grid
+            // Horizontals
+            { id: 'H1', name: 'Row 1', indices: [0, 1, 2, 3] }, { id: 'H2', name: 'Row 2', indices: [4, 5, 6, 7] },
+            { id: 'H3', name: 'Row 3', indices: [8, 9, 10, 11] },{ id: 'H4', name: 'Row 4', indices: [12, 13, 14, 15] },
+            // Verticals
+            { id: 'V1', name: 'Col 1', indices: [0, 4, 8, 12] }, { id: 'V2', name: 'Col 2', indices: [1, 5, 9, 13] },
+            { id: 'V3', name: 'Col 3', indices: [2, 6, 10, 14] },{ id: 'V4', name: 'Col 4', indices: [3, 7, 11, 15] },
+            // Diagonals
+            { id: 'D1', name: 'Diag \\', indices: [0, 5, 10, 15] }, { id: 'D2', name: 'Diag /', indices: [3, 6, 9, 12] },
+        ],
+        bigWinThresholdMultiplier: 15, // If a win multiplier is this or higher
+    };
+
+    // --- Reel Symbol Prototypes (for populating reel strips) ---
+    const REEL_SYMBOL_PROTOTYPES = [];
+    ['X', 'O'].forEach(type => {
+        COLOR_ORDER_FOR_PAYTABLE.forEach(colorInfo => {
+            const id = `${type}_${colorInfo.name.toUpperCase()}`;
+            for (let i = 0; i < colorInfo.weight; i++) { // Use weight from C object
+                REEL_SYMBOL_PROTOTYPES.push({
+                    id: id,                     // e.g., "X_RED", used for payout lookup
+                    baseType: type,             // 'X' or 'O'
+                    color: colorInfo,           // The full color object from C
+                    emoji: type,                // Visual character 'X' or 'O'
+                });
+            }
+        });
+    });
+
+
+    // --- JavaScript (Logic adapted for Rainbow Tic-Tac-Toe 4x4) ---
+    let money = config.money;
+    let currentBet = 1;
+    let autoMode = false;
+    let spinning = false;
+    let reels = [];
+    let finalSymbols = []; // Stores the symbol objects {baseType, color, id, emoji} that landed
+    let autoSpinTimeout = null;
+
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const startButton = document.getElementById('start-button');
+    const gameLayoutContainer = document.getElementById('game-layout-container');
+    const paytablePanelContent = document.getElementById('paytable-content');
+
+    const sounds = {
+        spin: document.getElementById('spin-sound'),
+        win: document.getElementById('win-sound'),
+        bigWin: document.getElementById('big-win-sound'),
+        reelStop: document.getElementById('reel-stop-sound'),
+        click: document.getElementById('button-click-sound')
+    };
+
+    function playSound(sound) {
+        if (sound && sound.readyState >= 3) {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Sound play failed:", e.message, e.name));
+        } else if (sound) {
+            console.warn("Sound not ready to play:", sound.src, sound.readyState);
+        }
+    }
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `Credits: $${money.toLocaleString()}`;
+      const maxBetForNextSpin = money > 0 ? money : 1;
+      betInput.max = maxBetForNextSpin;
+      let betValInInput = parseInt(betInput.value);
+      if (isNaN(betValInInput) || betValInInput < 1) betInput.value = 1;
+      else if (betValInInput > maxBetForNextSpin && money > 0) betInput.value = maxBetForNextSpin;
+
+       if (money <= 0 && !spinning) {
+            if (parseInt(betInput.value) > 1) betInput.value = 1;
+            disableControls(true, false);
+            displayMessage("Out of credits! Start 'New Game' or try $1 spin.", false, false);
+            if (autoMode) stopAutoSpin();
+       }
+    }
+
+    function disableControls(disable = true, disableReset = disable) {
+        spinButton.disabled = disable;
+        maxBetButton.disabled = disable;
+        betInput.disabled = disable;
+        if (!spinning) autoButton.disabled = disable;
+        resetButton.disabled = disableReset;
+        if (money <= 0 && parseInt(betInput.value) === 1 && !spinning) spinButton.disabled = false;
+     }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg; messageDisplay.className = 'message';
+      if (isBigWin) messageDisplay.classList.add('big-win');
+      else if (isWin) messageDisplay.classList.add('win');
+    }
+
+    function createSymbolElement(symbolData) { // symbolData is from REEL_SYMBOL_PROTOTYPES
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.dataset.symbolId = symbolData.id; // e.g. "X_RED"
+        div.textContent = symbolData.emoji;   // 'X' or 'O'
+        if (symbolData.color && symbolData.color.cssVar) {
+            div.style.color = `var(${symbolData.color.cssVar})`;
+        }
+        return div;
+    }
+
+    function buildReels() {
+      reelsContainer.innerHTML = ''; reels = [];
+      const reelStripLength = 40; // Number of symbols on the virtual reel strip
+
+      for (let i = 0; i < config.reelCount; i++) {
+        const reelElement = document.createElement('div'); reelElement.classList.add('reel');
+        const symbolsContainer = document.createElement('div'); symbolsContainer.classList.add('symbols-container');
+        const reelSymbolsData = []; const reelSymbolElements = [];
+
+        for (let k = 0; k < reelStripLength; k++) {
+            const randomSymbolProto = REEL_SYMBOL_PROTOTYPES[Math.floor(Math.random() * REEL_SYMBOL_PROTOTYPES.length)];
+            const symbolElement = createSymbolElement(randomSymbolProto);
+            symbolsContainer.appendChild(symbolElement);
+            reelSymbolsData.push(randomSymbolProto); // This stores {id, baseType, color, emoji}
+            reelSymbolElements.push(symbolElement);
+        }
+        reelElement.appendChild(symbolsContainer); reelsContainer.appendChild(reelElement);
+        reels.push({ element: reelElement, symbolsContainer: symbolsContainer, symbols: reelSymbolsData,
+            symbolElements: reelSymbolElements, finalPosition: 0, failsafeTimeout: null });
+      }
+      reels.forEach(reel => {
+         const middleRowIndex = Math.floor(config.rowCount / 2);
+         const randomSymbolPos = Math.floor(Math.random() * reel.symbols.length);
+         const initialOffset = -((randomSymbolPos - middleRowIndex + reel.symbols.length) % reel.symbols.length) * config.symbolHeight;
+         reel.symbolsContainer.style.transition = 'none';
+         reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`;
+         reel.finalPosition = initialOffset;
+         void reel.symbolsContainer.offsetWidth;
+         reel.symbolsContainer.style.transition = '';
+      });
+    }
+
+    function clearReelHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+    }
+    function clearPaytableHighlights() {
+        document.querySelectorAll('.paytable-table td.paytable-win-flash').forEach(el => el.classList.remove('paytable-win-flash'));
+    }
+
+    function highlightWinsOnReels(winningLinesInfo) {
+        winningLinesInfo.forEach(winInfo => {
+            winInfo.indices.slice(0, winInfo.count).forEach(gridIndex => { // Only highlight actual winning symbols
+                 const reelIndex = gridIndex % config.reelCount;
+                 const visibleRowIndex = Math.floor(gridIndex / config.reelCount);
+                 const reel = reels[reelIndex];
+                 const topVisibleSymbolIndexOnStrip = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                 const targetSymbolElementIndex = (topVisibleSymbolIndexOnStrip + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length;
+                 const symbolElement = reel.symbolElements[targetSymbolElementIndex];
+                 if (symbolElement) symbolElement.classList.add('winning');
+            });
+        });
+    }
+
+    function highlightPaytableEntry(symbolId, winCount) {
+        const row = paytablePanelContent.querySelector(`.paytable-table tr[data-symbol-id="${symbolId}"]`);
+        if (row) {
+            const cell = row.querySelector(`td[data-payout-count="${winCount}"]`);
+            if (cell) cell.classList.add('paytable-win-flash');
+        }
+    }
+
+    function startSpin() {
+        if (spinning) return;
+        let betForThisSpin = parseInt(betInput.value);
+        if (isNaN(betForThisSpin) || betForThisSpin < 1) betForThisSpin = 1;
+        const maxAffordableBet = money > 0 ? money : 1;
+        if (betForThisSpin > maxAffordableBet && money > 0) betForThisSpin = maxAffordableBet;
+        else if (money <= 0 && betForThisSpin > 1) betForThisSpin = 1;
+        betInput.value = betForThisSpin; currentBet = betForThisSpin;
+
+        if (currentBet > money && money > 0) {
+            displayMessage("Not enough credits for this bet!");
+            if (autoMode) stopAutoSpin();
+            disableControls(false, money <= 0); return;
+        }
+
+        clearTimeout(autoSpinTimeout); clearReelHighlights(); clearPaytableHighlights(); playSound(sounds.click);
+        spinning = true;
+        if (money > 0) money -= currentBet;
+        else if (money <= 0 && currentBet === 1) displayMessage("Spinning on the house!");
+        updateMoneyDisplay(); disableControls(true); spinButton.innerText = "Spinning...";
+        if (!(money <= 0 && currentBet === 1 && (money + currentBet) <=0 )) displayMessage("Good luck!");
+        playSound(sounds.spin);
+
+        let reelsStoppedCount = 0;
+        reels.forEach((reel, index) => {
+            if (reel.failsafeTimeout) clearTimeout(reel.failsafeTimeout);
+            const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element;
+            reelElement.classList.remove('stopping'); reelElement.classList.add('spinning');
+            const middleRowDisplayIndex = Math.floor(config.rowCount / 2);
+            const randomTargetSymbolOnStrip = Math.floor(Math.random() * reel.symbols.length);
+            reel.finalPosition = -((randomTargetSymbolOnStrip - middleRowDisplayIndex + reel.symbols.length) % reel.symbols.length) * config.symbolHeight;
+            const currentY = parseFloat(symbolsContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0;
+            const spinDistance = (reel.symbols.length * config.symbolHeight) * 2 + Math.abs(reel.finalPosition - currentY);
+            symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`;
+            const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+
+            setTimeout(() => {
+                reelElement.classList.remove('spinning'); reelElement.classList.add('stopping');
+                symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`;
+                playSound(sounds.reelStop);
+                const transitionEndHandler = (event) => {
+                    if (event.target === symbolsContainer && event.propertyName === 'transform') {
+                        symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                        clearTimeout(reel.failsafeTimeout); reelElement.classList.remove('stopping');
+                        reelsStoppedCount++;
+                        if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                    }
+                };
+                symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+                reel.failsafeTimeout = setTimeout(() => {
+                     if (!reelElement.classList.contains('stopping')) return;
+                     console.warn(`Reel ${index} transitionEnd failsafe.`);
+                     symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                     symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`;
+                     reelElement.classList.remove('stopping'); reelsStoppedCount++;
+                     if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                }, totalSpinDuration + 200);
+            }, totalSpinDuration - (config.spinDurationBase * 0.8));
+        });
+    }
+
+    function evaluateResult() {
+        let totalWinnings = 0; let combinedWinningLinesInfo = []; let isBigWinOverall = false;
+        finalSymbols = [];
+
+        for (let r = 0; r < config.rowCount; r++) {
+            for (let c = 0; c < config.reelCount; c++) {
+                const reel = reels[c];
+                const topVisibleSymbolIndexOnStrip = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const symbolIndexInDataArray = (topVisibleSymbolIndexOnStrip + r + reel.symbols.length) % reel.symbols.length;
+                finalSymbols.push(reel.symbols[symbolIndexInDataArray]); // reel.symbols contains {id, baseType, color, emoji}
+            }
+        }
+
+        config.winningLines.forEach(line => {
+            let bestWinOnThisLine = null;
+
+            // Check for 4-in-a-row
+            const lineSyms4 = line.indices.map(i => finalSymbols[i]);
+            if (lineSyms4.every(s => s && s.baseType === lineSyms4[0].baseType)) { // All same baseType (X or O)
+                const type = lineSyms4[0].baseType;
+                if (lineSyms4.every(s => s && s.color.name === lineSyms4[0].color.name)) { // All same color
+                    const symbolId = lineSyms4[0].id; // e.g., X_RED
+                    const payoutConf = config.symbols.find(s => s.id === symbolId);
+                    if (payoutConf && payoutConf.payouts['4']) {
+                        const multiplier = payoutConf.payouts['4'];
+                        bestWinOnThisLine = { amount: currentBet * multiplier, count: 4, symbolId, indices: line.indices, multiplier, lineName: line.name };
+                    }
+                } else { // Mixed colors, same type
+                    const symbolId = type === 'X' ? 'X_MIXED' : 'O_MIXED';
+                    const payoutConf = config.symbols.find(s => s.id === symbolId);
+                     if (payoutConf && payoutConf.payouts['4']) {
+                        const multiplier = payoutConf.payouts['4'];
+                        bestWinOnThisLine = { amount: currentBet * multiplier, count: 4, symbolId, indices: line.indices, multiplier, lineName: line.name };
+                    }
+                }
+            }
+
+            // Check for 3-in-a-row (only if no 4-in-a-row found on this line)
+            if (!bestWinOnThisLine) {
+                const lineSyms3 = line.indices.slice(0, 3).map(i => finalSymbols[i]);
+                if (lineSyms3.every(s => s && s.baseType === lineSyms3[0].baseType)) {
+                    const type = lineSyms3[0].baseType;
+                    if (lineSyms3.every(s => s && s.color.name === lineSyms3[0].color.name)) {
+                        const symbolId = lineSyms3[0].id;
+                        const payoutConf = config.symbols.find(s => s.id === symbolId);
+                        if (payoutConf && payoutConf.payouts['3']) {
+                            const multiplier = payoutConf.payouts['3'];
+                            bestWinOnThisLine = { amount: currentBet * multiplier, count: 3, symbolId, indices: line.indices, multiplier, lineName: line.name };
+                        }
+                    } else {
+                        const symbolId = type === 'X' ? 'X_MIXED' : 'O_MIXED';
+                        const payoutConf = config.symbols.find(s => s.id === symbolId);
+                        if (payoutConf && payoutConf.payouts['3']) {
+                            const multiplier = payoutConf.payouts['3'];
+                            bestWinOnThisLine = { amount: currentBet * multiplier, count: 3, symbolId, indices: line.indices, multiplier, lineName: line.name };
+                        }
+                    }
+                }
+            }
+
+            if (bestWinOnThisLine) {
+                totalWinnings += bestWinOnThisLine.amount;
+                combinedWinningLinesInfo.push(bestWinOnThisLine);
+                if (bestWinOnThisLine.multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true;
+            }
+        });
+
+        spinning = false;
+        if (totalWinnings > 0) {
+            money += totalWinnings;
+            let winMsg = "";
+            if (combinedWinningLinesInfo.length > 1) {
+                winMsg = "Multiple Rainbow Wins!\n";
+                combinedWinningLinesInfo.forEach(info => {
+                    const symData = config.symbols.find(s => s.id === info.symbolId);
+                    winMsg += `${info.count}x ${symData.name} on ${info.lineName} = $${info.amount.toLocaleString()}\n`;
+                });
+                winMsg += `Total Credits Won: $${totalWinnings.toLocaleString()}`;
+            } else if (combinedWinningLinesInfo.length === 1) {
+                const info = combinedWinningLinesInfo[0];
+                const symData = config.symbols.find(s => s.id === info.symbolId);
+                winMsg = `Rainbow Match! ${info.count}x ${symData.name} on ${info.lineName} = $${info.amount.toLocaleString()}`;
+            }
+            if (isBigWinOverall) {
+                winMsg = `!!! SPECTACULAR RAINBOW WIN !!!\n` + (combinedWinningLinesInfo.length > 1 ? winMsg.substring(winMsg.indexOf('\n') + 1) : winMsg);
+                playSound(sounds.bigWin);
+            } else { playSound(sounds.win); }
+            displayMessage(winMsg, true, isBigWinOverall);
+            highlightWinsOnReels(combinedWinningLinesInfo);
+            combinedWinningLinesInfo.forEach(info => highlightPaytableEntry(info.symbolId, info.count));
+        } else {
+            const moneyBeforeSpin = money + currentBet;
+            if (!(moneyBeforeSpin <= 0 && currentBet === 1)) displayMessage("No matches this time. Spin again!");
+        }
+
+        updateMoneyDisplay();
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        spinButton.innerText = "Spin";
+        if (autoMode) {
+            let nextBet = parseInt(betInput.value); if(isNaN(nextBet) || nextBet < 1) nextBet = 1;
+            if ((money >= nextBet && money > 0) || (money <= 0 && nextBet === 1) ) {
+                autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+            } else {
+                stopAutoSpin();
+                displayMessage(money <= 0 ? "Out of credits! Auto Spin stopped." : "Not enough credits. Auto Spin off.", false, money <= 0);
+            }
+         }
+    }
+
+    function stopAutoSpin() {
+        autoMode = false; clearTimeout(autoSpinTimeout);
+        autoButton.innerText = "Auto Spin"; autoButton.style.background = '';
+        if (!spinning) disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    }
+
+    function generateSidePayTable() {
+        paytablePanelContent.innerHTML = '';
+        const table = document.createElement('table'); table.classList.add('paytable-table');
+        const thead = table.createTHead(); const headerRow = thead.insertRow();
+        ['Symbol', 'Type', '3x ', '4x '].forEach(text => {
+            const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th);
+        });
+        const tbody = table.createTBody();
+
+        // Mixed Wins First
+        const mixedHeaderRow = tbody.insertRow();
+        const mixedHeaderCell = mixedHeaderRow.insertCell();
+        mixedHeaderCell.colSpan = 4;
+        mixedHeaderCell.textContent = "Mixed Color Wins";
+        mixedHeaderCell.classList.add('paytable-section-header');
+
+        config.symbols.filter(s => s.isMixed).sort((a,b) => a.paytableOrder - b.paytableOrder).forEach(symbolData => {
+            const row = tbody.insertRow(); row.dataset.symbolId = symbolData.id;
+            const emojiCell = row.insertCell();
+            emojiCell.textContent = symbolData.emoji;
+            emojiCell.classList.add('paytable-symbol-emoji');
+            emojiCell.style.color = `var(--mixed-color-display)`;
+            row.insertCell().textContent = symbolData.name;
+            const p3 = symbolData.payouts['3'] || 0;
+            const p4 = symbolData.payouts['4'] || 0;
+            const p3Cell = row.insertCell(); p3Cell.textContent = p3 > 0 ? `${p3}x` : '-'; if (p3 > 0) p3Cell.dataset.payoutCount = "3";
+            const p4Cell = row.insertCell(); p4Cell.textContent = p4 > 0 ? `${p4}x` : '-'; if (p4 > 0) p4Cell.dataset.payoutCount = "4";
+        });
+
+        // Same Color Wins
+        const sameColorHeaderRow = tbody.insertRow();
+        const sameColorHeaderCell = sameColorHeaderRow.insertCell();
+        sameColorHeaderCell.colSpan = 4;
+        sameColorHeaderCell.textContent = "Same Color Wins";
+        sameColorHeaderCell.classList.add('paytable-section-header');
+
+        config.symbols.filter(s => !s.isMixed).sort((a,b) => a.paytableOrder - b.paytableOrder).forEach(symbolData => {
+            const row = tbody.insertRow(); row.dataset.symbolId = symbolData.id;
+            const emojiCell = row.insertCell();
+            emojiCell.textContent = symbolData.emoji;
+            emojiCell.classList.add('paytable-symbol-emoji');
+            if (symbolData.color && symbolData.color.cssVar) emojiCell.style.color = `var(${symbolData.color.cssVar})`;
+            row.insertCell().textContent = symbolData.name;
+            const p3 = symbolData.payouts['3'] || 0;
+            const p4 = symbolData.payouts['4'] || 0;
+            const p3Cell = row.insertCell(); p3Cell.textContent = p3 > 0 ? `${p3}x` : '-'; if (p3 > 0) p3Cell.dataset.payoutCount = "3";
+            const p4Cell = row.insertCell(); p4Cell.textContent = p4 > 0 ? `${p4}x` : '-'; if (p4 > 0) p4Cell.dataset.payoutCount = "4";
+        });
+
+        paytablePanelContent.appendChild(table);
+        const gameInfoDiv = document.createElement('div');
+        gameInfoDiv.classList.add('paytable-wild-info');
+        gameInfoDiv.style.fontSize = '0.8em';
+        gameInfoDiv.innerHTML = `Match 3 or 4 symbols of the same type (X or O) on a line. <br>Matching colors pays more! Payouts are Bet x Multiplier.`;
+        paytablePanelContent.appendChild(gameInfoDiv);
+    }
+
+
+    startButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        titleScreen.style.display = 'none'; gameLayoutContainer.style.display = 'flex';
+        initializeGame();
+    });
+    spinButton.addEventListener('click', () => { if (!spinning) startSpin(); });
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (!spinning) {
+            const maxBetValue = money > 0 ? money : 1;
+            betInput.value = maxBetValue; currentBet = maxBetValue;
+        }
+    });
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (autoMode) {
+            stopAutoSpin(); if (!spinning) displayMessage("Auto Spin OFF.");
+        } else {
+            let betForAuto = parseInt(betInput.value); if (isNaN(betForAuto) || betForAuto < 1) betForAuto = 1;
+            const maxAffordableAuto = money > 0 ? money : 1;
+            if (betForAuto > maxAffordableAuto && money > 0) betForAuto = maxAffordableAuto;
+            else if (money <= 0 && betForAuto > 1) betForAuto = 1;
+            betInput.value = betForAuto;
+            if (!spinning && ((money >= betForAuto && money > 0) || (money <= 0 && betForAuto === 1))) {
+                autoMode = true; autoButton.innerText = "Stop Auto"; autoButton.style.background = 'linear-gradient(to bottom, #E74C3C, #C0392B)';
+                displayMessage("Auto Spin ON!"); startSpin();
+            } else if (spinning) {
+                autoMode = true; autoButton.innerText = "Stop Auto"; autoButton.style.background = 'linear-gradient(to bottom, #E74C3C, #C0392B)';
+                displayMessage("Auto Spin will start next round.");
+            } else {
+                displayMessage(money <= 0 ? "Out of credits!" : "Not enough credits for Auto Spin!");
+            }
+        }
+    });
+    resetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (confirm("Start a new game with $100 credits?")) location.reload();
+    });
+    betInput.addEventListener('blur', () => {
+        let n = parseInt(betInput.value); const maxBet = money > 0 ? money : 1;
+        if (isNaN(n) || n < 1) n = 1;
+        if (n > maxBet && money > 0) n = maxBet; else if (money <= 0 && n > 1) n = 1;
+        betInput.value = n; currentBet = n;
+    });
+
+    function initializeGame() {
+        money = config.money;
+        let initBet = parseInt(betInput.value);
+        if (isNaN(initBet) || initBet < 1) initBet = 1;
+        else if (initBet > config.money) initBet = config.money > 0 ? config.money : 1;
+        betInput.value = initBet; currentBet = initBet;
+        autoMode = false; spinning = false; clearTimeout(autoSpinTimeout);
+        displayMessage("Place your bet for rainbow wins!");
+        buildReels(); generateSidePayTable(); updateMoneyDisplay();
+        clearReelHighlights(); clearPaytableHighlights();
+        disableControls(false, money <= 0 && currentBet > 1);
+        autoButton.innerText = "Auto Spin"; autoButton.style.background = '';
+        Object.values(sounds).forEach(s => { if (s.readyState < 2) s.load(); });
+    }
+    window.addEventListener('keydown', function(e) {
+        if (e.key === " " && document.activeElement !== betInput && gameLayoutContainer.style.display === 'flex') {
+            e.preventDefault(); if (!spinButton.disabled && !spinning) spinButton.click();
+        }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruity Cascade Deluxe!</title>
+    <style>
+        :root {
+            /* --- Fruity Cascade Deluxe Theme (Layout like Bugs) --- */
+            /* Grid & Layout - from original fruity, for 5x3 */
+            --reel-width: 120px;
+            --reel-height: 120px;
+            --symbol-size: 85px;
+            --num-reels: 5;
+            --num-rows: 3; /* Fruity is 5x3 */
+            --reel-gap: 15px;
+
+            /* Fruity Colors */
+            --bg-color-main: #FFDAB9; /* PeachPuff */
+            --bg-color-accent: #FFF0F5; /* LavenderBlush */
+            --machine-border: #FF6347; /* Tomato */
+            --title-bg: linear-gradient(to bottom, #FF7F50, #FF6347); /* Coral to Tomato */
+            --title-text-color: #FFF8DC; /* Cornsilk */
+            --title-shadow: rgba(139,0,0,0.4); /* DarkRed shadow */
+            --money-color: #32CD32; /* LimeGreen for "Juicy Cash" */
+            --reels-bg: #FFE4B5; /* Moccasin - Lighter Grid Background */
+            --reel-bg: #FFDEAD; /* NavajoWhite for individual reel */
+            --button-bg: linear-gradient(to bottom, #90EE90, #3CB371); /* LightGreen to MediumSeaGreen */
+            --button-border: #2E8B57; /* SeaGreen */
+            --button-hover-bg: linear-gradient(to bottom, #98FB98, #3CB371);
+            --spin-button-bg: linear-gradient(to bottom, #FFA07A, #FF7F50); /* LightSalmon to Coral for Spin */
+            --spin-button-border: #E9967A; /* DarkSalmon */
+            --message-bg: rgba(255, 228, 196, 0.9); /* Bisque message box */
+            --message-text-color: #A52A2A; /* Brown text */
+            --message-win-color: #228B22; /* ForestGreen for win */
+            --message-bigwin-color: #FF4500; /* OrangeRed for big win */
+            --paytable-bg: rgba(255, 240, 245, 0.95); /* LavenderBlush paytable */
+            --paytable-text-color: #8B4513; /* SaddleBrown text */
+            --paytable-header-bg: rgba(255, 105, 180, 0.85); /* HotPink header */
+
+            /* Fruity Symbol Colors (for paytable, emojis have own colors) */
+            --fruit-cherry-color: #DC143C; /* Crimson */
+            --fruit-orange-color: #FFA500; /* Orange */
+            --fruit-lemon-color: #FFFACD; /* LemonChiffon (text might need contrast) */
+            --fruit-grapes-color: #8A2BE2; /* BlueViolet */
+            --fruit-banana-color: #FFFFE0; /* LightYellow */
+            --fruit-watermelon-color: #FF69B4; /* HotPink (rind could be green) */
+            --fruit-peach-color: #FFDAB9; /* PeachPuff */
+            --fruit-pineapple-color: #FFFF00; /* Yellow */
+            --fruit-star-color: #FFD700; /* Gold */
+
+            /* Fonts (from original fruity) */
+            --font-header: 'Orbitron', sans-serif;
+            --font-button: 'Orbitron', sans-serif; /* Using Orbitron for buttons for consistency */
+            --font-body: 'Orbitron', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--font-body);
+            background: linear-gradient(135deg, var(--bg-color-accent) 0%, var(--bg-color-main) 100%);
+            color: var(--paytable-text-color);
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+         #three-canvas { /* Copied from original fruity */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+        }
+
+
+        #game-layout-container { /* Style like bug game */
+            display: flex;
+            width: 100%;
+            height: 100%;
+            padding: 15px;
+            box-sizing: border-box;
+            gap: 15px;
+            position: relative; /* For z-index to be above canvas */
+            z-index: 1;
+        }
+
+        #paytable-panel { /* Style like bug game, themed fruity */
+            flex: 0 0 330px; /* Fixed width for paytable */
+            background: var(--paytable-bg);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.15);
+            overflow-y: auto;
+            border: 3px solid var(--machine-border);
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 30px);
+        }
+        #paytable-panel h2 {
+            text-align: center; color: var(--machine-border);
+            font-family: var(--font-header); /* Use Orbitron for headers too */
+            font-size: 1.9em; margin-top: 0; margin-bottom: 10px;
+            text-shadow: 1px 1px 1px var(--title-shadow);
+        }
+        .paytable-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85em; }
+        .paytable-table th, .paytable-table td { border: 1px solid var(--message-bigwin-color); padding: 6px; text-align: center; vertical-align: middle; }
+        .paytable-table th { background-color: var(--paytable-header-bg); color: var(--title-text-color); font-weight: bold; }
+        .paytable-table td { color: var(--paytable-text-color); }
+        .paytable-symbol-emoji { font-size: 24px; vertical-align: middle; }
+        .paytable-symbol-name { font-weight: bold; text-transform: capitalize; }
+        .paytable-wild-info { margin-top: 15px; font-size: 0.9em; text-align: center; color: var(--fruit-star-color); line-height: 1.4; font-weight: bold;}
+
+        @keyframes paytableWinFlashFruity {
+            0%, 100% { background-color: transparent; color: var(--paytable-text-color); transform: scale(1); }
+            50% { background-color: var(--message-win-color); color: #fff; transform: scale(1.05); }
+        }
+        .paytable-table td.paytable-win-flash {
+            animation: paytableWinFlashFruity 0.8s ease-in-out infinite;
+            font-weight: bold; position: relative; z-index: 1;
+        }
+
+
+        #main-game-area { /* Style like bug game */
+            flex-grow: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            padding: 0; overflow: hidden; min-width: 0;
+        }
+
+        #slot-machine { /* Themed fruity */
+            background: linear-gradient(145deg, var(--reel-bg), var(--reels-bg));
+            border: 6px solid var(--machine-border);
+            border-radius: 15px; padding: var(--machine-padding, 20px); /* Use CSS var from original fruity */
+            box-shadow: 0 0 20px var(--machine-border), inset 0 0 15px rgba(0,0,0,0.2);
+            text-align: center; width: 100%; height: 100%;
+            max-width: calc(100vw - 330px - 30px - 30px); /* Adjust for paytable and gaps */
+            max-height: calc(100vh - 30px);
+            box-sizing: border-box; display: flex; flex-direction: column;
+            justify-content: space-around; position: relative; z-index: 1;
+        }
+
+        #title { /* Themed fruity */
+            font-size: clamp(1.8em, 3.5vw, 2.8em); font-weight: 900; color: var(--title-text-color);
+            text-shadow: 2px 2px 2px var(--title-shadow), 0 0 10px var(--machine-border); background: var(--title-bg);
+            padding: 12px; margin: 0 0 15px 0;
+            border-radius: 8px 8px 0 0; border-bottom: 4px solid var(--machine-border);
+            line-height: 1.1; letter-spacing: 1px; width: 100%; box-sizing: border-box;
+            font-family: var(--font-header);
+        }
+        #title .subtitle { font-size: clamp(0.5em, 1.2vw, 0.7em); color: #FFF5EE; font-weight: normal; display: block; margin-top: 4px; text-shadow: 1px 1px 1px rgba(0,0,0,0.3); }
+
+        #money-display { /* Themed fruity */
+            font-size: clamp(1.6em, 2.8vw, 2.2em); margin: 15px 0; color: var(--money-color);
+            text-shadow: 0 0 5px #fff, 0 0 8px var(--money-color); background-color: rgba(139, 69, 19, 0.7); /* Darker Brownish screen */
+            padding: 10px 18px; border-radius: 6px; display: inline-block; border: 2px solid var(--money-color);
+            font-weight: 700; font-family: var(--font-body);
+        }
+
+        #reels-container { /* Adjusted for fruity 5x3 */
+            display: grid; grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+            grid-gap: var(--reel-gap); justify-content: center;
+            margin-bottom: 20px; background: var(--reels-bg);
+            padding: var(--reels-padding, 15px); border-radius: 10px;
+            border: 2px solid var(--machine-border);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+            height: calc(var(--num-rows) * var(--reel-height)); /* Correct for 3 rows */
+            position: relative;
+            align-self: center;
+            /* Max height ensures it doesn't get too tall if vars are large */
+            max-height: calc(3 * 120px + 30px);
+        }
+
+        .reel { /* From original fruity */
+            width: var(--reel-width);
+            height: calc(var(--num-rows) * var(--reel-height));
+            overflow: hidden;
+            background: var(--reel-bg);
+            border-radius: 8px;
+            position: relative;
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
+        }
+        .symbols-container { position: absolute; top: 0; left: 0; width: 100%; will-change: transform;}
+        .reel.spinning .symbols-container { transition: transform 0.08s linear; filter: blur(2px); } /* Faster blur like bug */
+        .reel.stopping .symbols-container { transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.3, 1); filter: blur(0px); } /* Smoother stop */
+
+        .symbol { /* From original fruity */
+            width: var(--reel-width);
+            height: var(--reel-height);
+            display: flex; align-items: center; justify-content: center;
+            font-size: var(--symbol-size);
+            position: relative; box-sizing: border-box; line-height: 1;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.5); user-select: none; color: #fff; /* Default color for emojis */
+             filter: drop-shadow(0 0 3px rgba(255,255,255,0.3));
+            transition: transform 0.1s ease-out, filter 0.1s ease-out;
+        }
+
+        @keyframes symbolWinFlashFruity { /* Renamed, themed fruity */
+            0%,100%{transform:scale(1); opacity: 1; filter: brightness(1) drop-shadow(0 0 3px rgba(255,255,255,0.3));}
+            50%{transform:scale(1.15) rotate(2deg); opacity: 1; filter: brightness(1.5) drop-shadow(0 0 10px var(--message-win-color)) drop-shadow(0 0 5px #fff);}
+        }
+        .symbol.winning { animation: symbolWinFlashFruity 0.7s ease-in-out infinite; z-index: 10; outline: 2px dashed var(--message-win-color); background-color: rgba(34, 139, 34, 0.15); outline-offset: -2px; }
+
+
+        #controls { /* Themed fruity */
+            margin: 20px 0 10px 0; display: flex; flex-wrap: wrap; justify-content: center;
+            gap: clamp(8px, 1.2vw, 12px);
+            font-family: var(--font-button); /* Orbitron for buttons */
+        }
+        #controls input, #controls button {
+            font-family: inherit; /* Inherit Orbitron */
+            font-size: clamp(0.9em, 1.5vw, 1.1em);
+            font-weight: 700;
+            padding: clamp(8px, 1.2vw, 12px) clamp(12px, 1.8vw, 18px);
+            margin: clamp(3px, 0.6vw, 5px);
+            border-radius: 8px; border: 2px solid var(--button-border);
+            background: var(--button-bg); color: var(--title-text-color); /* Use title text color for contrast */
+            cursor: pointer;
+            transition: all 0.15s ease-out;
+            box-shadow: 0 3px 0px darken(var(--button-border), 10%), 0 4px 5px rgba(0,0,0,0.25);
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+        }
+        #controls input { width: clamp(70px, 10vw, 90px); text-align: center; background: #fff; color: #A52A2A; text-shadow: none; font-weight: bold; }
+        #controls button:hover:not(:disabled) { background: var(--button-hover-bg); transform: translateY(-2px); box-shadow: 0 5px 0px darken(var(--button-border), 10%), 0 6px 8px rgba(0,0,0,0.3); }
+        #controls button:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0px darken(var(--button-border), 10%), 0 2px 3px rgba(0,0,0,0.2); }
+        #controls button:disabled { cursor: not-allowed; opacity: 0.6; filter: grayscale(60%); box-shadow: 0 2px 0px darken(var(--button-border), 10%), 0 2px 3px rgba(0,0,0,0.15); }
+
+        #spin { /* Themed fruity */
+            font-size: clamp(1em, 1.8vw, 1.3em);
+            padding: clamp(10px, 1.5vw, 14px) clamp(20px, 2.5vw, 25px);
+            background: var(--spin-button-bg); border-color: var(--spin-button-border); color: var(--title-text-color);
+        }
+        #spin:hover:not(:disabled) { background: linear-gradient(to bottom, lighten(var(--FFA07A, #FFA07A),5%), lighten(var(--FF7F50,#FF7F50),5%)); border-color: darken(var(--E9967A,#E9967A),5%); }
+        #maxBet { background: linear-gradient(to bottom, #BA55D3, #9932CC); border-color: #800080; color: #fff;} /* Orchid/Purple for Max Bet */
+
+        #message { /* Themed fruity */
+            font-size: clamp(1.1em, 2vw, 1.4em); margin-top: 15px;
+            min-height: clamp(40px, 8vh, 55px); padding: 10px;
+            background-color: var(--message-bg); border-radius: 6px;
+            color: var(--message-text-color); text-shadow: 1px 1px 1px #fff;
+            white-space: pre-line; line-height: 1.4; border: 2px solid var(--machine-border);
+            box-shadow: inset 0 0 8px rgba(139,69,19,0.3); font-weight: bold;
+            width: 90%; align-self: center; box-sizing: border-box;
+            font-family: var(--font-body);
+        }
+        #message.win { color: var(--message-win-color); font-weight: bold; text-shadow: 0 0 8px var(--message-win-color), 1px 1px 0px #fff; }
+        @keyframes bigWinMessagePulseFruity {0%{transform:scale(1);opacity:.9}100%{transform:scale(1.03);opacity:1}}
+        #message.big-win { font-size: clamp(1.2em, 2.5vw, 1.6em); color: var(--message-bigwin-color); animation: bigWinMessagePulseFruity 0.7s infinite alternate; font-weight: bold; text-shadow: 0 0 10px var(--message-bigwin-color), 1px 1px 0px #fff; }
+
+
+        #title-screen { /* Themed fruity */
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(135deg, #FFB6C1, #FFA07A 50%, #FF7F50); /* LightPink to LightSalmon to Coral */
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000; text-align: center; color: #8B0000; /* DarkRed */
+            font-family: var(--font-header); /* Use Orbitron for title screen header */
+        }
+        #title-screen h1 {
+            font-size: clamp(3rem, 9vw, 7rem); color: #FF4500; /* OrangeRed */
+            text-shadow: 3px 3px 0px #FFF0F5, 0 0 20px rgba(255,255,0,0.7); /* LavenderBlush shadow, Yellow glow */
+            margin-bottom: 30px; letter-spacing: 2px;
+            font-family: 'Bangers', cursive; /* Use a more playful font for title screen H1 */
+        }
+        #title-screen p { font-size: clamp(1.1rem, 3vw, 1.9rem); margin-bottom: 50px; max-width: 80%; line-height: 1.7; color: #A52A2A; text-shadow: 1px 1px 1px rgba(255,255,255,0.5); font-family: var(--font-body); }
+        #start-button { /* Themed fruity */
+            font-family: var(--font-button); /* Orbitron button font */
+            font-weight: 700;
+            font-size: clamp(1.6rem, 5.5vw, 3rem); padding: 20px 50px;
+            border-radius: 10px; background: linear-gradient(145deg, #FFD700, #FFA500); /* Gold to Orange */
+            border: 4px solid #fff; color: #A52A2A; /* Brown text */
+            cursor: pointer; transition: all 0.3s ease;
+            box-shadow: 0 0 25px #FFA500, 0 8px 15px rgba(139,0,0, 0.4);
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.4); text-transform: uppercase;
+        }
+        #start-button:hover { transform: scale(1.05); box-shadow: 0 0 35px #FFA500, 0 12px 25px rgba(139,0,0, 0.5); }
+    </style>
+    <!-- Font for title screen H1, paytable headers from bug game -->
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Fredoka+One&display=swap" rel="stylesheet">
+
+</head>
+<body>
+
+    <canvas id="three-canvas"></canvas>
+
+    <div id="title-screen">
+        <h1>Fruity Cascade Deluxe!</h1>
+        <p>Get ready for a juicy explosion of flavor and fun!<br>
+           Line up the sweet fruits for a cascade of tasty wins. The golden 🌟 Star is WILD and extra delicious!</p>
+        <button id="start-button">Start the Harvest!</button>
+    </div>
+
+    <div id="game-layout-container" style="display: none;">
+        <aside id="paytable-panel">
+            <h2>Fruit Basket</h2>
+            <div id="paytable-content">
+                <!-- Paytable will be generated here by JS -->
+            </div>
+        </aside>
+
+        <main id="main-game-area">
+            <div id="slot-machine">
+                <div id="title">Fruity Cascade Deluxe!<span class="subtitle">Spin for Sweet & Juicy Wins!</span></div>
+                <div id="money-display">Juicy Cash: $100</div>
+                <div id="reels-container">
+                    <!-- Reels generated by JS -->
+                </div>
+                <div id="controls">
+                    <label for="bet">Bet:</label>
+                    <input type="number" id="bet" value="5" min="1">
+                    <button id="maxBet" class="control-button">Max Bet</button>
+                    <button id="spin" class="control-button">Spin!</button>
+                    <button id="auto" class="control-button">Auto-Play</button>
+                    <button id="reset" class="control-button">New Batch</button>
+                </div>
+                <div id="message">Set your bet and let the fruity fun begin!</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- UPDATE AUDIO SRCs with fruity themed sounds -->
+    <audio id="spin-sound" src="sounds/fruity_spin.mp3" preload="auto"></audio>
+    <audio id="win-sound" src="sounds/fruity_win_jingle.mp3" preload="auto"></audio>
+    <audio id="big-win-sound" src="sounds/fruity_jackpot_fanfare.mp3" preload="auto"></audio>
+    <audio id="reel-stop-sound" src="sounds/fruity_thud_stop.mp3" preload="auto"></audio>
+    <audio id="button-click-sound" src="sounds/fruity_pop_click.mp3" preload="auto"></audio>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // --- Configuration (Fruity Symbols & Payouts, Bug Layout Style) ---
+        const config = {
+            money: 100,
+            reelCount: 5,
+            rowCount: 3, // Fruity is 5x3
+            symbolHeight: 120, // From original fruity CSS
+            spinDurationBase: 800, // Adjusted like bug game
+            spinDurationVariance: 350,
+            reelStopDelay: 100,
+            autoSpinDelay: 1300,
+            symbols: [ // Original Fruity Symbols
+                { id: 'cherry',    emoji: '🍒', payouts: { '3': 2,  '4': 5,   '5': 15 }, colorVar: '--fruit-cherry-color' },
+                { id: 'orange',    emoji: '🍊', payouts: { '3': 3,  '4': 8,   '5': 20 }, colorVar: '--fruit-orange-color' },
+                { id: 'lemon',     emoji: '🍋', payouts: { '3': 4,  '4': 10,  '5': 25 }, colorVar: '--fruit-lemon-color' },
+                { id: 'grapes',    emoji: '🍇', payouts: { '3': 5,  '4': 15,  '5': 40 }, colorVar: '--fruit-grapes-color' },
+                { id: 'banana',    emoji: '🍌', payouts: { '3': 7,  '4': 20,  '5': 60 }, colorVar: '--fruit-banana-color' },
+                { id: 'watermelon',emoji: '🍉', payouts: { '3': 10, '4': 30,  '5': 100}, colorVar: '--fruit-watermelon-color' },
+                { id: 'peach',     emoji: '🍑', payouts: { '3': 12, '4': 40,  '5': 150}, colorVar: '--fruit-peach-color' },
+                { id: 'pineapple', emoji: '🍍', payouts: { '3': 15, '4': 50,  '5': 200}, colorVar: '--fruit-pineapple-color' },
+                { id: 'star',      emoji: '🌟', payouts: { '3': 25, '4': 100, '5': 500}, wild: true, colorVar: '--fruit-star-color' }, // Star is WILD
+            ],
+            winningLines: [ // Original Fruity 5x3 Lines (Indices 0-14)
+                { id: 'line-h0', name: 'Row 1', indices: [0, 1, 2, 3, 4] },
+                { id: 'line-h1', name: 'Row 2', indices: [5, 6, 7, 8, 9] },
+                { id: 'line-h2', name: 'Row 3', indices: [10, 11, 12, 13, 14] },
+                // Additional lines from original fruity, adjusted for understanding as 'left-to-right on the line'
+                { id: 'line-v-shape', name: 'V Shape', indices: [0, 6, 12, 8, 4] },
+                { id: 'line-m-shape', name: 'M Shape', indices: [10, 6, 2, 8, 14] },
+                { id: 'line-zigzag0', name: 'ZigZag 1', indices: [0, 5, 2, 9, 14] },
+                { id: 'line-zigzag1', name: 'ZigZag 2', indices: [10, 5, 12, 9, 4] }
+                // Note: Original Fruity had 12 lines including verticals.
+                // For 'adjacent pays' (like the bug game's evaluation), the vertical lines are implicitly covered if we check all horizontal segments.
+                // For simplicity with the side paytable and bug-style evaluation, sticking to more traditional lines.
+                // If true "adjacent pays" (anywhere on a line) is desired, the evaluateResult needs more complex logic.
+            ],
+            bigWinThresholdMultiplier: 20, // From bug game
+             // --- Fruity THEME COLORS FOR THREE.JS ---
+            threeJsBgColor1: '#FFDAB9',     // PeachPuff
+            threeJsBgColor2: '#FFA07A',     // LightSalmon
+            threeJsBgColor3: '#FF6347',     // Tomato
+
+            particleAccentColor: '#FF4500', // OrangeRed for mega win particles/lasers
+            particlePrimaryColor: '#32CD32',// LimeGreen for standard win particles
+            particleBigWinColor: '#FFD700', // Gold for big win particles
+
+            particleBurst: { count: 80, lifetime: 1.3, size: 0.25, speed: 2.5 }, // Fruity particles
+            laserEffect: { beamCount: 5, duration: 0.7, length: 18 } // Fruity lasers
+        };
+
+        // --- JavaScript (Adapted from Bug Game Logic) ---
+        let money = config.money;
+        let currentBet = 5;
+        let autoMode = false;
+        let spinning = false;
+        let reels = [];
+        let finalSymbols = [];
+        let autoSpinTimeout = null;
+        let threeInitialized = false; // For Three.js
+
+        const moneyDisplay = document.getElementById('money-display');
+        const reelsContainer = document.getElementById('reels-container');
+        const betInput = document.getElementById('bet');
+        const maxBetButton = document.getElementById('maxBet');
+        const spinButton = document.getElementById('spin');
+        const autoButton = document.getElementById('auto');
+        const resetButton = document.getElementById('reset');
+        const messageDisplay = document.getElementById('message');
+        const titleScreen = document.getElementById('title-screen');
+        const startButton = document.getElementById('start-button');
+        const gameLayoutContainer = document.getElementById('game-layout-container');
+        const paytablePanelContent = document.getElementById('paytable-content');
+        const slotMachineElement = document.getElementById('slot-machine'); // For shake effect
+
+
+        const sounds = {
+            spin: document.getElementById('spin-sound'),
+            win: document.getElementById('win-sound'),
+            bigWin: document.getElementById('big-win-sound'),
+            reelStop: document.getElementById('reel-stop-sound'),
+            click: document.getElementById('button-click-sound')
+        };
+
+        // --- Three.js (Copied from original fruity, colors updated) ---
+        let scene, camera, renderer, clock;
+        let backgroundPlane, backgroundMaterial;
+        let activeBursts = []; let activeLasers = [];
+
+        function initThreeJS() {
+            if (threeInitialized) return;
+            try {
+                clock = new THREE.Clock(); scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 5;
+                renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('three-canvas'), antialias: true, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight); renderer.setClearColor(0x000000, 0);
+                const planeGeo = new THREE.PlaneGeometry(camera.aspect * 12, 12);
+                backgroundMaterial = new THREE.ShaderMaterial({
+                    uniforms: {
+                        uTime: { value: 0.0 },
+                        uColor1: { value: new THREE.Color(config.threeJsBgColor1) },
+                        uColor2: { value: new THREE.Color(config.threeJsBgColor2) },
+                        uColor3: { value: new THREE.Color(config.threeJsBgColor3) }
+                    },
+                    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+                    fragmentShader: `
+                        uniform float uTime; uniform vec3 uColor1; uniform vec3 uColor2; uniform vec3 uColor3; varying vec2 vUv;
+                        float random (vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123); }
+                        void main() {
+                            float timeScaled = uTime * 0.3;
+                            float mixFactor1 = (sin(timeScaled + vUv.y * 3.0 + vUv.x * 1.5) + 1.0) / 2.0; // Fruity swirl 1
+                            float mixFactor2 = (cos(timeScaled * 1.3 + vUv.x * 2.5 - vUv.y * 1.0) + 1.0) / 2.0; // Fruity swirl 2
+                            vec3 color = mix(uColor1, uColor2, smoothstep(0.1, 0.9, vUv.y + mixFactor1 * 0.3 - 0.15)); // More dynamic mix
+                            color = mix(color, uColor3, smoothstep(0.2, 0.8, vUv.x + mixFactor2 * 0.25 - 0.1));
+                            color += (random(vUv * (2.5 + sin(timeScaled * 0.2))) - 0.5) * 0.04; /* Softer, fruity noise */
+                            gl_FragColor = vec4(color, 1.0);
+                        }`,
+                    depthWrite: false, side: THREE.DoubleSide
+                });
+                backgroundPlane = new THREE.Mesh(planeGeo, backgroundMaterial); backgroundPlane.position.z = -2;
+                scene.add(backgroundPlane); window.addEventListener('resize', onWindowResize, false);
+                animateThreeJS(); threeInitialized = true; console.log("Three.js Initialized with Fruity Theme");
+            } catch (error) { console.error("Three.js initialization failed:", error); }
+        }
+        function onWindowResize() {
+            if (!camera || !renderer) return; camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function animateThreeJS() {
+            requestAnimationFrame(animateThreeJS); const delta = clock.getDelta(); const time = clock.getElapsedTime();
+            if (backgroundMaterial) backgroundMaterial.uniforms.uTime.value = time;
+            for (let i = activeBursts.length - 1; i >= 0; i--) {
+                const burst = activeBursts[i]; burst.elapsedTime += delta;
+                if (burst.elapsedTime >= burst.lifetime) { scene.remove(burst.mesh); burst.mesh.geometry.dispose(); burst.mesh.material.dispose(); activeBursts.splice(i, 1); }
+                else { const positions = burst.mesh.geometry.attributes.position.array; const opacities = burst.mesh.geometry.attributes.alpha.array; const lifeRatio = burst.elapsedTime / burst.lifetime;
+                    for (let j = 0; j < burst.velocities.length; j++) { const index = j * 3; positions[index] += burst.velocities[j].x * delta; positions[index + 1] += burst.velocities[j].y * delta; positions[index + 2] += burst.velocities[j].z * delta; burst.velocities[j].y -= 1.8 * delta; burst.velocities[j].multiplyScalar(0.97); opacities[j] = 1.0 - lifeRatio * lifeRatio; } // Fruity gravity/drag
+                    burst.mesh.geometry.attributes.position.needsUpdate = true; burst.mesh.geometry.attributes.alpha.needsUpdate = true;
+                }
+            }
+            for (let i = activeLasers.length - 1; i >= 0; i--) {
+                const laser = activeLasers[i]; laser.elapsedTime += delta;
+                if (laser.elapsedTime >= laser.duration) { scene.remove(laser.mesh); laser.mesh.geometry.dispose(); laser.mesh.material.dispose(); activeLasers.splice(i, 1); }
+                else { laser.mesh.material.opacity = 1.0 - (laser.elapsedTime / laser.duration); }
+            }
+            if(renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        function createParticleBurst(origin, color = new THREE.Color(0xffffff)) {
+            if (!threeInitialized) return; playSound(sounds.burst || sounds.win); const count = config.particleBurst.count; const lifetime = config.particleBurst.lifetime; const speed = config.particleBurst.speed; const size = config.particleBurst.size; const geometry = new THREE.BufferGeometry(); const positions = new Float32Array(count * 3); const velocities = []; const alphas = new Float32Array(count);
+            for (let i = 0; i < count; i++) { const i3 = i * 3; positions[i3] = origin.x; positions[i3+1] = origin.y; positions[i3+2] = origin.z; const theta = Math.random()*Math.PI*2; const phi = Math.acos(Math.random()*2-1); const x=Math.sin(phi)*Math.cos(theta); const y=Math.sin(phi)*Math.sin(theta); const z=Math.cos(phi); velocities.push(new THREE.Vector3(x,y,z).multiplyScalar(speed*(0.5+Math.random()*0.5))); alphas[i] = 1.0; }
+            geometry.setAttribute('position',new THREE.BufferAttribute(positions,3)); geometry.setAttribute('alpha',new THREE.BufferAttribute(alphas,1)); const material = new THREE.PointsMaterial({size:size,color:color,transparent:true,opacity:1.0,blending:THREE.AdditiveBlending,depthWrite:false}); const points = new THREE.Points(geometry,material); scene.add(points); activeBursts.push({mesh:points,velocities:velocities,lifetime:lifetime,elapsedTime:0,initialSize:size});
+        }
+        function createLaserBeam(startPos, direction, color = new THREE.Color(0xff0000)) {
+            if (!threeInitialized) return; playSound(sounds.laser || sounds.bigWin); const duration = config.laserEffect.duration; const length = config.laserEffect.length; const endPos = startPos.clone().add(direction.clone().multiplyScalar(length)); const geometry = new THREE.BufferGeometry().setFromPoints([startPos,endPos]); const material = new THREE.LineBasicMaterial({color:color,linewidth:3,transparent:true,opacity:1.0,blending:THREE.AdditiveBlending}); const line = new THREE.Line(geometry,material); scene.add(line); activeLasers.push({mesh:line,duration:duration,elapsedTime:0});
+        }
+        function triggerWinEffect(level = 'standard') {
+            if (!threeInitialized) return; console.log(`Triggering win effect: ${level}`); slotMachineElement.classList.remove('shake'); const effectOrigin = new THREE.Vector3(0,0,0);
+            if (level === 'big' || level === 'mega') { const burstColor = new THREE.Color(level === 'mega' ? config.particleAccentColor : config.particleBigWinColor); createParticleBurst(effectOrigin, burstColor); void slotMachineElement.offsetWidth; slotMachineElement.classList.add('shake'); }
+            if (level === 'mega') { const laserColor = new THREE.Color(config.particleAccentColor); for (let i=0; i<config.laserEffect.beamCount; i++) { const angle = (i/config.laserEffect.beamCount)*Math.PI*2+(Math.random()-0.5)*0.5; const direction = new THREE.Vector3(Math.cos(angle),Math.sin(angle),(Math.random()-0.5)*0.3).normalize(); createLaserBeam(effectOrigin.clone().add(new THREE.Vector3(0,0,0.5)), direction, laserColor); } }
+            if (backgroundMaterial) { const originalColor1 = backgroundMaterial.uniforms.uColor1.value.clone(); const flashColor = new THREE.Color(level === 'mega' ? config.particleAccentColor : level === 'big' ? config.particleBigWinColor : config.particlePrimaryColor); backgroundMaterial.uniforms.uColor1.value = flashColor; setTimeout(() => { if (backgroundMaterial) backgroundMaterial.uniforms.uColor1.value = originalColor1; }, 300); }
+        }
+        function clearWinEffects() {
+            activeLasers.forEach(laser => {if(scene) scene.remove(laser.mesh); laser.mesh?.geometry?.dispose(); laser.mesh?.material?.dispose(); }); activeLasers = [];
+            activeBursts.forEach(burst => {if(scene) scene.remove(burst.mesh); burst.mesh?.geometry?.dispose(); burst.mesh?.material?.dispose(); }); activeBursts = [];
+        }
+
+        // --- Core Game Functions (Adapted from Bug Game Logic) ---
+        function playSound(sound) { /* Same as bug game */
+            if (sound && sound.readyState >= 3) { sound.currentTime = 0; sound.play().catch(e => console.warn("Sound play failed:", e.message, e.name)); }
+            else if (sound) { sound.load(); }
+        }
+        function updateMoneyDisplay() { /* Adapted for "Juicy Cash" */
+            moneyDisplay.innerText = `Juicy Cash: $${money.toLocaleString()}`;
+            const maxBetForNextSpin = money > 0 ? money : 1; betInput.max = maxBetForNextSpin;
+            let betValInInput = parseInt(betInput.value);
+            if (isNaN(betValInInput) || betValInInput < 1) betInput.value = 1;
+            else if (betValInInput > maxBetForNextSpin) betInput.value = maxBetForNextSpin;
+            if (money <= 0 && !spinning) {
+                if (parseInt(betInput.value) > 1) betInput.value = 1;
+                disableControls(true, false);
+                displayMessage("Out of Juice! (No Cash) Try 'New Batch' or a $1 spin.", false, false);
+                if (autoMode) stopAutoSpin();
+            }
+        }
+        function disableControls(disable = true, disableReset = disable) { /* Same as bug game */
+            spinButton.disabled = disable; maxBetButton.disabled = disable; betInput.disabled = disable;
+            if (!spinning) autoButton.disabled = disable; resetButton.disabled = disableReset;
+            if (money <= 0 && parseInt(betInput.value) === 1 && !spinning) spinButton.disabled = false;
+        }
+        function displayMessage(msg, isWin = false, isBigWin = false) { /* Same as bug game */
+            messageDisplay.innerText = msg; messageDisplay.className = 'message';
+            if (isBigWin) messageDisplay.classList.add('big-win'); else if (isWin) messageDisplay.classList.add('win');
+        }
+        function createSymbolElement(symbolData) { /* Adapted for fruity colors */
+            const div = document.createElement('div'); div.classList.add('symbol'); div.dataset.symbolId = symbolData.id;
+            div.textContent = symbolData.emoji;
+            if (symbolData.colorVar) div.style.color = `var(${symbolData.colorVar})`; // Use color from var if defined
+            if (symbolData.wild) div.style.textShadow = '0 0 8px gold, 0 0 15px yellow, 0 0 5px #FFD700'; // Star wild pop
+            return div;
+        }
+        function buildReels() { /* Adapted for fruity 5x3 */
+            reelsContainer.innerHTML = ''; reels = [];
+            for (let i = 0; i < config.reelCount; i++) {
+                const reelElement = document.createElement('div'); reelElement.classList.add('reel');
+                const symbolsContainer = document.createElement('div'); symbolsContainer.classList.add('symbols-container');
+                const reelSymbolsData = []; const reelSymbolElements = [];
+                for (let k = 0; k < 25; k++) { // SYMBOL_REPETITIONS
+                    const shuffledSymbols = [...config.symbols].sort(() => Math.random() - 0.5);
+                    shuffledSymbols.forEach(symbolData => { const symbolElement = createSymbolElement(symbolData); symbolsContainer.appendChild(symbolElement); reelSymbolsData.push(symbolData); reelSymbolElements.push(symbolElement); });
+                }
+                reelElement.appendChild(symbolsContainer); reelsContainer.appendChild(reelElement);
+                reels.push({ element: reelElement, symbolsContainer: symbolsContainer, symbols: reelSymbolsData, symbolElements: reelSymbolElements, finalPosition: 0, failsafeTimeout: null });
+            }
+            reels.forEach(reel => { const initialOffset = -(Math.floor(Math.random() * reel.symbols.length) * config.symbolHeight); reel.symbolsContainer.style.transition = 'none'; reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`; reel.finalPosition = initialOffset; void reel.symbolsContainer.offsetWidth; reel.symbolsContainer.style.transition = ''; });
+        }
+        function clearReelHighlights() { document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning')); }
+        function clearPaytableHighlights() { document.querySelectorAll('.paytable-table td.paytable-win-flash').forEach(el => el.classList.remove('paytable-win-flash')); }
+
+        function highlightWinsOnReels(winningLinesInfo) { /* Same logic as bug game */
+            winningLinesInfo.forEach(winInfo => {
+                winInfo.indices.forEach(gridIndex => {
+                    const reelIndex = gridIndex % config.reelCount; const visibleRowIndex = Math.floor(gridIndex / config.reelCount); const reel = reels[reelIndex];
+                    const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                    const targetSymbolIndexInElementArray = (topVisibleSymbolIndex + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length;
+                    const symbolElement = reel.symbolElements[targetSymbolIndexInElementArray];
+                    if (symbolElement) symbolElement.classList.add('winning');
+                });
+            });
+        }
+        function highlightPaytableEntry(symbolId, winCount) { /* Same logic as bug game */
+            const row = paytablePanelContent.querySelector(`.paytable-table tr[data-symbol-id="${symbolId}"]`);
+            if (row) { const cell = row.querySelector(`td[data-payout-count="${winCount}"]`); if (cell) cell.classList.add('paytable-win-flash'); }
+        }
+
+        function startSpin() { /* Adapted from bug game */
+            if (spinning) return;
+            let betForThisSpin = parseInt(betInput.value);
+            if (isNaN(betForThisSpin) || betForThisSpin < 1) betForThisSpin = 1;
+            const maxAffordableBet = money > 0 ? money : 1;
+            if (betForThisSpin > maxAffordableBet && money > 0) betForThisSpin = maxAffordableBet;
+            else if (money <= 0 && betForThisSpin > 1) betForThisSpin = 1;
+            betInput.value = betForThisSpin; currentBet = betForThisSpin;
+            if (currentBet > money && money > 0) { displayMessage("Not enough Juicy Cash!"); if (autoMode) stopAutoSpin(); disableControls(false, money <= 0); return; }
+
+            clearTimeout(autoSpinTimeout); clearReelHighlights(); clearPaytableHighlights(); clearWinEffects(); playSound(sounds.click);
+            spinning = true;
+            if (money > 0) money -= currentBet; else if (money <= 0 && currentBet === 1) displayMessage("One last juicy chance!");
+            updateMoneyDisplay(); disableControls(true); spinButton.innerText = "Spinning...";
+            if (!(money <= 0 && currentBet === 1 && (money + currentBet) <=0 )) displayMessage("Here come the fruits!");
+            playSound(sounds.spin); let reelsStoppedCount = 0;
+            reels.forEach((reel, index) => {
+                if (reel.failsafeTimeout) clearTimeout(reel.failsafeTimeout);
+                const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element;
+                reelElement.classList.remove('stopping'); reelElement.classList.add('spinning');
+                const randomSymbolIndex = Math.floor(Math.random() * reel.symbols.length);
+                const middleRowOffset = Math.floor(config.rowCount / 2);
+                const targetTopIndex = (randomSymbolIndex - middleRowOffset + reel.symbols.length) % reel.symbols.length;
+                reel.finalPosition = -(targetTopIndex * config.symbolHeight);
+                const currentY = parseFloat(getComputedStyle(symbolsContainer).transform.split(',')[5]) || reel.finalPosition || 0; // Get current Y better
+                const spinDistance = (reel.symbols.length * config.symbolHeight) * (3 + Math.random()*2); // Spin a bit more
+                symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`;
+                const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+                setTimeout(() => {
+                    reelElement.classList.remove('spinning'); reelElement.classList.add('stopping');
+                    symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`; playSound(sounds.reelStop);
+                    const transitionEndHandler = (event) => { if (event.target === symbolsContainer && event.propertyName === 'transform') { symbolsContainer.removeEventListener('transitionend', transitionEndHandler); clearTimeout(reel.failsafeTimeout); reelElement.classList.remove('stopping'); reelsStoppedCount++; if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100); } };
+                    symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+                    reel.failsafeTimeout = setTimeout(() => { if (!reelElement.classList.contains('stopping')) return; console.warn(`Reel ${index} failsafe.`); symbolsContainer.removeEventListener('transitionend', transitionEndHandler); reelElement.classList.remove('stopping'); reelsStoppedCount++; if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100); }, 1200 + config.reelStopDelay); // Adjusted failsafe
+                }, totalSpinDuration - (config.reelStopDelay + 200)); // Start stopping animation a bit earlier
+            });
+        }
+
+        function evaluateResult() { /* Adapted from bug game (adjacent pays) */
+            let totalWinnings = 0; let combinedWinningLinesInfo = []; let isBigWinOverall = false;
+            finalSymbols = [];
+            for (let r = 0; r < config.rowCount; r++) { for (let c = 0; c < config.reelCount; c++) { const reel = reels[c]; const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight); const symbolIndexInDataArray = (topVisibleSymbolIndex + r + reel.symbols.length) % reel.symbols.length; finalSymbols.push(reel.symbols[symbolIndexInDataArray]); } }
+
+            config.winningLines.forEach(line => {
+                let bestWinOnThisLine = { amount: 0, count: 0, symbolId: null, indices: [], multiplier: 0, lineName: line.name || line.id };
+                // Iterate through symbols to check for wins starting with that symbol or wild
+                config.symbols.forEach(symbolToCheckAsBase => {
+                    if (!symbolToCheckAsBase.payouts) return; // Skip symbols that don't pay (if any)
+                    const baseSymbolId = symbolToCheckAsBase.id;
+                    const isBaseSymbolWild = symbolToCheckAsBase.wild;
+
+                    for (let len = config.reelCount; len >= 3; len--) { // Check for 5, 4, then 3 matches
+                        // Check all possible start positions for this length on the line
+                        for (let startPosOnLine = 0; startPosOnLine <= line.indices.length - len; startPosOnLine++) {
+                            const currentSegmentIndicesOnLine = line.indices.slice(startPosOnLine, startPosOnLine + len);
+                            if (currentSegmentIndicesOnLine.length < len) continue; // Should not happen with the loop condition
+
+                            const groupSymbolsData = currentSegmentIndicesOnLine.map(globalIndex => finalSymbols[globalIndex]);
+
+                            // Check if this group forms a win for the baseSymbolId (or if baseSymbolId is wild and can start a line)
+                            if (checkAdjacentGroup(groupSymbolsData, baseSymbolId, len, isBaseSymbolWild)) {
+                                const payoutKey = len.toString();
+                                if (symbolToCheckAsBase.payouts[payoutKey]) {
+                                    const multiplier = symbolToCheckAsBase.payouts[payoutKey];
+                                    const amount = currentBet * multiplier;
+                                    if (amount > bestWinOnThisLine.amount) { // Only keep the highest paying combination on this line
+                                        bestWinOnThisLine = { amount, count: len, symbolId: baseSymbolId, indices: currentSegmentIndicesOnLine, multiplier, lineName: line.name || line.id };
+                                    }
+                                }
+                                // If a win of this length is found for this base symbol, no need to check shorter lengths for the same base symbol
+                                break; // Break from inner loop (startPosOnLine)
+                            }
+                        }
+                        if (bestWinOnThisLine.count === len && bestWinOnThisLine.symbolId === baseSymbolId) break; // Break from middle loop (len)
+                    }
+                });
+                if (bestWinOnThisLine.amount > 0) { totalWinnings += bestWinOnThisLine.amount; combinedWinningLinesInfo.push(bestWinOnThisLine); if (bestWinOnThisLine.multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true; }
+            });
+            spinning = false; triggerWinEffect(isBigWinOverall ? 'big' : (totalWinnings > 0 ? 'standard' : 'none')); // Trigger 3D effects
+            if (totalWinnings > 0) {
+                money += totalWinnings; let winMessage = "";
+                if (combinedWinningLinesInfo.length > 1) { winMessage = "Sweet Combo! Multiple Juicy Wins!\n"; combinedWinningLinesInfo.forEach(info => { const displayName = info.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); winMessage += `${info.count}x ${displayName} (${info.lineName}) = $${info.amount.toLocaleString()}\n`;}); winMessage += `Total Juicy Cash: $${totalWinnings.toLocaleString()}`; }
+                else if (combinedWinningLinesInfo.length === 1) { const winInfo = combinedWinningLinesInfo[0]; const displayName = winInfo.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); winMessage = `Sweet! ${winInfo.count}x ${displayName} on ${winInfo.lineName} = $${winInfo.amount.toLocaleString()}`; }
+                if (isBigWinOverall) { const baseMessage = combinedWinningLinesInfo.length > 1 ? winMessage.substring(winMessage.indexOf('\n') + 1) : winMessage; winMessage = `!!! FRUIT FRENZY JACKPOT !!!\n` + baseMessage; playSound(sounds.bigWin); } else { playSound(sounds.win); }
+                displayMessage(winMessage, true, isBigWinOverall); highlightWinsOnReels(combinedWinningLinesInfo); combinedWinningLinesInfo.forEach(winInfo => highlightPaytableEntry(winInfo.symbolId, winInfo.count));
+            } else { const moneyBeforeThisSpin = money + currentBet; if (!(moneyBeforeThisSpin <= 0 && currentBet === 1)) displayMessage("No juice this time... Spin again!"); }
+            updateMoneyDisplay(); disableControls(false, money <= 0 && parseInt(betInput.value) > 1); spinButton.innerText = "Spin!";
+            if (autoMode) { let nextBetForAuto = parseInt(betInput.value); if(isNaN(nextBetForAuto) || nextBetForAuto < 1) nextBetForAuto = 1; if ((money >= nextBetForAuto && money > 0) || (money <= 0 && nextBetForAuto === 1) ) autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay); else { stopAutoSpin(); displayMessage(money <= 0 ? "Out of Juice! Try 'New Batch'?" : "Not enough Juicy Cash for Auto. Mode off.", false, money <= 0); } }
+        }
+
+        function checkAdjacentGroup(groupSymbolsData, checkSymbolId, requiredCount, isWildTypeBeingChecked) { /* Same as bug game */
+            if (groupSymbolsData.length !== requiredCount) return false; if (groupSymbolsData.some(s => !s)) return false;
+            for (let i = 0; i < requiredCount; i++) { const symbol = groupSymbolsData[i]; if (isWildTypeBeingChecked) { if (!symbol.wild) return false; } else { if (symbol.id !== checkSymbolId && !symbol.wild) return false; } } return true;
+        }
+        function stopAutoSpin() { /* Adapted for fruity */
+            autoMode = false; clearTimeout(autoSpinTimeout); autoButton.innerText = "Auto-Play"; autoButton.style.background = ''; if (!spinning) disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        }
+        function generateSidePayTable() { /* Adapted for "Fruit Basket" */
+            paytablePanelContent.innerHTML = ''; const table = document.createElement('table'); table.classList.add('paytable-table'); const thead = table.createTHead(); const headerRow = thead.insertRow(); const headers = ['Icon', 'Fruit', '3x', '4x', '5x']; headers.forEach(text => { const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th); }); const tbody = table.createTBody();
+            config.symbols.forEach(symbolData => { if (symbolData.payouts) { const row = tbody.insertRow(); row.dataset.symbolId = symbolData.id; const emojiCell = row.insertCell(); emojiCell.textContent = symbolData.emoji; emojiCell.classList.add('paytable-symbol-emoji'); if (symbolData.colorVar) emojiCell.style.color = `var(${symbolData.colorVar})`; const nameCell = row.insertCell(); let symbolNameText = symbolData.id.replace(/_/g, ' '); if (symbolData.wild) symbolNameText += " (Wild)"; nameCell.textContent = symbolNameText; nameCell.classList.add('paytable-symbol-name'); const p3 = symbolData.payouts['3'] || 0, p4 = symbolData.payouts['4'] || 0, p5 = symbolData.payouts['5'] || 0; const p3Cell = row.insertCell(); p3Cell.textContent = p3 > 0 ? `${p3}x` : '-'; if (p3 > 0) p3Cell.dataset.payoutCount = "3"; const p4Cell = row.insertCell(); p4Cell.textContent = p4 > 0 ? `${p4}x` : '-'; if (p4 > 0) p4Cell.dataset.payoutCount = "4"; const p5Cell = row.insertCell(); p5Cell.textContent = p5 > 0 ? `${p5}x` : '-'; if (p5 > 0) p5Cell.dataset.payoutCount = "5"; } });
+            paytablePanelContent.appendChild(table); const wildSymbol = config.symbols.find(s => s.wild); const wildInfoDiv = document.createElement('div'); wildInfoDiv.classList.add('paytable-wild-info'); if (wildSymbol) wildInfoDiv.innerHTML = `<b>${wildSymbol.emoji} ${wildSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> is WILD and substitutes for all other fruits for extra juicy wins!`; else wildInfoDiv.textContent = "No special fruit in this basket."; paytablePanelContent.appendChild(wildInfoDiv);
+        }
+        function requestFullScreenGame() { /* Same as bug game */
+            const elem = document.documentElement; if (elem.requestFullscreen) elem.requestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`)); else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen().catch(err => console.warn(`Fullscreen error: ${err.message}`)); else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`)); else if (elem.msRequestFullscreen) elem.msRequestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+        }
+
+        startButton.addEventListener('click', () => { /* Adapted for fruity */
+            playSound(sounds.click); requestFullScreenGame(); titleScreen.style.display = 'none'; gameLayoutContainer.style.display = 'flex';
+            initThreeJS(); // Initialize 3D background after starting
+            initializeGame();
+        });
+        spinButton.addEventListener('click', () => { if (!spinning) startSpin(); });
+        maxBetButton.addEventListener('click', () => { playSound(sounds.click); if (!spinning) { const maxBetValue = money > 0 ? money : 1; betInput.value = maxBetValue; } });
+        autoButton.addEventListener('click', () => { /* Adapted for fruity */
+            playSound(sounds.click); if (autoMode) { stopAutoSpin(); if (!spinning) displayMessage("Auto-Play OFF."); }
+            else { let betForAuto = parseInt(betInput.value); if (isNaN(betForAuto) || betForAuto < 1) betForAuto = 1; const maxAffordableAuto = money > 0 ? money : 1; if (betForAuto > maxAffordableAuto && money > 0) betForAuto = maxAffordableAuto; else if (money <= 0 && betForAuto > 1) betForAuto = 1; betInput.value = betForAuto;
+                if (!spinning && ((money >= betForAuto && money > 0) || (money <= 0 && betForAuto === 1))) { autoMode = true; autoButton.innerText = "Stop Auto"; autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #c62828)'; displayMessage("Auto-Play ON! Let the fruits roll!"); startSpin(); }
+                else if (spinning) { autoMode = true; autoButton.innerText = "Stop Auto"; autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #c62828)'; displayMessage("Auto-Play will start after this spin."); }
+                else { displayMessage(money <= 0 ? "Out of Juice! Try 'New Batch'?" : "Not enough Juicy Cash for Auto-Play!"); }
+            }
+        });
+        resetButton.addEventListener('click', () => { /* Adapted for fruity */
+            playSound(sounds.click); if (confirm("Start with a fresh batch of $100?")) { if (document.fullscreenElement) document.exitFullscreen(); else if (document.mozCancelFullScreen) document.mozCancelFullScreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); else if (document.msExitFullscreen) document.msExitFullscreen(); location.reload(); }
+        });
+        betInput.addEventListener('input', () => { /* Validation on blur */ });
+        betInput.addEventListener('blur', () => { /* Same as bug game */
+            let n = parseInt(betInput.value); const maxBetForNext = money > 0 ? money : 1; if (isNaN(n) || n < 1) n = 1; if (n > maxBetForNext && money > 0) n = maxBetForNext; else if (money <= 0 && n > 1) n = 1; betInput.value = n; updateMoneyDisplay(); disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        });
+        function initializeGame() { /* Adapted for fruity */
+            money = config.money; let initialBetVal = parseInt(betInput.value); if (isNaN(initialBetVal) || initialBetVal < 1) initialBetVal = 1; const maxInitial = money > 0 ? money : 1; if (initialBetVal > maxInitial && money > 0) initialBetVal = maxInitial; else if (money <=0 && initialBetVal > 1) initialBetVal = 1; betInput.value = initialBetVal; currentBet = initialBetVal;
+            autoMode = false; spinning = false; clearTimeout(autoSpinTimeout);
+            displayMessage("Set your bet and let the fruity fun begin!");
+            buildReels(); generateSidePayTable(); updateMoneyDisplay(); clearReelHighlights(); clearPaytableHighlights(); clearWinEffects();
+            disableControls(false, money <= 0 && currentBet > 1); autoButton.innerText = "Auto-Play"; autoButton.style.background = '';
+            Object.values(sounds).forEach(sound => { if (sound.readyState < 2) sound.load(); });
+             console.log("Fruity Cascade Deluxe Initialized.");
+        }
+    </script>
+</body>
+</html>

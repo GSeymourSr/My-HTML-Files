@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cosmic Cash Quest - Alien Slots</title>
+  <style>
+    :root {
+      /* --- Cosmic Cash Quest Theme --- */
+      --bg-color-main: #0c031a; /* Deep Space Purple/Black */
+      --bg-color-accent: #1d0f33; /* Darker Purple */
+      --machine-border: #00e5ff; /* Cyan Glow */
+      --title-bg: linear-gradient(to bottom, #3d1f7c, #2a0d52); /* Purple Gradient */
+      --title-text-color: #e0e0ff; /* Light Lavender */
+      --title-shadow: rgba(0, 229, 255, 0.3);
+      --money-color: #69f0ae; /* Bright Mint Green */
+      --reels-bg: #220a47; /* Dark Purple */
+      --reel-bg: #331066; /* Slightly Lighter Purple */
+      --button-bg: linear-gradient(to bottom, #5e35b1, #4527a0); /* Purple Buttons */
+      --button-border: #7e57c2; /* Lighter Purple Border */
+      --button-hover-bg: linear-gradient(to bottom, #7e57c2, #5e35b1);
+      --spin-button-bg: linear-gradient(to bottom, #00e5ff, #00b8d4); /* Cyan Spin Button */
+      --spin-button-border: #00a1b8;
+      --message-bg: rgba(10, 5, 20, 0.95); /* Very Dark Transparent Purple */
+      --message-text-color: #c5cae9; /* Light Indigo */
+      --message-win-color: #69f0ae; /* Mint Green */
+      --message-bigwin-color: #00e5ff; /* Bright Cyan */
+      --paytable-bg: rgba(29, 15, 51, 0.97); /* Dark Purple Transparent */
+      --paytable-text-color: #b3b8d9;
+      --paytable-header-bg: rgba(78, 36, 143, 0.9);
+
+      --bonus-bg: rgba(5, 2, 10, 0.98); /* Almost Black for Bonus */
+      --bonus-text: #d1d8ff; /* Light Blueish */
+      --bonus-item-bg: #4a00e0; /* Electric Purple for Planets */
+      --bonus-item-hover-bg: #6f00ff;
+
+      --reel-width: 70px;
+      --reel-height: 70px;
+      --symbol-size: 45px;
+      --num-reels: 5;
+      --num-rows: 5;
+      --reel-gap: 6px;
+
+      /* Sci-fi gradient colors for text */
+      --g-color1: #00ffea; --g-color2: #33ceff; --g-color3: #809fff;
+      --g-color4: #ff00ff; --g-color5: #a020f0;
+    }
+
+    @keyframes gradientTextFlowSpace {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .animated-gradient-text-space {
+        background-size: 250% 250%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent !important;
+        animation: gradientTextFlowSpace 8s linear infinite;
+        display: inline-block;
+    }
+    @keyframes ufoWildPulse {
+        0%, 100% { filter: drop-shadow(0 0 3px #69f0ae) brightness(1); transform: scale(1); }
+        50% { filter: drop-shadow(0 0 8px #00ffea) brightness(1.3); transform: scale(1.05); }
+    }
+    .wild-symbol-animate { animation: ufoWildPulse 1.5s ease-in-out infinite; }
+
+    @keyframes galaxyScatterSpin {
+        0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 2px #ff00ff); }
+        50% { transform: rotate(10deg) scale(1.03); filter: drop-shadow(0 0 5px #c500c5); }
+        100% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 2px #ff00ff); }
+    }
+    .scatter-symbol-animate { animation: galaxyScatterSpin 2s ease-in-out infinite; }
+
+
+    body {
+      margin: 0;
+      font-family: 'Exo 2', 'Arial Narrow', sans-serif; /* Sci-fi font */
+      background: radial-gradient(circle, var(--bg-color-accent) 0%, var(--bg-color-main) 100%);
+      color: var(--paytable-text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    #app-wrapper {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    #title-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(135deg, #1a0033, #0d001a 50%, #000000); /* Deep space colors */
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 100;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+    #title-screen .main-title-ts {
+        font-size: clamp(2.5rem, 7vw, 4.5rem);
+        font-weight: bold;
+        margin-bottom: 15px;
+        font-family: 'Orbitron', 'Nova Square', cursive; /* Sci-fi title font */
+        background-image: linear-gradient(90deg, var(--g-color1), var(--g-color2), var(--g-color3), var(--g-color1));
+        text-shadow: 2px 2px 5px rgba(0,200,255,0.5);
+    }
+    #title-screen .sub-title-ts {
+        font-size: clamp(1rem, 2.2vw, 1.5rem);
+        color: #c5cae9;
+        margin-bottom: 30px;
+        max-width: 70%;
+        line-height: 1.5;
+        font-family: 'Rajdhani', sans-serif; /* Techy font */
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+    }
+    #title-screen #start-button {
+        font-family: 'Audiowide', cursive; /* Button font */
+        font-size: clamp(1.4rem, 4vw, 2rem);
+        padding: 12px 30px;
+        border-radius: 8px;
+        background: linear-gradient(145deg, #00e5ff, #00b8d4);
+        border: 3px solid #80deea; /* Light Cyan border */
+        color: #0c031a; /* Dark text on light button */
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 15px #00e5ff, 0 5px 10px rgba(0, 0, 0, 0.3);
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.2);
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+    #title-screen #start-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 25px #00e5ff, 0 7px 15px rgba(0, 0, 0, 0.4);
+        background: linear-gradient(145deg, #33ebff, #00c8e4);
+    }
+
+    #game-layout-container {
+        display: none;
+        flex-direction: row;
+        width: 100%;
+        height: 100%;
+        gap: 10px;
+        align-items: stretch;
+        box-sizing: border-box;
+    }
+    #paytable-panel {
+        flex: 0 0 280px;
+        background: var(--paytable-bg); border-radius: 10px;
+        padding: 10px; box-shadow: 0 0 10px rgba(0, 229, 255, 0.15); overflow-y: auto;
+        border: 2px solid var(--machine-border); display: flex; flex-direction: column;
+        max-height: calc(100vh - 40px);
+    }
+    #paytable-panel h2 {
+        text-align: center; color: var(--machine-border); font-family: 'Orbitron', cursive;
+        font-size: 1.6em; margin-top: 0; margin-bottom: 6px; text-shadow: 1px 1px 2px var(--title-shadow);
+    }
+    .paytable-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.7em;}
+    .paytable-table th, .paytable-table td { border: 1px solid var(--machine-border); padding: 3px; text-align: center; vertical-align: middle; }
+    .paytable-table th { background-color: var(--paytable-header-bg); color: #fff; font-weight: bold; font-family: 'Rajdhani', sans-serif;}
+    .paytable-table td { color: var(--paytable-text-color); }
+    .paytable-symbol-emoji { font-size: 18px; vertical-align: middle; }
+    .paytable-symbol-name { font-weight: bold; text-transform: capitalize; font-size: 0.85em; }
+    .paytable-wild-info { margin-top: 10px; font-size: 0.75em; text-align: center; color: var(--money-color); line-height: 1.3; }
+    @keyframes paytableWinFlashAlien {
+        0%, 100% { background-color: transparent; transform: scale(1); }
+        50% { background-color: var(--message-win-color); transform: scale(1.05); color: #000 !important; }
+    }
+    .paytable-table td.paytable-win-flash { animation: paytableWinFlashAlien 0.8s ease-in-out infinite; }
+
+    #main-game-area {
+        flex-grow: 1; display: flex; flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0; overflow: hidden; min-width: 0;
+        height: 100%;
+    }
+    #slot-machine {
+      background: linear-gradient(145deg, #15052e, #2a0d52);
+      border: 4px solid var(--machine-border);
+      border-radius: 8px; padding: 10px;
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.4), inset 0 0 8px rgba(0,0,0,0.3);
+      text-align: center;
+      width: 100%;
+      height: auto;
+      max-height: calc(100vh - 40px);
+      box-sizing: border-box; display: flex; flex-direction: column;
+      justify-content: space-around; position: relative; z-index: 1;
+    }
+    #title {
+      font-size: clamp(1.4em, 2.5vw, 1.8em); font-weight: bold;
+      text-shadow: 1px 1px 3px var(--title-shadow), 0 0 8px var(--machine-border);
+      background: var(--title-bg); padding: 7px; margin: 0 auto 8px auto;
+      border-radius: 5px 5px 0 0; border-bottom: 2px solid var(--machine-border);
+      line-height: 1.1; letter-spacing: 1px; width: 95%; box-sizing: border-box;
+      font-family: 'Orbitron', 'Nova Square', cursive;
+    }
+     #title .main-title-ingame {
+        background-image: linear-gradient(90deg, var(--g-color1), var(--g-color2), var(--g-color3), var(--g-color1));
+     }
+     #title .subtitle {
+        font-size: clamp(0.4em, 1vw, 0.6em);
+        color: #d1d8ff; font-weight: normal; display: block;
+        margin-top: 4px;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+        line-height: 1.3;
+        font-family: 'Rajdhani', sans-serif;
+      }
+    #money-display {
+      font-size: clamp(1.3em, 2.1vw, 1.6em); margin: 6px 0; color: var(--money-color);
+      text-shadow: 0 0 5px #000, 0 0 3px var(--money-color); background-color: rgba(5,2,10,0.9);
+      padding: 6px 10px; border-radius: 4px; display: inline-block; border: 1px solid var(--money-color);
+      font-weight: bold; font-family: 'Audiowide', sans-serif;
+    }
+
+    #reels-container {
+      display: grid; grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+      grid-gap: var(--reel-gap); justify-content: center; margin-bottom: 8px;
+      background: var(--reels-bg); padding: 6px; border-radius: 4px;
+      border: 1px solid var(--machine-border);
+      height: calc(var(--num-rows) * var(--reel-height));
+      position: relative; align-self: center;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    }
+    .reel {
+        width: var(--reel-width);
+        height: calc(var(--num-rows) * var(--reel-height));
+        overflow: hidden; background: var(--reel-bg); border-radius: 3px;
+        position: relative; box-shadow: inset 0 0 5px rgba(0,0,0,0.4);
+    }
+    .symbols-container { position: absolute; top: 0; left: 0; width: 100%; }
+    .reel.spinning .symbols-container { transition: transform 0.07s linear; filter: blur(1.5px) brightness(1.2); } /* Faster blur */
+    .reel.stopping .symbols-container { transition: transform 0.6s cubic-bezier(0.1, 0.8, 0.25, 1); filter: blur(0px); } /* Quicker stop */
+    .symbol {
+        width: var(--reel-width); height: var(--reel-height);
+        display: flex; align-items: center; justify-content: center;
+        font-size: var(--symbol-size); position: relative; box-sizing: border-box;
+        line-height: 1; text-shadow: 0 0 3px rgba(0,229,255,0.5), 0 0 6px var(--machine-border);
+        user-select: none; color: #f0f0ff;
+    }
+    @keyframes symbolWinFlashAlien { /* "Laser" or "Teleport" effect */
+        0%,100%{transform:scale(1); opacity: 1; filter: brightness(1) drop-shadow(0 0 2px var(--machine-border));}
+        50%{transform:scale(1.18) rotate(3deg); opacity: 0.9; filter: brightness(1.5) drop-shadow(0 0 6px var(--message-win-color)) drop-shadow(0 0 10px #fff);}
+    }
+    .symbol.winning { animation: symbolWinFlashAlien 0.5s ease-in-out infinite; z-index: 10; outline: 1.5px solid var(--message-win-color); background-color: rgba(0, 255, 200, 0.1); outline-offset: -1.5px; }
+
+    #controls {
+      margin: 8px 0 6px 0; display: flex; flex-wrap: wrap; justify-content: center;
+      gap: clamp(3px, 0.7vw, 6px);
+    }
+    #controls input, #controls button {
+      font-family: 'Audiowide', 'Rajdhani', cursive; font-size: clamp(0.75em, 1.2vw, 0.9em);
+      padding: clamp(6px, 0.8vw, 8px) clamp(8px, 1.3vw, 12px); margin: clamp(2px, 0.4vw, 3px);
+      border-radius: 3px; border: 1px solid var(--button-border); background: var(--button-bg);
+      color: #e0e0ff; cursor: pointer; transition: all 0.15s ease-out;
+      box-shadow: 0 1.5px 0px #2a0d52, 0 2px 3px rgba(0,0,0,0.4);
+      text-shadow: 1px 1px 1px rgba(0,0,0,0.6); font-weight: bold; text-transform: uppercase;
+    }
+    #controls input { width: clamp(50px, 7vw, 60px); text-align: center; background: #1c0e38; color: #e0e0ff; text-shadow: none; border-color: var(--machine-border);}
+    #controls button:hover:not(:disabled) { background: var(--button-hover-bg); transform: translateY(-1px); box-shadow: 0 2.5px 0px #2a0d52, 0 3px 5px rgba(0,0,0,0.5), 0 0 5px var(--machine-border); }
+    #spin {
+        font-size: clamp(0.8em, 1.4vw, 0.95em); padding: clamp(7px, 1.1vw, 10px) clamp(15px, 2vw, 18px);
+        background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #0c031a; text-shadow: 1px 1px 0px rgba(255,255,255,0.4);
+    }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #33ffff, #00cfea); border-color: #00b8d4; box-shadow: 0 0 10px #00e5ff; }
+    #maxBet { background: linear-gradient(to bottom, #ff00ff, #c500c5); border-color: #a020f0; color: #fff;}
+
+    #message {
+      font-size: clamp(0.85em, 1.5vw, 0.95em); margin-top: 6px; min-height: clamp(28px, 5vh, 35px); padding: 6px;
+      background-color: var(--message-bg); border-radius: 3px; color: var(--message-text-color); text-shadow: none;
+      white-space: pre-line; line-height: 1.2; border: 1px solid var(--machine-border);
+      box-shadow: inset 0 0 8px rgba(0, 229, 255, 0.3); font-weight: bold;
+      width: 90%; align-self: center; box-sizing: border-box; font-family: 'Rajdhani', sans-serif;
+    }
+    #message.win { color: var(--message-win-color); font-weight: bold; text-shadow: 0 0 4px var(--message-win-color), 0 0 2px #fff; }
+    @keyframes bigWinMessagePulseAlien {0%{transform:scale(1);opacity:.9; text-shadow: 0 0 6px var(--message-bigwin-color), 0 0 12px #fff;}100%{transform:scale(1.03);opacity:1; text-shadow: 0 0 10px var(--message-bigwin-color), 0 0 20px #fff, 0 0 5px var(--message-bigwin-color);}}
+    #message.big-win { font-size: clamp(1em, 2vw, 1.2em); color: var(--message-bigwin-color); animation: bigWinMessagePulseAlien 0.5s infinite alternate; font-weight: bold; }
+
+    /* --- Planet Scan Bonus Screen Styles --- */
+    #bonus-planet-scan-screen {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background-color: var(--bonus-bg); color: var(--bonus-text);
+        z-index: 200; flex-direction: column; align-items: center;
+        justify-content: center;
+        padding: clamp(15px, 4vh, 30px);
+        box-sizing: border-box; text-align: center;
+        font-family: 'Rajdhani', sans-serif;
+    }
+    #bonus-planet-scan-screen h2 {
+        font-family: 'Orbitron', cursive; font-size: clamp(1.6em, 3.5vw, 2.2em);
+        color: var(--machine-border); text-shadow: 1px 1px 3px var(--title-shadow);
+        margin-bottom: clamp(15px, 3vh, 25px);
+    }
+    #bonus-planet-scan-screen p#bonus-instructions {
+      font-size: clamp(0.9em, 2.2vw, 1.2em);
+      margin-bottom: clamp(15px, 3vh, 25px);
+      line-height: 1.4;
+    }
+    #planet-scan-items-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(clamp(80px, 18vw, 110px), 1fr));
+        gap: clamp(12px, 2.5vw, 20px);
+        width: 90%;
+        max-width: clamp(500px, 90vw, 750px);
+        margin-bottom: clamp(15px, 2vh, 20px);
+    }
+    .planet-scan-item { /* Represents a planet to scan */
+        background-color: var(--bonus-item-bg);
+        padding: 10px;
+        min-height: clamp(45px, 12vmin, 70px);
+        border-radius: 50%; /* Make them round like planets */
+        font-size: clamp(2em, 6vmin, 3em); /* For the '?' or revealed emoji */
+        color: #fff; cursor: pointer; transition: all 0.3s ease;
+        border: 2px solid #7e57c2; /* Darker purple border */
+        box-shadow: 0 0 10px var(--bonus-item-bg), inset 0 0 5px rgba(0,0,0,0.3);
+        display: flex; align-items: center; justify-content: center; text-align: center;
+    }
+    .planet-scan-item:hover:not(.picked) {
+        background-color: var(--bonus-item-hover-bg);
+        transform: scale(1.08) rotate(5deg);
+        box-shadow: 0 0 15px var(--bonus-item-hover-bg), 0 0 5px #fff;
+    }
+    .planet-scan-item.picked {
+        opacity: 0.6; cursor: default; background-color: #1c0a3e; /* Dark, "scanned" color */
+        transform: scale(0.95); box-shadow: inset 0 0 8px rgba(0,0,0,0.5);
+    }
+    #scan-special-items-collected { /* For Wormhole Stabilizers */
+      margin-bottom: clamp(10px, 2.5vh, 18px);
+      font-size: clamp(0.9em, 2vw, 1.1em);
+      line-height: 1.5;
+    }
+    #scan-special-items-collected span {
+        display: inline-block; padding: 5px 10px;
+        background-color: #2a0d52; /* Dark purple chip */
+        border-radius: 5px;
+        margin: 5px 8px;
+        border: 1px solid var(--machine-border);
+        font-size: 1em; /* Make special item text larger */
+        box-shadow: 0 0 5px var(--machine-border);
+    }
+    #bonus-scan-winnings-display {
+        font-size: clamp(1.1em, 2.8vw, 1.6em); color: var(--money-color);
+        font-weight: bold;
+        margin-bottom: clamp(18px, 3.5vh, 30px);
+        text-shadow: 0 0 5px var(--money-color);
+    }
+    #collect-scan-bonus-button {
+        padding: 10px 22px; font-size: clamp(0.9em, 2.2vw, 1.2em);
+        font-family: 'Audiowide', cursive; text-transform: uppercase;
+        background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #0c031a;
+        text-shadow: 1px 1px 0px rgba(255,255,255,0.4);
+        cursor: pointer; border-radius: 5px;
+    }
+    @keyframes hyperJumpFlash {
+        0%, 100% { box-shadow: 0 0 20px #fff, 0 0 30px #00e5ff, 0 0 40px #ff00ff; }
+        50% { box-shadow: 0 0 30px #fff, 0 0 50px #00e5ff, 0 0 70px #ff00ff, 0 0 10px #fff inset; }
+    }
+    #bonus-planet-scan-screen.hyper-jump-active {
+        animation: hyperJumpFlash 0.7s ease-in-out 3; /* Flash 3 times */
+    }
+
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        #game-layout-container { flex-direction: column; overflow-y: auto; }
+        #paytable-panel { flex: 0 0 auto; max-height: 250px; margin-bottom: 10px; }
+        #main-game-area { justify-content: flex-start; padding-top: 10px; }
+        #title { font-size: clamp(1.2em, 4vw, 1.6em); }
+        #bonus-planet-scan-screen h2 { font-size: clamp(1.4em, 5vw, 1.8em); }
+        .planet-scan-item { font-size: clamp(1.8em, 8vmin, 2.5em); }
+
+    }
+     @media (max-height: 600px) and (min-width: 769px) {
+        #slot-machine { padding: 5px; }
+        #title { font-size: clamp(1.2em, 2vw, 1.5em); padding: 5px; margin-bottom: 5px;}
+        #money-display { font-size: clamp(1.1em, 1.8vw, 1.4em); margin: 4px 0; }
+        #reels-container { margin-bottom: 5px; }
+    }
+     @media (max-height: 500px) { /* Very short viewports */
+        #paytable-panel { max-height: 150px; }
+        #title { display: none; } /* Hide machine title if very constrained */
+        #slot-machine { padding: 5px; }
+        #controls button { padding: 5px 8px; font-size: clamp(0.7em, 1vw, 0.8em); }
+        #spin { padding: 6px 10px; }
+        #bonus-planet-scan-screen h2 { font-size: clamp(1.2em, 4vw, 1.5em); margin-bottom: 10px;}
+        #bonus-planet-scan-screen p#bonus-instructions { font-size: clamp(0.8em, 3vw, 1em); margin-bottom: 10px;}
+        #planet-scan-items-container { gap: 8px; }
+        .planet-scan-item { min-height: clamp(35px, 10vmin, 50px); font-size: clamp(1.5em, 7vmin, 2em); }
+
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Exo+2:wght@400;700&family=Rajdhani:wght@400;700&family=Audiowide&family=Nova+Square&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="title-screen">
+        <div class="main-title-ts animated-gradient-text-space">Cosmic Cash Quest</div>
+        <p class="sub-title-ts">Explore uncharted galaxies, scan mysterious planets, and uncover alien treasures! The 🛸 UFO is WILD, beaming up big wins!</p>
+        <button id="start-button">Launch Expedition!</button>
+    </div>
+
+  <div id="app-wrapper" style="display:none;">
+      <div id="game-layout-container">
+          <aside id="paytable-panel">
+              <h2>Intel Log</h2>
+              <div id="paytable-content"></div>
+          </aside>
+          <main id="main-game-area">
+              <div id="slot-machine">
+                <div id="title">
+                    <span class="main-title-ingame animated-gradient-text-space">Cosmic Cash Quest</span>
+                    <span class="subtitle">By Greg Seymour &amp; AI<br>The Universe Awaits!</span>
+                </div>
+                <div id="money-display">Credits: $100</div>
+                <div id="reels-container"></div>
+                <div id="controls">
+                  <label for="bet">Bet:</label>
+                  <input type="number" id="bet" value="5" min="1">
+                  <button id="maxBet">Max Warp</button>
+                  <button id="spin">Engage!</button>
+                  <button id="auto">Autopilot</button>
+                  <button id="reset">Abort Mission</button>
+                </div>
+                <div id="message">Set your coordinates (bet) and engage thrusters!</div>
+              </div>
+          </main>
+      </div>
+  </div>
+
+  <div id="bonus-planet-scan-screen">
+      <h2>Planet Scan Initiative</h2>
+      <p id="bonus-instructions">You have <span id="bonus-scans-left">3</span> scans remaining. Find 3 Wormhole Stabilizers 🌀 for a Hyper Jump Bonus!</p>
+      <div id="scan-special-items-collected">Stabilizers: </div>
+      <div id="planet-scan-items-container">
+          <!-- Planets will be generated here by JS -->
+      </div>
+      <p id="bonus-scan-winnings-display">Scan Winnings: $0</p>
+      <button id="collect-scan-bonus-button" style="display:none;">Collect Galactic Spoils!</button>
+  </div>
+
+  <!-- Audio tags would go here for new sounds:
+  <audio id="spin-sound" src="sounds/warp_spin.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="sounds/laser_win.mp3" preload="auto"></audio>
+  ... and so on
+  -->
+
+  <script>
+    const config = {
+        money: 100,
+        reelCount: 5,
+        rowCount: 5,
+        symbolHeight: 70,
+        spinDurationBase: 600, // Slightly faster base spin
+        spinDurationVariance: 250,
+        reelStopDelay: 70,
+        autoSpinDelay: 1000, // Faster auto-spin
+        symbols: [
+            // Emojis: Alien Monster, Alien, Comet, Star, Astronaut, Satellite, Rocket, Ringed Planet, UFO (Wild), Galaxy (Scatter)
+            { id: 'alien_monster', emoji: '👾', payouts: { '3': 2,  '4': 5,   '5': 10  } },
+            { id: 'comet',         emoji: '☄️', payouts: { '3': 3,  '4': 7,   '5': 15  } },
+            { id: 'star',          emoji: '⭐', payouts: { '3': 4,  '4': 10,  '5': 20  } },
+            { id: 'astronaut',     emoji: '🧑‍🚀', payouts: { '3': 5,  '4': 12,  '5': 30  } },
+            { id: 'satellite',     emoji: '🛰️', payouts: { '3': 8,  '4': 20,  '5': 50  } },
+            { id: 'rocket',        emoji: '🚀', payouts: { '3': 15, '4': 40,  '5': 100 } },
+            { id: 'ringed_planet', emoji: '🪐', payouts: { '3': 20, '4': 60,  '5': 150 } },
+            { id: 'galaxy_scatter',emoji: '🌌', scatter: true, payouts: { '3': 5, '4': 10, '5': 25} }, // Pays on line, triggers bonus
+            { id: 'ufo_wild',      emoji: '🛸', payouts: { '3': 30, '4': 100, '5': 300 }, wild: true },
+        ],
+        winningLines: [
+            { id: 'cosmic-ray-1', name: 'Ray 1 (Row 1)', type: 'horizontal', indices: [0, 1, 2, 3, 4] },
+            { id: 'cosmic-ray-2', name: 'Ray 2 (Row 2)', type: 'horizontal', indices: [5, 6, 7, 8, 9] },
+            { id: 'cosmic-ray-3', name: 'Ray 3 (Row 3)', type: 'horizontal', indices: [10, 11, 12, 13, 14] },
+            { id: 'cosmic-ray-4', name: 'Ray 4 (Row 4)', type: 'horizontal', indices: [15, 16, 17, 18, 19] },
+            { id: 'cosmic-ray-5', name: 'Ray 5 (Row 5)', type: 'horizontal', indices: [20, 21, 22, 23, 24] },
+            { id: 'nebula-diagonal', name: 'Nebula Diag \\', type: 'fixedpath', indices: [0, 6, 12, 18, 24] },
+            { id: 'quasar-diagonal', name: 'Quasar Diag /', type: 'fixedpath', indices: [20, 16, 12, 8, 4] },
+        ],
+        bigWinThresholdMultiplier: 25,
+        planetScanBonus: { // New Bonus Config
+            numPlanets: 9, // Total planets to show on screen
+            numScans: 3,   // Player picks
+            specialItem: { id: "wormhole_stabilizer", name: "Wormhole Stabilizer", emoji: "🌀" },
+            numSpecialToCollect: 3,
+            hyperJumpBonus: 150, // Multiplier of currentBet for Hyper Jump
+            planetPrizes: [ // Possible outcomes for scanning a planet
+                { type: 'credits', value: 2 }, { type: 'credits', value: 3 }, { type: 'credits', value: 5 },
+                { type: 'credits', value: 2 }, { type: 'credits', value: 4 }, { type: 'credits', value: 1 },
+                { type: 'artifact_multiplier', value: 2 }, // Multiplies current bonus winnings
+                { type: 'special_item' }, // Will be the wormhole_stabilizer
+                { type: 'special_item' },
+                { type: 'special_item' }, // Ensure enough special items can appear
+                { type: 'credits', value: 7 },
+                { type: 'credits', value: 3 },
+            ],
+            planetEmojis: ['🪐', '🌍', '🌑', '🔴', '🔵', '🟠', '🟡', '🟢', '🟣'] // Visuals for planets
+        }
+    };
+
+    let money = config.money;
+    let currentBet = 5;
+    let autoMode = false;
+    let spinning = false;
+    let reels = [];
+    let finalSymbols = [];
+    let autoSpinTimeout = null;
+
+    let bonusActive = false;
+    // Planet Scan Bonus specific variables
+    let bonusScansLeft = 0;
+    let bonusScanCurrentWinnings = 0;
+    let bonusScanWinningsMultiplier = 1; // For artifact multipliers
+    let collectedSpecialScanItems = new Set();
+
+
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const appWrapper = document.getElementById('app-wrapper');
+    const gameLayoutContainer = document.getElementById('game-layout-container');
+    const paytablePanelContent = document.getElementById('paytable-content');
+
+    // Bonus Screen Elements
+    const bonusPlanetScanScreen = document.getElementById('bonus-planet-scan-screen');
+    const bonusScansLeftDisplay = document.getElementById('bonus-scans-left'); // In #bonus-instructions span
+    const scanSpecialItemsCollectedDisplay = document.getElementById('scan-special-items-collected');
+    const planetScanItemsContainer = document.getElementById('planet-scan-items-container');
+    const bonusScanWinningsDisplay = document.getElementById('bonus-scan-winnings-display');
+    const collectScanBonusButton = document.getElementById('collect-scan-bonus-button');
+
+
+    const sounds = { /* map to new sound IDs if audio is implemented */ };
+
+    function playSound(sound) {
+        if (sound && typeof sound.play === 'function') {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Sound play failed:", e.message));
+        }
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `Credits: $${money.toLocaleString()}`;
+      const maxBetForNextSpin = money > 0 ? money : 1;
+      betInput.max = maxBetForNextSpin;
+
+      let betValInInput = parseInt(betInput.value);
+      if (isNaN(betValInInput) || betValInInput < 1) betInput.value = 1;
+      else if (betValInInput > maxBetForNextSpin && money > 0) betInput.value = maxBetForNextSpin;
+      else if (money <= 0 && betValInInput > 1) betInput.value = 1;
+
+       if (money <= 0 && !spinning && !bonusActive) {
+            disableControls(true, false);
+            displayMessage("Fuel depleted! 'Abort Mission' or a $1 emergency supply.", false, false);
+            if (autoMode) stopAutoSpin();
+       }
+    }
+
+    function disableControls(disable = true, disableReset = disable) {
+        spinButton.disabled = disable;
+        maxBetButton.disabled = disable;
+        betInput.disabled = disable;
+
+        if (!spinning && !bonusActive) {
+            autoButton.disabled = disable;
+        } else {
+            autoButton.disabled = true;
+            if (autoMode && !disable) {
+                 autoButton.disabled = false;
+            }
+        }
+        resetButton.disabled = disableReset;
+        if (money <= 0 && parseInt(betInput.value) === 1 && !spinning && !bonusActive) {
+            spinButton.disabled = false;
+            betInput.disabled = true;
+            maxBetButton.disabled = true;
+        }
+    }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg;
+      messageDisplay.className = 'message';
+      if (isBigWin) messageDisplay.classList.add('big-win');
+      else if (isWin) messageDisplay.classList.add('win');
+    }
+
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.dataset.symbolId = symbolData.id;
+        div.textContent = symbolData.emoji;
+        if (symbolData.wild) {
+            div.classList.add('wild-symbol-animate'); // Add class for UFO pulse
+        }
+        if (symbolData.scatter) {
+            div.classList.add('scatter-symbol-animate'); // Add class for Galaxy swirl
+        }
+        return div;
+    }
+
+    function buildReels() {
+      reelsContainer.innerHTML = '';
+      reels = [];
+      for (let i = 0; i < config.reelCount; i++) {
+        const reelElement = document.createElement('div');
+        reelElement.classList.add('reel');
+        const symbolsContainer = document.createElement('div');
+        symbolsContainer.classList.add('symbols-container');
+        const reelSymbolsData = [];
+        const reelSymbolElements = [];
+        for (let k = 0; k < 30; k++) { // Increased symbol strip length for more variety
+            const shuffledPortion = [...config.symbols].sort(() => Math.random() - 0.5);
+            shuffledPortion.forEach(symbolData => {
+                 const symbolElement = createSymbolElement(symbolData);
+                 symbolsContainer.appendChild(symbolElement);
+                 reelSymbolsData.push(symbolData);
+                 reelSymbolElements.push(symbolElement);
+            });
+        }
+        reelElement.appendChild(symbolsContainer);
+        reelsContainer.appendChild(reelElement);
+        reels.push({ element: reelElement, symbolsContainer, symbols: reelSymbolsData, symbolElements: reelSymbolElements, finalPosition: 0, failsafeTimeout: null });
+      }
+      reels.forEach(reel => {
+         const initialOffset = -(Math.floor(Math.random() * reel.symbols.length) * config.symbolHeight);
+         reel.symbolsContainer.style.transition = 'none';
+         reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`;
+         reel.finalPosition = initialOffset;
+         void reel.symbolsContainer.offsetWidth;
+         reel.symbolsContainer.style.transition = '';
+      });
+    }
+
+    function clearReelHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+    }
+    function clearPaytableHighlights() {
+        document.querySelectorAll('.paytable-table td.paytable-win-flash').forEach(el => el.classList.remove('paytable-win-flash'));
+    }
+
+    function highlightWinsOnReels(winningLinesInfo) {
+        winningLinesInfo.forEach(winInfo => {
+            if (!winInfo.indices || winInfo.indices.length === 0) return;
+            winInfo.indices.forEach(gridIndex => {
+                 const reelIndex = gridIndex % config.reelCount;
+                 const visibleRowIndex = Math.floor(gridIndex / config.reelCount);
+                 const reel = reels[reelIndex];
+                 if (!reel || !reel.symbolElements || reel.symbolElements.length === 0) return;
+                 const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                 const targetSymbolIndexInElementArray = (topVisibleSymbolIndex + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length;
+                 const symbolElement = reel.symbolElements[targetSymbolIndexInElementArray];
+                 if (symbolElement) symbolElement.classList.add('winning');
+            });
+        });
+    }
+
+    function highlightPaytableEntry(symbolId, winCount) {
+        if (!symbolId) return;
+        const row = paytablePanelContent.querySelector(`.paytable-table tr[data-symbol-id="${symbolId}"]`);
+        if (row) {
+            const cell = row.querySelector(`td[data-payout-count="${winCount.toString()}"]`);
+            if (cell) cell.classList.add('paytable-win-flash');
+        }
+    }
+
+    function startSpin() {
+        if (spinning || bonusActive) return;
+        let betForThisSpin = parseInt(betInput.value);
+        if (isNaN(betForThisSpin) || betForThisSpin < 1) betForThisSpin = 1;
+        const maxAffordableBet = money > 0 ? money : 1;
+        if (betForThisSpin > maxAffordableBet && money > 0) betForThisSpin = maxAffordableBet;
+        else if (money <= 0 && betForThisSpin > 1) betForThisSpin = 1;
+        betInput.value = betForThisSpin; currentBet = betForThisSpin;
+
+        const isFreeSpin = (money <= 0 && currentBet === 1);
+        if (!isFreeSpin && currentBet > money) {
+            displayMessage("Insufficient credits for this warp jump!");
+            if (autoMode) stopAutoSpin();
+            disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+            return;
+        }
+        clearTimeout(autoSpinTimeout); clearReelHighlights(); clearPaytableHighlights();
+        playSound(sounds.click); spinning = true;
+
+        if (isFreeSpin) displayMessage("Emergency power for one last jump!");
+        else { money -= currentBet; displayMessage("Engaging hyperdrive..."); }
+
+        updateMoneyDisplay(); disableControls(true); spinButton.innerText = "Jumping...";
+        playSound(sounds.spin); // Replace with warp_spin sound
+
+        let reelsStoppedCount = 0;
+        reels.forEach((reel, index) => {
+            if (reel.failsafeTimeout) clearTimeout(reel.failsafeTimeout);
+            const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element;
+            reelElement.classList.remove('stopping'); reelElement.classList.add('spinning');
+            const randomSymbolIndexOnStrip = Math.floor(Math.random() * reel.symbols.length);
+            reel.finalPosition = -(randomSymbolIndexOnStrip * config.symbolHeight);
+            const currentY = parseFloat(symbolsContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0;
+            const fullRotations = Math.floor(Math.random() * 2) + 3; // More rotations
+            const spinDistance = (reel.symbols.length * config.symbolHeight) * fullRotations;
+            symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`;
+            const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+            const stopAnimationDuration = 600; // Matches .reel.stopping transition
+
+            setTimeout(() => {
+                reelElement.classList.remove('spinning'); reelElement.classList.add('stopping');
+                symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`;
+                playSound(sounds.reelStop); // Replace with a 'thud' or 'decelerate' sound
+                const transitionEndHandler = (event) => {
+                    if (event.target === symbolsContainer && event.propertyName === 'transform') {
+                        symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                        clearTimeout(reel.failsafeTimeout); reelElement.classList.remove('stopping');
+                        reelsStoppedCount++;
+                        if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                    }
+                };
+                symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+                reel.failsafeTimeout = setTimeout(() => {
+                     if (!reelElement.classList.contains('stopping') && !spinning) return;
+                     symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                     reelElement.classList.remove('stopping'); reelsStoppedCount++;
+                     if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                }, stopAnimationDuration + 200);
+            }, totalSpinDuration - stopAnimationDuration);
+        });
+    }
+
+    function evaluateResult() {
+        let totalWinningsFromSpin = 0;
+        let combinedWinningLinesInfo = [];
+        let isBigWinOverall = false;
+        const scatterSymbolData = config.symbols.find(s => s.scatter);
+        let bonusTriggeredThisSpin = false;
+        let bonusTriggerCount = 0;
+
+        finalSymbols = [];
+         for (let r = 0; r < config.rowCount; r++) {
+            for (let c = 0; c < config.reelCount; c++) {
+                const reel = reels[c];
+                if (!reel || !reel.symbols) { finalSymbols.push({id: "error", emoji: "❓"}); continue; }
+                const topVisibleSymbolIndexOnStrip = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const symbolIndexInDataArray = (topVisibleSymbolIndexOnStrip + r + reel.symbols.length) % reel.symbols.length;
+                if (reel.symbols[symbolIndexInDataArray]) finalSymbols.push(reel.symbols[symbolIndexInDataArray]);
+                else finalSymbols.push({id: "error", emoji: "❓"});
+            }
+        }
+
+        config.winningLines.forEach(line => {
+            let bestWinOnThisLine = { amount: 0, count: 0, symbolId: null, indices: [], multiplier: 0, lineName: line.name || line.id };
+            config.symbols.forEach(symbolToCheck => {
+                if (!symbolToCheck.payouts) return;
+                const checkSymbolId = symbolToCheck.id;
+                const isWildTypeBeingChecked = symbolToCheck.wild;
+
+                for (let len = config.reelCount; len >= 3; len--) {
+                    let startPositions = [0];
+                    if (line.type === 'horizontal') {
+                        startPositions = [];
+                        for (let s = 0; s <= config.reelCount - len; s++) startPositions.push(s);
+                    }
+                    for (const start of startPositions) {
+                        const currentSegmentIndicesOnLine = line.indices.slice(start, start + len);
+                        if (currentSegmentIndicesOnLine.length < len) continue;
+                        const groupSymbolsData = currentSegmentIndicesOnLine.map(globalIndex => finalSymbols[globalIndex]).filter(s => s);
+                        if (groupSymbolsData.length < len) continue;
+
+                        if (checkAdjacentGroup(groupSymbolsData, checkSymbolId, len, isWildTypeBeingChecked)) {
+                            const payoutKey = len.toString();
+                            if (symbolToCheck.payouts[payoutKey]) {
+                                const lineMultiplier = symbolToCheck.payouts[payoutKey];
+                                const amount = currentBet * lineMultiplier;
+                                if (amount > bestWinOnThisLine.amount) {
+                                    bestWinOnThisLine = { amount, count: len, symbolId: checkSymbolId, indices: currentSegmentIndicesOnLine, multiplier: lineMultiplier, lineName: line.name || line.id };
+                                }
+                            }
+                        }
+                    }
+                    if (bestWinOnThisLine.symbolId === checkSymbolId && bestWinOnThisLine.count === len) break;
+                }
+            });
+
+            if (bestWinOnThisLine.amount > 0) {
+                const isDuplicate = combinedWinningLinesInfo.some(ex => ex.symbolId === bestWinOnThisLine.symbolId && ex.count === bestWinOnThisLine.count && ex.indices.every((v,i) => v === bestWinOnThisLine.indices[i]));
+                if (!isDuplicate) {
+                    totalWinningsFromSpin += bestWinOnThisLine.amount;
+                    combinedWinningLinesInfo.push(bestWinOnThisLine);
+                    if (bestWinOnThisLine.multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true;
+                    if (scatterSymbolData && bestWinOnThisLine.symbolId === scatterSymbolData.id && bestWinOnThisLine.count >= 3) {
+                        bonusTriggeredThisSpin = true;
+                        bonusTriggerCount = Math.max(bonusTriggerCount, bestWinOnThisLine.count);
+                    }
+                }
+            }
+        });
+        spinning = false;
+
+        if (bonusTriggeredThisSpin && scatterSymbolData) {
+            playSound(sounds.scatterTrigger); // Replace with galaxy_reveal sound
+            if (totalWinningsFromSpin > 0) money += totalWinningsFromSpin;
+            updateMoneyDisplay();
+            displayMessage(`Galaxy Sighting! ${bonusTriggerCount}x ${scatterSymbolData.emoji} on a line triggers Planet Scan!`, true, false);
+            if(combinedWinningLinesInfo.length > 0) {
+                 highlightWinsOnReels(combinedWinningLinesInfo.filter(info => info.indices && info.indices.length > 0));
+                 combinedWinningLinesInfo.forEach(winInfo => { if (winInfo.symbolId) highlightPaytableEntry(winInfo.symbolId, winInfo.count); });
+            }
+            setTimeout(triggerPlanetScanBonus, 2200); // Longer delay for dramatic effect
+            return;
+        }
+        processEndOfSpin(totalWinningsFromSpin, combinedWinningLinesInfo, isBigWinOverall);
+    }
+
+    function processEndOfSpin(currentSpinWinnings, linesInfo, isBigWin) {
+        const isFreeSpinLosing = (money <= 0 && currentBet === 1 && currentSpinWinnings <= 0 && (money + currentBet) === 1);
+        if (currentSpinWinnings > 0) {
+            money += currentSpinWinnings;
+            let winMessageText = "";
+            const uniqueLineWins = linesInfo.filter(info => info.amount > 0);
+            if (uniqueLineWins.length > 0) {
+                winMessageText = isBigWin ? `!!! COSMIC JACKPOT !!!\n` : "Successful Transmission!\n";
+                uniqueLineWins.forEach(info => {
+                    const displayName = info.symbolId ? info.symbolId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Signal";
+                    winMessageText += `${info.count}x ${displayName} (${info.lineName}) = $${info.amount.toLocaleString()}\n`;
+                });
+                winMessageText += `Total This Jump: $${currentSpinWinnings.toLocaleString()}`;
+            }
+            if (winMessageText) {
+                displayMessage(winMessageText, true, isBigWin);
+                if (isBigWin) playSound(sounds.bigWin); else playSound(sounds.win); // Use new sounds
+            }
+            if(linesInfo.length > 0) {
+                highlightWinsOnReels(linesInfo.filter(info => info.indices && info.indices.length > 0));
+                linesInfo.forEach(winInfo => { if (winInfo.symbolId) highlightPaytableEntry(winInfo.symbolId, winInfo.count); });
+            }
+        } else if (!bonusActive && !isFreeSpinLosing) {
+             displayMessage("Lost in space... Try another jump!");
+        }
+        updateMoneyDisplay();
+        if (!bonusActive) disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        spinButton.innerText = "Engage!";
+        if (autoMode && !bonusActive) {
+            let nextBetForAuto = parseInt(betInput.value);
+            if(isNaN(nextBetForAuto) || nextBetForAuto < 1) nextBetForAuto = 1;
+            const canAffordNext = (money >= nextBetForAuto && money > 0) || (money <= 0 && nextBetForAuto === 1);
+            if (canAffordNext) autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+            else {
+                stopAutoSpin();
+                displayMessage(money <= 0 ? "Fuel depleted! Autopilot disengaged." : "Insufficient credits for Autopilot. Stopped.", false, money <= 0);
+            }
+         }
+    }
+
+    function checkAdjacentGroup(groupSymbolsData, checkSymbolId, requiredCount, isWildTypeBeingChecked) {
+        if (groupSymbolsData.length !== requiredCount || groupSymbolsData.some(s => !s)) return false;
+        for (let i = 0; i < requiredCount; i++) {
+            const symbol = groupSymbolsData[i];
+            if (isWildTypeBeingChecked) { if (!symbol.wild) return false; }
+            else { if (symbol.id !== checkSymbolId && !symbol.wild) return false; }
+        }
+        return true;
+    }
+
+    function stopAutoSpin() {
+        autoMode = false; clearTimeout(autoSpinTimeout);
+        autoButton.innerText = "Autopilot"; autoButton.style.background = '';
+        if (!spinning && !bonusActive) disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    }
+
+    function generateSidePayTable() {
+        paytablePanelContent.innerHTML = '';
+        const table = document.createElement('table'); table.classList.add('paytable-table');
+        const thead = table.createTHead(); const headerRow = thead.insertRow();
+        const headers = ['Signal', 'Specimen/Object', '3x', '4x', '5x'];
+        headers.forEach(text => { const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th); });
+        const tbody = table.createTBody();
+        config.symbols.forEach(symbolData => {
+            if (symbolData.payouts) {
+                const row = tbody.insertRow(); row.dataset.symbolId = symbolData.id;
+                const emojiCell = row.insertCell(); emojiCell.textContent = symbolData.emoji; emojiCell.classList.add('paytable-symbol-emoji');
+                if (symbolData.wild) emojiCell.classList.add('wild-symbol-animate');
+                if (symbolData.scatter) emojiCell.classList.add('scatter-symbol-animate');
+                const nameCell = row.insertCell();
+                let symbolNameText = symbolData.id.replace(/_/g, ' ');
+                if (symbolData.wild) symbolNameText += " (Wild)";
+                if (symbolData.scatter) symbolNameText += " (Scatter)";
+                nameCell.textContent = symbolNameText; nameCell.classList.add('paytable-symbol-name');
+                const p3=symbolData.payouts['3']||0, p4=symbolData.payouts['4']||0, p5=symbolData.payouts['5']||0;
+                const p3Cell = row.insertCell(); p3Cell.textContent = p3>0?`${p3}x`:'-'; if(p3>0)p3Cell.dataset.payoutCount="3";
+                const p4Cell = row.insertCell(); p4Cell.textContent = p4>0?`${p4}x`:'-'; if(p4>0)p4Cell.dataset.payoutCount="4";
+                const p5Cell = row.insertCell(); p5Cell.textContent = p5>0?`${p5}x`:'-'; if(p5>0)p5Cell.dataset.payoutCount="5";
+            }
+        });
+        paytablePanelContent.appendChild(table);
+        const wildSymbol = config.symbols.find(s => s.wild); const scatterSymbol = config.symbols.find(s => s.scatter);
+        const wildInfoDiv = document.createElement('div'); wildInfoDiv.classList.add('paytable-wild-info');
+        let infoText = "";
+        if (wildSymbol) infoText += `<b>${wildSymbol.emoji} ${wildSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> is WILD, substitutes for all symbols.<br>`;
+        if (scatterSymbol) infoText += `<b>${scatterSymbol.emoji} ${scatterSymbol.id.replace(/_/g, ' ').toUpperCase()}</b> (Scatter) 3+ on a line triggers Planet Scan Bonus and pays.`;
+        wildInfoDiv.innerHTML = infoText || "Classified Alien Intel...";
+        paytablePanelContent.appendChild(wildInfoDiv);
+    }
+
+    function requestFullScreenGame() { /* Same as before */
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) elem.requestFullscreen().catch(err=>console.warn(err.message));
+        else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen().catch(err=>console.warn(err.message));
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen().catch(err=>console.warn(err.message));
+        else if (elem.msRequestFullscreen) elem.msRequestFullscreen().catch(err=>console.warn(err.message));
+    }
+
+    // --- Planet Scan Bonus Functions ---
+    function triggerPlanetScanBonus() {
+        bonusActive = true; disableControls(true);
+        gameLayoutContainer.style.transition = 'opacity 0.5s ease-out';
+        gameLayoutContainer.style.opacity = '0.1'; // Dim main game more
+        bonusPlanetScanScreen.style.display = 'flex';
+        bonusPlanetScanScreen.classList.remove('hyper-jump-active');
+
+
+        bonusScansLeft = config.planetScanBonus.numScans;
+        bonusScanCurrentWinnings = 0;
+        bonusScanWinningsMultiplier = 1;
+        collectedSpecialScanItems.clear();
+
+        document.getElementById('bonus-scans-left').textContent = bonusScansLeft; // Update scans left in instruction
+        updatePlanetScanUI();
+        populatePlanetItems();
+        collectScanBonusButton.style.display = 'none';
+    }
+
+    function populatePlanetItems() {
+        planetScanItemsContainer.innerHTML = '';
+        let planetPrizesAvailable = [...config.planetScanBonus.planetPrizes];
+        shuffleArray(planetPrizesAvailable);
+
+        // Ensure enough special items are possible if numPlanets is high
+        const specialItemPrize = { type: 'special_item' };
+        let prizePool = [];
+        for(let i = 0; i < config.planetScanBonus.numPlanets; i++) {
+            prizePool.push(planetPrizesAvailable[i % planetPrizesAvailable.length]);
+        }
+        // Attempt to ensure at least numSpecialToCollect are in the pool if possible
+        let currentSpecialCount = prizePool.filter(p => p.type === 'special_item').length;
+        for(let i=0; i < prizePool.length && currentSpecialCount < config.planetScanBonus.numSpecialToCollect; i++){
+            if(prizePool[i].type !== 'special_item'){
+                prizePool[i] = specialItemPrize;
+                currentSpecialCount++;
+            }
+        }
+        shuffleArray(prizePool); // Shuffle again after potential modification
+
+        const planetEmojis = config.planetScanBonus.planetEmojis;
+
+        for (let i = 0; i < config.planetScanBonus.numPlanets; i++) {
+            const planetItem = document.createElement('div');
+            planetItem.classList.add('planet-scan-item');
+            planetItem.textContent = planetEmojis[i % planetEmojis.length]; // Cycle through planet emojis
+            // planetItem.textContent = '❓'; // Alternative: Hide planet type initially
+            planetItem.dataset.outcome = JSON.stringify(prizePool[i]);
+            planetItem.addEventListener('click', handlePlanetItemClick, { once: true });
+            planetScanItemsContainer.appendChild(planetItem);
+        }
+    }
+
+    function handlePlanetItemClick(event) {
+        if (bonusScansLeft <= 0 || !bonusActive) return;
+        const planetElement = event.currentTarget;
+        planetElement.classList.add('picked');
+        playSound(sounds.bonusPick); // Replace with 'scan_sound'
+
+        const outcome = JSON.parse(planetElement.dataset.outcome);
+        let revealedContent = "";
+        let feedbackMessage = "Scan result: ";
+
+        if (outcome.type === 'credits') {
+            const prize = outcome.value * currentBet;
+            bonusScanCurrentWinnings += prize;
+            revealedContent = `$${prize.toLocaleString()}`;
+            feedbackMessage += `Energy Crystals valued at $${prize.toLocaleString()}!`;
+        } else if (outcome.type === 'artifact_multiplier') {
+            bonusScanWinningsMultiplier *= outcome.value; // Multiplies current bonus total
+            revealedContent = `${outcome.value}X Artifact`;
+            feedbackMessage += `Alien Artifact found! Bonus multiplied by ${outcome.value}!`;
+        } else if (outcome.type === 'special_item') {
+            const special = config.planetScanBonus.specialItem;
+            revealedContent = special.emoji;
+            if (!collectedSpecialScanItems.has(special.id)) {
+                collectedSpecialScanItems.add(special.id);
+                feedbackMessage += `Collected ${special.name} ${special.emoji}!`;
+            } else { // Already collected this one, give consolation
+                const consolationPrize = currentBet * 2; // Example consolation
+                bonusScanCurrentWinnings += consolationPrize;
+                feedbackMessage += `Another ${special.name}. Signal strengthened! +$${consolationPrize.toLocaleString()}`;
+            }
+        }
+        planetElement.innerHTML = `<span style="font-size: 0.5em; display:block; line-height:1;">${planetElement.textContent}</span>${revealedContent}`; // Show planet and prize
+        // planetElement.textContent = revealedContent; // Simpler reveal
+
+        bonusScansLeft--;
+        document.getElementById('bonus-scans-left').textContent = bonusScansLeft;
+        updatePlanetScanUI();
+        displayMessage(feedbackMessage, true, false);
+
+        if (collectedSpecialScanItems.size === config.planetScanBonus.numSpecialToCollect || bonusScansLeft <= 0) {
+            planetScanItemsContainer.querySelectorAll('.planet-scan-item:not(.picked)').forEach(item => item.style.cursor = 'default');
+            setTimeout(finishPlanetScanBonus, 1800);
+        }
+    }
+
+    function updatePlanetScanUI() {
+        bonusScanWinningsDisplay.textContent = `Scan Winnings: $${(bonusScanCurrentWinnings * bonusScanWinningsMultiplier).toLocaleString()}`;
+        let specialItemsHTML = `Stabilizers: `;
+        const specialItemConf = config.planetScanBonus.specialItem;
+        for (let i = 0; i < config.planetScanBonus.numSpecialToCollect; i++) {
+            if (i < collectedSpecialScanItems.size) {
+                specialItemsHTML += `<span>${specialItemConf.emoji}</span> `;
+            } else {
+                specialItemsHTML += `<span style="opacity:0.3;">${specialItemConf.emoji}</span> `;
+            }
+        }
+        scanSpecialItemsCollectedDisplay.innerHTML = specialItemsHTML;
+    }
+
+    function finishPlanetScanBonus() {
+        let finalBonusAmount = bonusScanCurrentWinnings * bonusScanWinningsMultiplier;
+        let hyperJumpAchieved = collectedSpecialScanItems.size === config.planetScanBonus.numSpecialToCollect;
+
+        if (hyperJumpAchieved) {
+            const hyperPrize = config.planetScanBonus.hyperJumpBonus * currentBet;
+            finalBonusAmount += hyperPrize;
+            playSound(sounds.grandPrize); // Replace with 'hyper_jump_sound'
+            displayMessage(`HYPER JUMP SUCCESSFUL! +$${hyperPrize.toLocaleString()}! Total Scan Yield: $${finalBonusAmount.toLocaleString()}`, true, true);
+            bonusPlanetScanScreen.classList.add('hyper-jump-active');
+
+        } else {
+            displayMessage(`Planet Scan Complete! Yield: $${finalBonusAmount.toLocaleString()}`, true, finalBonusAmount > currentBet * 15);
+             bonusPlanetScanScreen.classList.remove('hyper-jump-active');
+        }
+        money += finalBonusAmount;
+        updateMoneyDisplay();
+        collectScanBonusButton.style.display = 'inline-block';
+
+        // Reveal unpicked planets
+        planetScanItemsContainer.querySelectorAll('.planet-scan-item:not(.picked)').forEach(item => {
+            try {
+                const outcome = JSON.parse(item.dataset.outcome);
+                let unpickedContent = "❔";
+                if (outcome.type === 'credits') unpickedContent = `$${(outcome.value * currentBet)}`;
+                else if (outcome.type === 'artifact_multiplier') unpickedContent = `${outcome.value}X`;
+                else if (outcome.type === 'special_item') unpickedContent = config.planetScanBonus.specialItem.emoji;
+                item.innerHTML = `<span style="font-size: 0.5em; display:block; line-height:1;">${item.textContent}</span>${unpickedContent}`;
+                // item.textContent = unpickedContent;
+            } catch (e) { item.textContent = '❔'; }
+            item.classList.add('picked'); // Style as picked
+        });
+    }
+
+    collectScanBonusButton.addEventListener('click', () => {
+        bonusActive = false;
+        bonusPlanetScanScreen.style.display = 'none';
+        bonusPlanetScanScreen.classList.remove('hyper-jump-active');
+        gameLayoutContainer.style.opacity = '1';
+        gameLayoutContainer.style.transition = '';
+        collectScanBonusButton.style.display = 'none';
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        spinButton.innerText = "Engage!";
+        displayMessage("Expedition complete. Ready for next warp jump!", false, false);
+        if (autoMode) {
+            let nextBet = parseInt(betInput.value); if(isNaN(nextBet)||nextBet<1) nextBet=1;
+            const canAfford = (money >= nextBet && money > 0) || (money <= 0 && nextBet === 1);
+            if (canAfford) autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+            else { stopAutoSpin(); displayMessage(money <= 0 ? "Fuel depleted!" : "Insufficient credits.", false, money <= 0); }
+         }
+    });
+
+    // --- Event Listeners & Initialization ---
+    const startButtonElement = document.getElementById('start-button');
+    startButtonElement.addEventListener('click', () => {
+        playSound(sounds.click); requestFullScreenGame();
+        titleScreen.style.display = 'none';
+        appWrapper.style.display = 'flex';
+        gameLayoutContainer.style.display = 'flex';
+        initializeGame();
+    });
+
+    spinButton.addEventListener('click', () => { if (!spinning && !bonusActive) startSpin(); });
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click); if (!spinning && !bonusActive) { const max = money>0?money:1; betInput.value = max; updateMoneyDisplay();}
+    });
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click); if (bonusActive) return;
+        if (autoMode) { stopAutoSpin(); if (!spinning) displayMessage("Autopilot disengaged."); }
+        else {
+            let betVal = parseInt(betInput.value); if(isNaN(betVal)||betVal<1) betVal=1;
+            const maxAff = money>0?money:1;
+            if(betVal>maxAff && money>0) betVal=maxAff; else if(money<=0 && betVal>1) betVal=1;
+            betInput.value = betVal;
+            const canStart = !spinning && ((money>=betVal && money>0)||(money<=0 && betVal===1));
+            if(canStart){
+                autoMode=true; autoButton.innerText="Stop Pilot"; autoButton.style.background='linear-gradient(to bottom, #ff5252, #c62828)'; // Red for active
+                displayMessage("Autopilot engaged!"); startSpin();
+            } else if (spinning) {
+                 autoMode=true; autoButton.innerText="Stop Pilot"; autoButton.style.background='linear-gradient(to bottom, #ff5252, #c62828)';
+                 displayMessage("Autopilot will engage after current jump.");
+            } else displayMessage(money<=0 ? "Fuel depleted!" : "Insufficient credits!");
+        }
+    });
+    resetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        let msg = "Abort mission and return to base (100 Credits)? All scan data will be lost.";
+        if(bonusActive || spinning) msg = "Warp drive active or mid-scan! Sure you want to abort? This resets your mission.";
+        if (!confirm(msg)) return;
+        if (document.fullscreenElement) document.exitFullscreen();
+        location.reload();
+    });
+    betInput.addEventListener('blur', () => {
+        if (bonusActive || spinning) return;
+        let n = parseInt(betInput.value); const max = money>0?money:1;
+        if (isNaN(n)||n<1) n=1; if(n>max && money>0) n=max; else if(money<=0 && n>1) n=1;
+        betInput.value = n; updateMoneyDisplay();
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    });
+
+    function initializeGame() {
+        money = config.money;
+        let initBet = parseInt(betInput.value); if(isNaN(initBet)||initBet<1)initBet=1;
+        const maxInit = money>0?money:1;
+        if(initBet>maxInit && money>0)initBet=maxInit; else if(money<=0 && initBet>1)initBet=1;
+        betInput.value = initBet; currentBet = initBet;
+        autoMode=false; spinning=false; bonusActive=false; clearTimeout(autoSpinTimeout);
+        displayMessage("Set coordinates (bet) and engage thrusters!");
+        buildReels(); generateSidePayTable(); updateMoneyDisplay();
+        clearReelHighlights(); clearPaytableHighlights();
+        disableControls(false, money <= 0 && currentBet > 1);
+        autoButton.innerText = "Autopilot"; autoButton.style.background = '';
+        Object.values(sounds).forEach(s => { if(s && s.load) try{s.load();}catch(e){} });
+    }
+  </script>
+</body>
+</html>

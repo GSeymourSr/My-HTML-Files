@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Tic-Tac-Toe Reels (3x3)</title>
+  <style>
+    :root {
+      /* --- Tic-Tac-Toe Reels Theme (3x3) --- */
+      /* Grid & Layout */
+      --reel-width: 100px; /* Adjusted for 3x3 */
+      --reel-height: 100px; /* Adjusted for 3x3 */
+      --symbol-size: 70px;  /* Adjusted for 3x3 */
+      --num-reels: 3;
+      --num-rows: 3;
+      --reel-gap: 10px;
+
+      /* Colors - Retaining some base from original, can be themed further */
+      --bg-color-main: #AED6F1; /* Light Sky Blue */
+      --bg-color-accent: #85C1E9; /* Brighter Sky Blue */
+      --machine-border: #7DCEA0; /* Friendly Green */
+      --title-bg: linear-gradient(to bottom, #FAD7A0, #F5B041); /* Warm Yellow/Orange - Sunrise */
+      --title-text-color: #34495E; /* Dark Slate Blue */
+      --title-shadow: rgba(255,255,255,0.4);
+      --money-color: #5DADE2; /* Steel Blue for "Credits" */
+      --reels-bg: #FEF9E7; /* Creamy White - Paper/Notebook */
+      --reel-bg: #FDFEFE; /* Very Light Grey/White - Clean Page */
+      --button-bg: linear-gradient(to bottom, #A9CCE3, #85C1E9); /* Light Blue Buttons */
+      --button-border: #5499C7; /* Darker Blue */
+      --button-hover-bg: linear-gradient(to bottom, #D6EAF8, #A9CCE3);
+      --spin-button-bg: linear-gradient(to bottom, #F1C40F, #F39C12); /* Cheerful Yellow for Spin */
+      --spin-button-border: #B7950B;
+      --message-bg: rgba(232, 248, 245, 0.97); /* Very light aqua message box */
+      --message-text-color: #1A5276; /* Dark Blue text */
+      --message-win-color: #2ECC71; /* Green for win */
+      --message-bigwin-color: #F39C12; /* Bright Yellow/Orange for big win */
+      --paytable-bg: rgba(212, 230, 241, 0.97); /* Light blue/grey paytable */
+      --paytable-text-color: #2C3E50; /* Dark Slate for paytable text */
+      --paytable-header-bg: rgba(93, 173, 226, 0.85); /* Medium Blue header */
+
+      /* Tic-Tac-Toe Symbol Colors */
+      --x-blue-color: #3498DB;  /* Blue for X */
+      --o-red-color: #E74C3C;   /* Red for O */
+      --x-green-color: #2ECC71; /* Green for X (premium) */
+      --o-lime-color: #27AE60;  /* Lime Green for O (premium) */
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Quicksand', 'Arial Rounded MT Bold', sans-serif;
+      background: linear-gradient(135deg, var(--bg-color-accent) 0%, var(--bg-color-main) 100%);
+      color: var(--paytable-text-color);
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    #game-layout-container {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        padding: 15px;
+        box-sizing: border-box;
+        gap: 15px;
+    }
+
+    #paytable-panel {
+        flex: 0 0 300px; /* Slightly narrower for simpler paytable */
+        background: var(--paytable-bg);
+        border-radius: 12px;
+        padding: 15px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.15);
+        overflow-y: auto;
+        border: 2px solid var(--machine-border);
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 30px);
+    }
+    #paytable-panel h2 {
+        text-align: center; color: var(--machine-border);
+        font-family: 'Pacifico', cursive;
+        font-size: 1.8em; margin-top: 0; margin-bottom: 10px;
+        text-shadow: 1px 1px 1px rgba(255,255,255,0.3);
+    }
+    .paytable-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em;} /* Slightly larger font */
+    .paytable-table th, .paytable-table td { border: 1px solid #85C1E9; padding: 6px; text-align: center; vertical-align: middle; }
+    .paytable-table th { background-color: var(--paytable-header-bg); color: #fff; font-weight: bold; }
+    .paytable-table td { color: var(--paytable-text-color); }
+    .paytable-symbol-emoji { font-size: 28px; vertical-align: middle; font-weight: bold;} /* Larger emoji */
+    .paytable-symbol-name { font-weight: bold; text-transform: capitalize; }
+    .paytable-wild-info { margin-top: 15px; font-size: 0.85em; text-align: center; color: #1A5276; line-height: 1.4; }
+
+    @keyframes paytableWinFlashTicTacToe { /* Renamed animation */
+        0%, 100% { background-color: transparent; color: var(--paytable-text-color); transform: scale(1); }
+        50% { background-color: var(--message-win-color); color: #fff; transform: scale(1.05); }
+    }
+    .paytable-table td.paytable-win-flash {
+        animation: paytableWinFlashTicTacToe 0.8s ease-in-out infinite;
+        font-weight: bold; position: relative; z-index: 1;
+    }
+
+
+    #main-game-area {
+        flex-grow: 1; display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        padding: 0; overflow: hidden; min-width: 0;
+    }
+
+    #slot-machine {
+      background: linear-gradient(145deg, #EBF5FB, #D6EAF8);
+      border: 6px solid var(--machine-border);
+      border-radius: 10px; padding: 15px;
+      box-shadow: 0 0 15px rgba(125, 206, 160,0.4), inset 0 0 10px rgba(0,0,0,0.1);
+      text-align: center; width: 100%; height: 100%;
+      /* Max width calculation for 3 reels */
+      max-width: calc( (var(--num-reels) * var(--reel-width)) + ((var(--num-reels) - 1) * var(--reel-gap)) + (2 * 15px) + (2 * 6px) + 40px); /* reels + gaps + padding + border + buffer */
+      max-height: calc(100vh - 30px);
+      box-sizing: border-box; display: flex; flex-direction: column;
+      justify-content: space-around; position: relative; z-index: 1;
+    }
+
+    #title {
+      font-size: clamp(1.7em, 3vw, 2.2em); font-weight: bold; color: var(--title-text-color);
+      text-shadow: 1px 1px 1px var(--title-shadow); background: var(--title-bg);
+      padding: 10px; margin: 0 0 10px 0;
+      border-radius: 6px 6px 0 0; border-bottom: 3px solid var(--machine-border);
+      line-height: 1.1; letter-spacing: 1px; width: 100%; box-sizing: border-box;
+      font-family: 'Lobster Two', cursive;
+    }
+     #title .subtitle { font-size: clamp(0.4em, 1vw, 0.55em); color: #4A235A; font-weight: normal; display: block; margin-top: 3px; text-shadow: 1px 1px 1px rgba(255,255,255,0.2); }
+
+    #money-display {
+      font-size: clamp(1.5em, 2.5vw, 1.9em); margin: 10px 0; color: var(--money-color);
+      text-shadow: 0 0 3px #fff; background-color: rgba(214, 234, 248, 0.9);
+      padding: 8px 15px; border-radius: 4px; display: inline-block; border: 1px solid var(--money-color);
+      font-weight: bold;
+    }
+
+    #reels-container {
+      display: grid; grid-template-columns: repeat(var(--num-reels), var(--reel-width));
+      grid-gap: var(--reel-gap); justify-content: center;
+      margin-bottom: 15px; background: var(--reels-bg);
+      padding: 10px; border-radius: 6px;
+      border: 1px solid #A9CCE3;
+      /* Height calculation for 3 rows */
+      height: calc(var(--num-rows) * var(--reel-height) + 20px); /* rows height + padding */
+      position: relative;
+      align-self: center;
+      /* max-height dynamically set for 3 rows */
+      max-height: calc(var(--num-rows) * var(--reel-height) + 20px);
+    }
+
+    .reel {
+        width: var(--reel-width);
+        height: calc(var(--num-rows) * var(--reel-height)); /* Shows 3 symbols */
+        overflow: hidden;
+        background: var(--reel-bg);
+        border-radius: 3px;
+        position: relative;
+        box-shadow: inset 0 0 4px rgba(0,0,0,0.05);
+    }
+    .symbols-container { position: absolute; top: 0; left: 0; width: 100%; }
+    .reel.spinning .symbols-container { transition: transform 0.08s linear; filter: blur(1.2px); }
+    .reel.stopping .symbols-container { transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.3, 1); filter: blur(0px); }
+    .symbol {
+        width: var(--reel-width);
+        height: var(--reel-height);
+        display: flex; align-items: center; justify-content: center;
+        font-size: var(--symbol-size);
+        font-weight: bold; /* Make X and O thicker */
+        position: relative; box-sizing: border-box; line-height: 1;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.15); user-select: none;
+        /* Default color removed, will be set by JS */
+    }
+
+    @keyframes symbolWinFlashTicTacToe { /* Renamed animation */
+        0%,100%{transform:scale(1); opacity: 1; box-shadow: none;}
+        50%{transform:scale(1.15) rotate(2deg); opacity: 0.9; box-shadow: 0 0 10px var(--message-win-color);}
+    }
+    .symbol.winning { animation: symbolWinFlashTicTacToe 0.7s ease-in-out infinite; z-index: 10; outline: 2px solid var(--message-win-color); background-color: rgba(46, 204, 113, 0.1); outline-offset: -2px; }
+
+
+    #controls {
+      margin: 15px 0 10px 0; display: flex; flex-wrap: wrap; justify-content: center;
+      gap: clamp(5px, 1vw, 10px);
+    }
+    #controls input, #controls button {
+      font-family: inherit;
+      font-size: clamp(0.85em, 1.4vw, 0.95em);
+      padding: clamp(7px, 1.1vw, 9px) clamp(10px, 1.6vw, 13px);
+      margin: clamp(2px, 0.5vw, 4px);
+      border-radius: 3px; border: 1px solid var(--button-border);
+      background: var(--button-bg); color: #1B4F72; cursor: pointer;
+      transition: all 0.15s ease-out; box-shadow: 0 2px 0px #2E86C1, 0 3px 4px rgba(0,0,0,0.2);
+      text-shadow: 1px 1px 0px rgba(255,255,255,0.4);
+      font-weight: bold; text-transform: uppercase;
+    }
+    #controls input { width: clamp(60px, 9vw, 70px); text-align: center; background: #fff; color: #333; text-shadow: none; }
+    #controls button:hover:not(:disabled) { background: var(--button-hover-bg); transform: translateY(-1px); box-shadow: 0 3px 0px #2E86C1, 0 4px 6px rgba(0,0,0,0.3); }
+    #controls button:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0px #2E86C1, 0 1px 2px rgba(0,0,0,0.2); }
+    #controls button:disabled { cursor: not-allowed; opacity: 0.5; filter: grayscale(50%); box-shadow: 0 1px 0px #2E86C1, 0 1px 2px rgba(0,0,0,0.1); }
+
+    #spin {
+        font-size: clamp(0.9em, 1.7vw, 1.0em);
+        padding: clamp(9px, 1.4vw, 11px) clamp(18px, 2.3vw, 20px);
+        background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #873600; text-shadow: 1px 1px 1px rgba(255,255,255,0.3);
+    }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #F7DC6F, #F4D03F); border-color: #9A7D0A; }
+    #maxBet { background: linear-gradient(to bottom, #76D7C4, #48C9B0); border-color: #16A085; color: #117A65;}
+
+    #message {
+      font-size: clamp(1em, 1.8vw, 1.1em); margin-top: 10px;
+      min-height: clamp(35px, 7vh, 45px); padding: 8px;
+      background-color: var(--message-bg); border-radius: 4px;
+      color: var(--message-text-color); text-shadow: none;
+      white-space: pre-line; line-height: 1.3; border: 1px solid #A2D9CE;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.1); font-weight: bold;
+      width: 90%; align-self: center; box-sizing: border-box;
+    }
+    #message.win { color: var(--message-win-color); font-weight: bold; text-shadow: 0 0 5px var(--message-win-color); }
+    @keyframes bigWinMessagePulseTicTacToe {0%{transform:scale(1);opacity:.9}100%{transform:scale(1.03);opacity:1}} /* Renamed */
+    #message.big-win { font-size: clamp(1.1em, 2.3vw, 1.3em); color: var(--message-bigwin-color); animation: bigWinMessagePulseTicTacToe 0.7s infinite alternate; font-weight: bold; text-shadow: 0 0 8px var(--message-bigwin-color); }
+
+
+    #title-screen {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(135deg, #D6EAF8, #A9CCE3 50%, #85C1E9);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 100; text-align: center; color: #1B4F72;
+    }
+    #title-screen h1 {
+        font-size: clamp(3rem, 9vw, 6rem); color: #154360; /* Darker Blue */
+        text-shadow: 3px 3px 0px #A9DFBF, 0 0 15px rgba(255,255,255,0.7);
+        margin-bottom: 30px; letter-spacing: 1px;
+        font-family: 'Lilita One', 'Carter One', cursive;
+    }
+    #title-screen p { font-size: clamp(1.1rem, 3vw, 1.8rem); margin-bottom: 50px; max-width: 80%; line-height: 1.7; color: #21618C; text-shadow: 1px 1px 1px rgba(255,255,255,0.5); }
+    #start-button {
+        font-family: 'Quicksand', sans-serif; font-size: clamp(1.6rem, 5.5vw, 2.8rem); padding: 18px 45px;
+        border-radius: 8px; background: linear-gradient(145deg, #FAD7A0, #F5B041);
+        border: 4px solid #fff; color: #AF601A;
+        cursor: pointer; transition: all 0.3s ease;
+        box-shadow: 0 0 20px #F5B041, 0 6px 12px rgba(0, 0, 0, 0.3);
+        text-shadow: 1px 1px 2px rgba(255,255,255,0.3); text-transform: uppercase; font-weight: bold;
+    }
+    #start-button:hover { transform: scale(1.05); box-shadow: 0 0 30px #F5B041, 0 10px 20px rgba(0, 0, 0, 0.4); }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&family=Pacifico&family=Lobster+Two:wght@700&family=Lilita+One&family=Carter+One&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="title-screen">
+    <h1>Tic-Tac-Toe Reels!</h1>
+    <p>Get three X's or O's in a row to win!<br>
+       Match colors for bigger prizes. Green symbols pay the most!</p>
+    <button id="start-button">Play Now!</button>
+  </div>
+
+  <div id="game-layout-container" style="display: none;">
+      <aside id="paytable-panel">
+          <h2>Paytable</h2>
+          <div id="paytable-content">
+              <!-- Paytable will be generated here by JS -->
+          </div>
+      </aside>
+
+      <main id="main-game-area">
+          <div id="slot-machine">
+            <div id="title">Tic-Tac-Toe Reels<span class="subtitle">XOXOX For The Dough!</span></div>
+            <div id="money-display">Credits: $100</div>
+            <div id="reels-container"></div>
+            <div id="controls">
+              <label for="bet">Bet:</label>
+              <input type="number" id="bet" value="1" min="1">
+              <button id="maxBet">Max Bet</button>
+              <button id="spin">Spin</button>
+              <button id="auto">Auto Spin</button>
+              <button id="reset">New Game</button>
+            </div>
+            <div id="message">Place your bet and spin the reels!</div>
+          </div>
+      </main>
+  </div>
+
+  <!-- NOTE: Update audio SRCs with appropriate sound files if desired -->
+  <audio id="spin-sound" src="sounds/slot_spin.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="sounds/win_chime.mp3" preload="auto"></audio>
+  <audio id="big-win-sound" src="sounds/big_win_fanfare.mp3" preload="auto"></audio>
+  <audio id="reel-stop-sound" src="sounds/reel_stop_click.mp3" preload="auto"></audio>
+  <audio id="button-click-sound" src="sounds/button_click.mp3" preload="auto"></audio>
+
+  <script>
+    // --- Configuration ---
+    const config = {
+        money: 100,
+        reelCount: 3, // 3x3 grid
+        rowCount: 3,  // 3x3 grid
+        symbolHeight: 100, // Matches CSS --reel-height
+        spinDurationBase: 700, // Slightly faster spins
+        spinDurationVariance: 250,
+        reelStopDelay: 100,
+        autoSpinDelay: 1200,
+        symbols: [ // Tic-Tac-Toe Symbols
+            // Standard symbols (more frequent)
+            { id: 'X_BLUE',  name: 'Blue X',  emoji: 'X', cssColorVar: '--x-blue-color',  payouts: { '3': 2 }, weight: 25 },
+            { id: 'O_RED',   name: 'Red O',   emoji: 'O', cssColorVar: '--o-red-color',   payouts: { '3': 2 }, weight: 25 },
+            // Premium symbols (less frequent, higher payout)
+            { id: 'X_GREEN', name: 'Green X', emoji: 'X', cssColorVar: '--x-green-color', payouts: { '3': 10 }, weight: 8 },
+            { id: 'O_LIME',  name: 'Green O', emoji: 'O', cssColorVar: '--o-lime-color',  payouts: { '3': 10 }, weight: 8 },
+            // You could add "blocker" or very low-paying symbols if desired
+            // { id: 'BLOCK', name: 'Block', emoji: '■', cssColorVar: 'grey', payouts: {}, weight: 15}
+        ],
+        winningLines: [ // 8 Winning lines for a 3x3 grid
+            // Horizontals
+            { id: 'H1', name: 'Top Row',    indices: [0, 1, 2] },
+            { id: 'H2', name: 'Middle Row', indices: [3, 4, 5] },
+            { id: 'H3', name: 'Bottom Row', indices: [6, 7, 8] },
+            // Verticals
+            { id: 'V1', name: 'Left Col',   indices: [0, 3, 6] },
+            { id: 'V2', name: 'Center Col', indices: [1, 4, 7] },
+            { id: 'V3', name: 'Right Col',  indices: [2, 5, 8] },
+            // Diagonals
+            { id: 'D1', name: 'Diagonal \\', indices: [0, 4, 8] }, // Top-Left to Bottom-Right
+            { id: 'D2', name: 'Diagonal /', indices: [2, 4, 6] }, // Top-Right to Bottom-Left
+        ],
+        bigWinThresholdMultiplier: 8, // Adjust based on new paytable (e.g. Green X/O is a big win)
+    };
+
+    // --- JavaScript (Logic adapted for Tic-Tac-Toe) ---
+    let money = config.money;
+    let currentBet = 1; // Default bet to 1
+    let autoMode = false;
+    let spinning = false;
+    let reels = [];
+    let finalSymbols = []; // Stores the symbol objects that landed on the grid
+    let autoSpinTimeout = null;
+
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const startButton = document.getElementById('start-button');
+    const gameLayoutContainer = document.getElementById('game-layout-container');
+    const paytablePanelContent = document.getElementById('paytable-content');
+
+    const sounds = {
+        spin: document.getElementById('spin-sound'),
+        win: document.getElementById('win-sound'),
+        bigWin: document.getElementById('big-win-sound'),
+        reelStop: document.getElementById('reel-stop-sound'),
+        click: document.getElementById('button-click-sound')
+    };
+
+    function playSound(sound) {
+        if (sound && sound.readyState >= 3) { // HAVE_FUTURE_DATA or more
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Sound play failed:", e.message, e.name));
+        } else if (sound) {
+            // Optional: try to load if not ready, but be mindful of user interaction requirements for play()
+            // sound.load();
+            console.warn("Sound not ready to play:", sound.src, sound.readyState);
+        }
+    }
+
+    function updateMoneyDisplay() {
+      moneyDisplay.innerText = `Credits: $${money.toLocaleString()}`;
+      const maxBetForNextSpin = money > 0 ? money : 1;
+      betInput.max = maxBetForNextSpin;
+
+      let betValInInput = parseInt(betInput.value);
+      if (isNaN(betValInInput) || betValInInput < 1) {
+          betInput.value = 1;
+      } else if (betValInInput > maxBetForNextSpin && money > 0) { // Allow bet > money if money is 0 (for $1 spin)
+          betInput.value = maxBetForNextSpin;
+      }
+
+
+       if (money <= 0 && !spinning) {
+            if (parseInt(betInput.value) > 1) betInput.value = 1; // Force bet to 1 if no money
+            disableControls(true, false); // Disable most controls, but allow reset
+            displayMessage("Out of credits! Start a 'New Game' or try a $1 spin if available.", false, false);
+            if (autoMode) stopAutoSpin();
+       }
+    }
+
+    function disableControls(disable = true, disableReset = disable) {
+        spinButton.disabled = disable;
+        maxBetButton.disabled = disable;
+        betInput.disabled = disable;
+        if (!spinning) autoButton.disabled = disable; // Only disable auto if not currently spinning
+        resetButton.disabled = disableReset;
+
+        // Special case: Allow $1 spin even if money is 0
+        if (money <= 0 && parseInt(betInput.value) === 1 && !spinning) {
+            spinButton.disabled = false;
+        }
+     }
+
+    function displayMessage(msg, isWin = false, isBigWin = false) {
+      messageDisplay.innerText = msg; messageDisplay.className = 'message'; // Reset classes
+      if (isBigWin) messageDisplay.classList.add('big-win');
+      else if (isWin) messageDisplay.classList.add('win');
+    }
+
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.dataset.symbolId = symbolData.id;
+        div.textContent = symbolData.emoji;
+        if (symbolData.cssColorVar) {
+            div.style.color = `var(${symbolData.cssColorVar})`;
+        }
+        return div;
+    }
+
+    function buildReels() {
+      reelsContainer.innerHTML = ''; reels = [];
+
+      const symbolPool = [];
+      config.symbols.forEach(symbolData => {
+          const weight = symbolData.weight || 1;
+          for (let i = 0; i < weight; i++) {
+              symbolPool.push(symbolData);
+          }
+      });
+
+      for (let i = 0; i < config.reelCount; i++) {
+        const reelElement = document.createElement('div'); reelElement.classList.add('reel');
+        const symbolsContainer = document.createElement('div'); symbolsContainer.classList.add('symbols-container');
+        const reelSymbolsData = []; const reelSymbolElements = [];
+        const reelStripLength = 30; // Number of symbols on the virtual reel strip
+
+        for (let k = 0; k < reelStripLength; k++) {
+            const randomSymbolFromPool = symbolPool[Math.floor(Math.random() * symbolPool.length)];
+            const symbolElement = createSymbolElement(randomSymbolFromPool);
+            symbolsContainer.appendChild(symbolElement);
+            reelSymbolsData.push(randomSymbolFromPool);
+            reelSymbolElements.push(symbolElement);
+        }
+        reelElement.appendChild(symbolsContainer); reelsContainer.appendChild(reelElement);
+        reels.push({ element: reelElement, symbolsContainer: symbolsContainer, symbols: reelSymbolsData,
+            symbolElements: reelSymbolElements, finalPosition: 0, failsafeTimeout: null });
+      }
+      // Set initial random positions for reels
+      reels.forEach(reel => {
+         // Position so a random symbol is in the middle row (index 1 for 3 rows)
+         const middleRowIndex = Math.floor(config.rowCount / 2);
+         const randomSymbolPos = Math.floor(Math.random() * reel.symbols.length);
+         // Calculate offset to bring this random symbol to the middle visible row
+         const initialOffset = -((randomSymbolPos - middleRowIndex + reel.symbols.length) % reel.symbols.length) * config.symbolHeight;
+
+         reel.symbolsContainer.style.transition = 'none';
+         reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`;
+         reel.finalPosition = initialOffset; // Store this as the current "stopped" position
+         void reel.symbolsContainer.offsetWidth; // Force reflow
+         reel.symbolsContainer.style.transition = '';
+      });
+    }
+
+    function clearReelHighlights() {
+        document.querySelectorAll('.symbol.winning').forEach(el => el.classList.remove('winning'));
+    }
+
+    function clearPaytableHighlights() {
+        document.querySelectorAll('.paytable-table td.paytable-win-flash').forEach(el => {
+            el.classList.remove('paytable-win-flash');
+        });
+    }
+
+    function highlightWinsOnReels(winningLinesInfo) {
+        winningLinesInfo.forEach(winInfo => {
+            winInfo.indices.forEach(gridIndex => {
+                 // Convert gridIndex (0-8) to reelIndex (0-2) and visibleRowIndex (0-2)
+                 const reelIndex = gridIndex % config.reelCount;
+                 const visibleRowIndex = Math.floor(gridIndex / config.reelCount);
+
+                 const reel = reels[reelIndex];
+                 // Calculate the index of the symbol element that is currently at the top of the visible reel area
+                 const topVisibleSymbolIndexOnStrip = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                 // The actual symbol element index in the DOM needs to account for the reel strip wrapping
+                 const targetSymbolElementIndex = (topVisibleSymbolIndexOnStrip + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length;
+
+                 const symbolElement = reel.symbolElements[targetSymbolElementIndex];
+                 if (symbolElement) symbolElement.classList.add('winning');
+            });
+        });
+    }
+
+    function highlightPaytableEntry(symbolId) { // Simplified for TicTacToe (only 3-in-a-row)
+        const row = paytablePanelContent.querySelector(`.paytable-table tr[data-symbol-id="${symbolId}"]`);
+        if (row) {
+            const cell = row.querySelector(`td[data-payout-count="3"]`); // Always "3" for TicTacToe
+            if (cell) cell.classList.add('paytable-win-flash');
+        }
+    }
+
+    function startSpin() {
+        if (spinning) return;
+
+        let betForThisSpin = parseInt(betInput.value);
+        if (isNaN(betForThisSpin) || betForThisSpin < 1) {
+            betForThisSpin = 1;
+        }
+
+        const maxAffordableBet = money > 0 ? money : 1; // Can bet 1 even with 0 money
+        if (betForThisSpin > maxAffordableBet && money > 0) { // If has money, cap bet
+            betForThisSpin = maxAffordableBet;
+        } else if (money <= 0 && betForThisSpin > 1) { // If no money, force bet to 1
+             betForThisSpin = 1;
+        }
+        betInput.value = betForThisSpin;
+        currentBet = betForThisSpin;
+
+        if (currentBet > money && money > 0) { // Check if bet is affordable only if player has money
+            displayMessage("Not enough credits for this bet!");
+            if (autoMode) stopAutoSpin();
+            disableControls(false, money <= 0);
+            return;
+        }
+
+        clearTimeout(autoSpinTimeout);
+        clearReelHighlights();
+        clearPaytableHighlights();
+        playSound(sounds.click);
+
+        spinning = true;
+
+        if (money > 0) { // Only deduct if money is available
+            money -= currentBet;
+        } else if (money <= 0 && currentBet === 1) {
+            // Allow $1 spin even with 0 credits - "on the house"
+            displayMessage("Spinning on the house!");
+        }
+
+        updateMoneyDisplay();
+        disableControls(true);
+        spinButton.innerText = "Spinning...";
+        if (!(money <= 0 && currentBet === 1 && (money + currentBet) <=0 )) { // Don't overwrite "on the house"
+             displayMessage("Reels are spinning... Good luck!");
+        }
+        playSound(sounds.spin);
+
+        let reelsStoppedCount = 0;
+        reels.forEach((reel, index) => {
+            if (reel.failsafeTimeout) clearTimeout(reel.failsafeTimeout);
+
+            const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element;
+            reelElement.classList.remove('stopping'); reelElement.classList.add('spinning');
+
+            // Determine target symbol index for the middle row
+            const middleRowDisplayIndex = Math.floor(config.rowCount / 2);
+            const randomTargetSymbolOnStrip = Math.floor(Math.random() * reel.symbols.length);
+
+            // Calculate finalPosition so randomTargetSymbolOnStrip lands in middleRowDisplayIndex
+            reel.finalPosition = -((randomTargetSymbolOnStrip - middleRowDisplayIndex + reel.symbols.length) % reel.symbols.length) * config.symbolHeight;
+
+
+            const currentY = parseFloat(symbolsContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0;
+            // Ensure enough spin distance for visual effect, minimum 2 full rotations of the strip
+            const spinDistance = (reel.symbols.length * config.symbolHeight) * 2 + Math.abs(reel.finalPosition - currentY);
+            symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`; // Spin downwards
+
+            const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance);
+
+            setTimeout(() => {
+                reelElement.classList.remove('spinning'); reelElement.classList.add('stopping');
+                symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`;
+                playSound(sounds.reelStop);
+
+                const transitionEndHandler = (event) => {
+                    if (event.target === symbolsContainer && event.propertyName === 'transform') {
+                        symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                        clearTimeout(reel.failsafeTimeout);
+                        reelElement.classList.remove('stopping');
+                        reelsStoppedCount++;
+                        if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                    }
+                };
+                symbolsContainer.addEventListener('transitionend', transitionEndHandler);
+
+                reel.failsafeTimeout = setTimeout(() => {
+                     if (!reelElement.classList.contains('stopping')) return;
+                     console.warn(`Reel ${index} transitionEnd failsafe. Forcing stop.`);
+                     symbolsContainer.removeEventListener('transitionend', transitionEndHandler);
+                     symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`; // Ensure final position
+                     reelElement.classList.remove('stopping');
+                     reelsStoppedCount++;
+                     if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100);
+                }, totalSpinDuration + 200); // Adjusted failsafe timeout
+
+            }, totalSpinDuration - (config.spinDurationBase * 0.8)); // Start stopping transition earlier
+        });
+    }
+
+    function evaluateResult() {
+        let totalWinnings = 0; let combinedWinningLinesInfo = []; let isBigWinOverall = false;
+        finalSymbols = []; // Reset and repopulate final symbols based on landed positions
+
+        // Populate finalSymbols array based on what's visible
+        // finalSymbols will be an array of 9 symbol objects (for 3x3 grid)
+        for (let r = 0; r < config.rowCount; r++) { // For each visible row
+            for (let c = 0; c < config.reelCount; c++) { // For each reel
+                const reel = reels[c];
+                const topVisibleSymbolIndexOnStrip = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight);
+                const symbolIndexInDataArray = (topVisibleSymbolIndexOnStrip + r + reel.symbols.length) % reel.symbols.length;
+                finalSymbols.push(reel.symbols[symbolIndexInDataArray]);
+            }
+        }
+
+        config.winningLines.forEach(line => {
+            const s1_data = finalSymbols[line.indices[0]];
+            const s2_data = finalSymbols[line.indices[1]];
+            const s3_data = finalSymbols[line.indices[2]];
+
+            // Check if all three symbols are defined and have the same ID
+            if (s1_data && s2_data && s3_data && s1_data.id === s2_data.id && s1_data.id === s3_data.id) {
+                const winningSymbolId = s1_data.id;
+                // Find the original symbol config to get payout (as s1_data is from the pool)
+                const symbolConfig = config.symbols.find(s => s.id === winningSymbolId);
+
+                if (symbolConfig && symbolConfig.payouts && symbolConfig.payouts['3']) {
+                    const multiplier = symbolConfig.payouts['3'];
+                    const amount = currentBet * multiplier;
+                    if (amount > 0) {
+                        totalWinnings += amount;
+                        combinedWinningLinesInfo.push({
+                            amount: amount,
+                            count: 3, // Always 3 for Tic-Tac-Toe
+                            symbolId: winningSymbolId,
+                            indices: line.indices,
+                            multiplier: multiplier,
+                            lineName: line.name || line.id
+                        });
+                        if (multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true;
+                    }
+                }
+            }
+        });
+
+        spinning = false;
+
+        if (totalWinnings > 0) {
+            money += totalWinnings;
+            let winMessage = "";
+            if (combinedWinningLinesInfo.length > 1) {
+                winMessage = "Multiple Wins!\n";
+                combinedWinningLinesInfo.forEach(info => {
+                    const displayName = config.symbols.find(s => s.id === info.symbolId)?.name || info.symbolId;
+                    winMessage += `3x ${displayName} on ${info.lineName} = $${info.amount.toLocaleString()}\n`;});
+                winMessage += `Total Credits Won: $${totalWinnings.toLocaleString()}`;
+            } else if (combinedWinningLinesInfo.length === 1) {
+                const winInfo = combinedWinningLinesInfo[0];
+                const displayName = config.symbols.find(s => s.id === winInfo.symbolId)?.name || winInfo.symbolId;
+                winMessage = `Tic-Tac-Toe! 3x ${displayName} on ${winInfo.lineName} = $${winInfo.amount.toLocaleString()}`;
+            }
+
+            if (isBigWinOverall && combinedWinningLinesInfo.length > 0) {
+                 const baseMessage = combinedWinningLinesInfo.length > 1 ? winMessage.substring(winMessage.indexOf('\n') + 1) : winMessage;
+                 winMessage = `!!! BIG WIN !!!\n` + baseMessage;
+                 playSound(sounds.bigWin);
+            } else { playSound(sounds.win); }
+
+            displayMessage(winMessage, true, isBigWinOverall);
+            highlightWinsOnReels(combinedWinningLinesInfo);
+            combinedWinningLinesInfo.forEach(winInfo => {
+                highlightPaytableEntry(winInfo.symbolId); // Only needs symbolId for TicTacToe
+            });
+        } else {
+            const moneyBeforeThisSpin = money + currentBet; // money was already deducted for non-free spin
+            if (!(moneyBeforeThisSpin <= 0 && currentBet === 1)) { // Don't show "no win" if it was a free spin
+                displayMessage("No win this time. Try again!");
+            }
+        }
+
+        updateMoneyDisplay();
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        spinButton.innerText = "Spin";
+
+        if (autoMode) {
+            let nextBetForAuto = parseInt(betInput.value);
+            if(isNaN(nextBetForAuto) || nextBetForAuto < 1) nextBetForAuto = 1;
+
+             if ((money >= nextBetForAuto && money > 0) || (money <= 0 && nextBetForAuto === 1) ) { // Can auto-spin if has money OR for $1 free spin
+                autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+             } else {
+                stopAutoSpin();
+                displayMessage(money <= 0 ? "Out of credits! Auto Spin stopped." : "Not enough credits for Auto Spin. Mode off.", false, money <= 0);
+             }
+         }
+    }
+
+    function stopAutoSpin() {
+        autoMode = false; clearTimeout(autoSpinTimeout);
+        autoButton.innerText = "Auto Spin"; autoButton.style.background = ''; // Reset style
+        if (!spinning) disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    }
+
+    function generateSidePayTable() {
+        paytablePanelContent.innerHTML = '';
+        const table = document.createElement('table'); table.classList.add('paytable-table');
+        const thead = table.createTHead(); const headerRow = thead.insertRow();
+        const headers = ['Icon', 'Symbol', '3 in a Row'];
+        headers.forEach(text => { const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th); });
+
+        const tbody = table.createTBody();
+        config.symbols.forEach(symbolData => {
+            // Only display symbols that have a payout defined for '3'
+            if (symbolData.payouts && symbolData.payouts['3']) {
+                const row = tbody.insertRow(); row.dataset.symbolId = symbolData.id;
+
+                const emojiCell = row.insertCell();
+                emojiCell.textContent = symbolData.emoji;
+                emojiCell.classList.add('paytable-symbol-emoji');
+                if (symbolData.cssColorVar) {
+                    emojiCell.style.color = `var(${symbolData.cssColorVar})`;
+                }
+
+                const nameCell = row.insertCell();
+                nameCell.textContent = symbolData.name || symbolData.id.replace(/_/g, ' ');
+                nameCell.classList.add('paytable-symbol-name');
+
+                const payoutCell = row.insertCell();
+                payoutCell.textContent = `${symbolData.payouts['3']}x`;
+                payoutCell.dataset.payoutCount = "3"; // Used for highlighting
+            }
+        });
+        paytablePanelContent.appendChild(table);
+
+        const gameInfoDiv = document.createElement('div');
+        gameInfoDiv.classList.add('paytable-wild-info'); // Re-use class for similar styling
+        gameInfoDiv.innerHTML = `Get three identical symbols (e.g., three Blue X's) on a line to win. <br>Green symbols pay more!`;
+        paytablePanelContent.appendChild(gameInfoDiv);
+    }
+
+    function requestFullScreenGame() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) elem.requestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+        else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+        else if (elem.msRequestFullscreen) elem.msRequestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`));
+    }
+
+    startButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        // Fullscreen can be annoying for testing, enable if desired
+        // requestFullScreenGame();
+        titleScreen.style.display = 'none';
+        gameLayoutContainer.style.display = 'flex';
+        initializeGame();
+    });
+
+    spinButton.addEventListener('click', () => { if (!spinning) startSpin(); });
+
+    maxBetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (!spinning) {
+            const maxBetValue = money > 0 ? money : 1;
+            betInput.value = maxBetValue;
+            currentBet = maxBetValue; // Update currentBet immediately
+        }
+    });
+
+    autoButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (autoMode) {
+            stopAutoSpin();
+            if (!spinning) displayMessage("Auto Spin OFF.");
+        } else {
+            let betForAuto = parseInt(betInput.value);
+            if (isNaN(betForAuto) || betForAuto < 1) betForAuto = 1;
+
+            const maxAffordableAuto = money > 0 ? money : 1;
+            if (betForAuto > maxAffordableAuto && money > 0) betForAuto = maxAffordableAuto;
+            else if (money <= 0 && betForAuto > 1) betForAuto = 1;
+            betInput.value = betForAuto;
+
+            if (!spinning && ((money >= betForAuto && money > 0) || (money <= 0 && betForAuto === 1))) {
+                autoMode = true; autoButton.innerText = "Stop Auto";
+                autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #c62828)'; // Reddish for "stop"
+                displayMessage("Auto Spin ON!"); startSpin();
+            } else if (spinning) {
+                autoMode = true; autoButton.innerText = "Stop Auto";
+                autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #c62828)';
+                displayMessage("Auto Spin will start after this round.");
+            } else {
+                displayMessage(money <= 0 ? "Out of credits! Cannot start Auto Spin." : "Not enough credits for Auto Spin!");
+            }
+        }
+    });
+
+    resetButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        if (confirm("Start a new game with $100 credits?")) {
+            // Optional: Exit fullscreen if active
+            // if (document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+            //     if (document.exitFullscreen) document.exitFullscreen();
+            //     else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+            //     else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            //     else if (document.msExitFullscreen) document.msExitFullscreen();
+            // }
+            location.reload(); // Easiest way to reset everything
+        }
+    });
+
+    betInput.addEventListener('blur', () => { // Validate on blur
+        let n = parseInt(betInput.value);
+        const maxBetForNext = money > 0 ? money : 1;
+
+        if (isNaN(n) || n < 1) n = 1;
+
+        if (n > maxBetForNext && money > 0) n = maxBetForNext;
+        else if (money <= 0 && n > 1) n = 1; // If no money, bet must be 1
+
+        betInput.value = n;
+        currentBet = n; // Update currentBet
+        // No need to call updateMoneyDisplay or disableControls here unless state changed significantly
+        // updateMoneyDisplay(); // To re-check max bet based on current money
+        // disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+    });
+
+    function initializeGame() {
+        money = config.money;
+        let initialBetVal = parseInt(betInput.value);
+        if (isNaN(initialBetVal) || initialBetVal < 1) initialBetVal = 1;
+        else if (initialBetVal > config.money) initialBetVal = config.money > 0 ? config.money : 1;
+        betInput.value = initialBetVal;
+        currentBet = initialBetVal;
+
+        autoMode = false; spinning = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Place your bet and spin the reels!");
+        buildReels(); generateSidePayTable();
+        updateMoneyDisplay();
+        clearReelHighlights(); clearPaytableHighlights();
+        disableControls(false, money <= 0 && currentBet > 1);
+        autoButton.innerText = "Auto Spin"; autoButton.style.background = '';
+        Object.values(sounds).forEach(sound => { if (sound.readyState < 2) sound.load(); });
+    }
+
+    // Prevent default for spacebar page scroll if game is focused, allow spin
+    window.addEventListener('keydown', function(e) {
+        if (e.key === " " && document.activeElement !== betInput && gameLayoutContainer.style.display === 'flex') {
+            e.preventDefault();
+            if (!spinButton.disabled && !spinning) {
+                spinButton.click();
+            }
+        }
+    });
+
+  </script>
+</body>
+</html>
