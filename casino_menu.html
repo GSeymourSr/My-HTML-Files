@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>
+   Neon Slots Casino!
+  </title>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Orbitron:wght@700&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+   body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e, #0f0c29); /* Deep space gradient */
+            background-size: 600% 600%;
+            animation: gradientBG 20s ease infinite;
+            color: #e0e0e0; /* Light grey for general text */
+            font-family: 'Press Start 2P', cursive; /* Retro arcade font for body */
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .casino-header {
+            background-color: rgba(0, 0, 0, 0.85); /* Darker, more solid header */
+            padding: 25px 0;
+            border-bottom: 10px solid;
+            border-image: linear-gradient(to right, #ff00ff, #00ffff, #ffff00, #ff00ff) 1; /* Animated border */
+            animation: headerBorderHueRotate 25s linear infinite;
+            box-shadow: 0 5px 30px rgba(0, 255, 255, 0.5), 0 0 40px rgba(255, 0, 255, 0.5); /* Stronger neon shadows */
+        }
+
+        @keyframes headerBorderHueRotate {
+            0% { border-image-source: linear-gradient(to right, #ff00ff, #00ffff, #ffff00, #ff00ff) 1; }
+            25% { border-image-source: linear-gradient(to right, #00ffff, #ffff00, #ff00ff, #00ffff) 1; }
+            50% { border-image-source: linear-gradient(to right, #ffff00, #ff00ff, #00ffff, #ffff00) 1; }
+            75% { border-image-source: linear-gradient(to right, #ff00ff, #00ffff, #ffff00, #ff00ff) 1; } /* Corrected from original mistake */
+            100% { border-image-source: linear-gradient(to right, #00ffff, #ffff00, #ff00ff, #00ffff) 1; } /* Corrected from original mistake */
+        }
+
+
+        .casino-header h1 {
+            font-family: 'Orbitron', sans-serif; /* Futuristic/tech font */
+            font-size: clamp(2.5rem, 7vw, 4.5rem); /* Responsive size */
+            margin: 0;
+            color: #fff;
+            text-shadow:
+                0 0 7px #fff,
+                0 0 12px #fff,
+                0 0 20px #00ffff, /* Cyan */
+                0 0 35px #00ffff,
+                0 0 40px #00ffff,
+                0 0 50px #00ffff,
+                0 0 75px #00ffff,
+                0 0 5px #ff00ff, /* Magenta accent */
+                0 0 10px #ff00ff;
+            animation: headerTextGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes headerTextGlow {
+            from { text-shadow: 0 0 7px #fff, 0 0 12px #fff, 0 0 20px #00ffff, 0 0 35px #00ffff, 0 0 40px #00ffff, 0 0 50px #00ffff, 0 0 75px #00ffff, 0 0 5px #ff00ff, 0 0 10px #ff00ff; }
+            to { text-shadow: 0 0 8px #fff, 0 0 15px #fff, 0 0 25px #ff00ff, 0 0 40px #ff00ff, 0 0 50px #ff00ff, 0 0 60px #ff00ff, 0 0 80px #ff00ff, 0 0 7px #00ffff, 0 0 12px #00ffff; }
+        }
+
+        .marquee {
+            background-color: #0a0a0a; /* Even darker for contrast */
+            color: #00ff99; /* Bright mint green */
+            padding: 12px 0;
+            font-size: 1.3rem;
+            overflow: hidden;
+            white-space: nowrap;
+            box-shadow: 0 0 15px #00ff99, inset 0 0 10px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+            border-top: 2px solid #00cc7a;
+            border-bottom: 2px solid #00cc7a;
+        }
+
+        .marquee span {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 35s linear infinite; /* Increased duration for longer text */
+        }
+
+        @keyframes marquee {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-120%, 0); }
+        }
+
+        .slot-menu-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px; /* Increased gap */
+            padding: 40px 20px;
+            flex-grow: 1;
+        }
+
+        .slot-button {
+            text-decoration: none;
+            color: #fff;
+            background-color: rgba(30, 10, 50, 0.85); /* Dark purple, slightly transparent */
+            padding: 25px 35px; /* Larger buttons */
+            border-radius: 20px; /* More rounded */
+            font-size: clamp(1.4rem, 2.8vw, 2rem); /* Responsive, larger button font */
+            font-family: 'Bangers', cursive; /* Fun, bold font for buttons */
+            letter-spacing: 2px;
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease, filter 0.25s ease;
+            display: flex;
+            flex-direction: column; /* Stack icon and text */
+            align-items: center;
+            justify-content: center;
+            min-width: 250px; /* Adjusted min-width */
+            min-height: 120px; /* Ensure some height */
+            border: 4px solid transparent;
+            position: relative;
+            overflow: hidden; /* For pseudo-elements */
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+        }
+
+        .slot-button .btn-text {
+            margin-top: 10px; /* Space between icon and text */
+        }
+
+
+        .slot-button::before, .slot-button::after { /* Dual animated borders */
+            content: '';
+            position: absolute;
+            z-index: -1;
+            border-radius: 22px; /* Match button radius + border */
+            transition: all 0.4s ease;
+        }
+        .slot-button::before { /* Outer border - MORE COLORS */
+            top: -6px; left: -6px; right: -6px; bottom: -6px;
+            background: linear-gradient(120deg, #ff00ff, #00ffff, #39ff14, #ffff00, #ff8000, #ff00ff); /* Magenta, Cyan, Neon Green, Yellow, Orange, Magenta */
+            background-size: 400% 400%; /* Adjusted size for more colors */
+            animation: borderGlowOuter 6s linear infinite;
+        }
+        .slot-button::after { /* Inner border highlight - MORE COLORS */
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(120deg, #00ffff, #39ff14, #ffff00, #ff8000, #ff00ff, #00ffff); /* Cyan, Neon Green, Yellow, Orange, Magenta, Cyan */
+            background-size: 400% 400%; /* Adjusted size for more colors */
+            animation: borderGlowInner 4s linear infinite reverse;
+            filter: blur(3px); /* Soft inner glow */
+        }
+
+        @keyframes borderGlowOuter {
+            0% { background-position: 0% 50%; filter: hue-rotate(0deg); }
+            50% { background-position: 100% 50%; filter: hue-rotate(180deg); }
+            100% { background-position: 0% 50%; filter: hue-rotate(360deg); }
+        }
+        @keyframes borderGlowInner {
+            0% { background-position: 100% 50%; filter: blur(3px) hue-rotate(0deg); }
+            50% { background-position: 0% 50%; filter: blur(5px) hue-rotate(-180deg); }
+            100% { background-position: 100% 50%; filter: blur(3px) hue-rotate(-360deg); }
+        }
+
+
+        .slot-button:hover {
+            transform: scale(1.08) translateY(-8px) rotate(1deg); /* More dynamic hover */
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 20px #00ffff, 0 0 30px #ff00ff, 0 0 40px #39ff14; /* Added green to hover shadow */
+            filter: brightness(1.2);
+        }
+        .slot-button:active {
+            transform: scale(1.02) translateY(-2px); /* Slight press down */
+        }
+
+        .btn-icon {
+            font-size: 2.5em; /* Larger icons */
+            line-height: 1;
+            filter: drop-shadow(0 0 5px #fff);
+            display: block; /* Make icon take full width for centering */
+            margin-bottom: 8px;
+        }
+
+
+        .casino-footer {
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 20px 0;
+            font-size: 1rem; /* Slightly larger footer text */
+            border-top: 5px solid;
+            border-image: linear-gradient(to right, #ff00ff, #00ffff, #ffff00, #ff00ff) 1;
+            animation: headerBorderHueRotate 10s linear infinite reverse; /* Reuse animation, reverse direction */
+            box-shadow: 0 -5px 25px rgba(0, 255, 255, 0.4), 0 0 30px rgba(255, 0, 255, 0.4);
+            margin-top: auto;
+        }
+  </style>
+ </head>
+ <body>
+  <header class="casino-header">
+   <h1>
+    GregSeymourAI Slot Machine Casino
+   </h1>
+  </header>
+  <div class="marquee">
+   <span>
+    ★★★ WELCOME TO GregSeymourAI SLOT MACHINE CASINO! ★★★ SPIN TO WIN BIG! ★★★ HIGH VOLTAGE JACKPOTS AWAIT! ★★★ TRY ALL OUR THEMED SLOTS! ★★★ NON-STOP ACTION! ★★★ GET YOUR GAME ON! ★★★ ALL SLOTS CREATED BY GregSeymourAI ★★★ HAVE FUN!!! ★★★ NEW GAMES ADDED REGULARLY! ★★★ ENTER THE NEON ZONE! ★★★ ARE YOU READY TO SPIN? ★★★ THE ULTIMATE SLOT EXPERIENCE! ★★★ GOOD LUCK, HIGH ROLLERS! ★★★
+   </span>
+  </div>
+  <main class="slot-menu-container">
+   <a class="slot-button" href="slot-flying.html">
+    <span class="btn-icon">
+     ✈️
+    </span>
+    <span class="btn-text">
+     Aviator Aces
+    </span>
+   </a>
+   <a class="slot-button" href="slot-bbq.html">
+    <span class="btn-icon">
+     🥩
+    </span>
+    <span class="btn-text">
+     BBQ Bonanza
+    </span>
+   </a>
+   <a class="slot-button" href="slot-beach.html">
+    <span class="btn-icon">
+     🏖️
+    </span>
+    <span class="btn-text">
+     Beach Day
+    </span>
+   </a>
+   <a class="slot-button" href="slot-blossom-.html">
+    <span class="btn-icon">
+     🌸
+    </span>
+    <span class="btn-text">
+     Blossom Hearts
+    </span>
+   </a>
+   <a class="slot-button" href="slot-bugging.html">
+    <span class="btn-icon">
+     🐞
+    </span>
+    <span class="btn-text">
+     Bug Blitz
+    </span>
+   </a>
+   <a class="slot-button" href="slot-chromatic.html">
+    <span class="btn-icon">
+     🌈
+    </span>
+    <span class="btn-text">
+     Chromatic Cascade
+    </span>
+   </a>
+   <a class="slot-button" href="slot-circus.html">
+    <span class="btn-icon">
+     🎪
+    </span>
+    <span class="btn-text">
+     Cirque du Spin
+    </span>
+   </a>
+   <a class="slot-button" href="slot-scaryclowns.html">
+    <span class="btn-icon">
+     🤡
+    </span>
+    <span class="btn-text">
+     Clown Chaos
+    </span>
+   </a>
+   <a class="slot-button" href="slot-cosmic.html">
+    <span class="btn-icon">
+     🚀
+    </span>
+    <span class="btn-text">
+     Cosmic Slots
+    </span>
+   </a>
+   <a class="slot-button" href="slot-cosmiccash.html">
+    <span class="btn-icon">
+     💲
+    </span>
+    <span class="btn-text">
+     Cosmiccash
+    </span>
+   </a>
+   <a class="slot-button" href="slot-crypt.html">
+    <span class="btn-icon">
+     👻
+    </span>
+    <span class="btn-text">
+     Creepy Crypt
+    </span>
+   </a>
+   <a class="slot-button" href="slot-deepsea.html">
+    <span class="btn-icon">
+     🦈
+    </span>
+    <span class="btn-text">
+     Deepsea
+    </span>
+   </a>
+   <a class="slot-button" href="slot-Diner.html">
+    <span class="btn-icon">
+     🍔
+    </span>
+    <span class="btn-text">
+     Diner Dash
+    </span>
+   </a>
+   <a class="slot-button" href="slot-doctor.html">
+    <span class="btn-icon">
+     🩺
+    </span>
+    <span class="btn-text">
+     Doctor Slots
+    </span>
+   </a>
+   <a class="slot-button" href="slot-drvolt.html">
+    <span class="btn-icon">
+     💉
+    </span>
+    <span class="btn-text">
+     Drvolt
+    </span>
+   </a>
+   <a class="slot-button" href="slot-easter-.html">
+    <span class="btn-icon">
+     🐰
+    </span>
+    <span class="btn-text">
+     Easter Hunt
+    </span>
+   </a>
+   <a class="slot-button" href="slot-emoji.html">
+    <span class="btn-icon">
+     😂
+    </span>
+    <span class="btn-text">
+     Emoji Slots
+    </span>
+   </a>
+   <a class="slot-button" href="slot-fruitfiesta.html">
+    <span class="btn-icon">
+     🍓
+    </span>
+    <span class="btn-text">
+     Fruit Frenzy
+    </span>
+   </a>
+   <a class="slot-button" href="slot-fruity.html">
+    <span class="btn-icon">
+     🍒
+    </span>
+    <span class="btn-text">
+     Fruity Cascade
+    </span>
+   </a>
+   <a class="slot-button" href="slot-community.html">
+    <span class="btn-icon">
+     🏘️
+    </span>
+    <span class="btn-text">
+     Hood Hitz
+    </span>
+   </a>
+   <a class="slot-button" href="slot-liquidlounge.html">
+    <span class="btn-icon">
+     🍹
+    </span>
+    <span class="btn-text">
+     Liquid Lounge
+    </span>
+   </a>
+   <a class="slot-button" href="slot-bathroom.html">
+    <span class="btn-icon">
+     🚽
+    </span>
+    <span class="btn-text">
+     Loo-dicrous Luck
+    </span>
+   </a>
+   <a class="slot-button" href="slot-meadow.html">
+    <span class="btn-icon">
+     🦋
+    </span>
+    <span class="btn-text">
+     Magic Meadow
+    </span>
+   </a>
+   <a class="slot-button" href="slot-mega2a.html">
+    <span class="btn-icon">
+     💎
+    </span>
+    <span class="btn-text">
+     Mega Slots
+    </span>
+   </a>
+   <a class="slot-button" href="slot-fish-.html">
+    <span class="btn-icon">
+     🐠
+    </span>
+    <span class="btn-text">
+     Ocean Odyssey
+    </span>
+   </a>
+   <a class="slot-button" href="slot-pirates.html">
+    <span class="btn-icon">
+     ⚓
+    </span>
+    <span class="btn-text">
+     Pirates
+    </span>
+   </a>
+   <a class="slot-button" href="slot-racing.html">
+    <span class="btn-icon">
+     🏎️
+    </span>
+    <span class="btn-text">
+     Racing Fortune
+    </span>
+   </a>
+   <a class="slot-button" href="slot-music1-.html">
+    <span class="btn-icon">
+     🎸
+    </span>
+    <span class="btn-text">
+     Rockin' Reels
+    </span>
+   </a>
+   <a class="slot-button" href="slot-safari.html">
+    <span class="btn-icon">
+     🦁
+    </span>
+    <span class="btn-text">
+     Safari Quest
+    </span>
+   </a>
+   <a class="slot-button" href="slot-Spellbook.html">
+    <span class="btn-icon">
+     📜
+    </span>
+    <span class="btn-text">
+     Spellbook
+    </span>
+   </a>
+   <a class="slot-button" href="slot-sports.html">
+    <span class="btn-icon">
+     🏈
+    </span>
+    <span class="btn-text">
+     Stadium Slots
+    </span>
+   </a>
+   <a class="slot-button" href="slot-summer.html">
+    <span class="btn-icon">
+     ☀️
+    </span>
+    <span class="btn-text">
+     Summer Slots
+    </span>
+   </a>
+   <a class="slot-button" href="slot-sweettreats1-.html">
+    <span class="btn-icon">
+     🍭
+    </span>
+    <span class="btn-text">
+     Sweet Treats
+    </span>
+   </a>
+   <a class="slot-button" href="slot-themepark.html">
+    <span class="btn-icon">
+     🎢
+    </span>
+    <span class="btn-text">
+     Theme Park
+    </span>
+   </a>
+   <a class="slot-button" href="slot-tictactoe.html">
+    <span class="btn-icon">
+     ✖️
+    </span>
+    <span class="btn-text">
+     Tictactoe
+    </span>
+   </a>
+   <a class="slot-button" href="slot-tictactoe2.html">
+    <span class="btn-icon">
+     ⭕
+    </span>
+    <span class="btn-text">
+     Tictactoe2
+    </span>
+   </a>
+   <a class="slot-button" href="slot-xmas-.html">
+    <span class="btn-icon">
+     🎄
+    </span>
+    <span class="btn-text">
+     Xmas Xplosion
+    </span>
+   </a>
+   <a class="slot-button" href="slot-zoo-.html">
+    <span class="btn-icon">
+     🐘
+    </span>
+    <span class="btn-text">
+     Zoo Adventure
+    </span>
+   </a>
+  </main>
+  <footer class="casino-footer">
+   <p>
+    © 2025 GregSeymourAI Slot Machine Casino. For Entertainment Purposes Only. Spin Responsibly!
+   </p>
+  </footer>
+ </body>
+</html>
