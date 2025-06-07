@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sweetheart Spins Deluxe V5 (Click Fixes & Error Handling)</title>
+  <style>
+    :root {
+      /* --- Sweetheart Spins Theme (Fullscreen) --- */
+      --reel-width: 110px;
+      --reel-height: 110px;
+      --symbol-size: 85px; /* Main game symbol size */
+      --num-reels: 5;
+      --num-rows: 3;
+      --reel-gap: 15px;
+
+      --bg-color-main: #F8BBD0;
+      --bg-color-accent: #E91E63;
+      --machine-border: #880E4F;
+      --title-bg: linear-gradient(to bottom, #F06292, #D81B60);
+      --title-text-color: #FFFDE7;
+      --title-shadow: rgba(74,20,140,0.5);
+      --money-color: #FFC107;
+      --reels-bg: #FCE4EC;
+      --reel-bg: #FFF8E1;
+      --button-bg: linear-gradient(to bottom, #EC407A, #C2185B);
+      --button-border: #880E4F;
+      --button-hover-bg: linear-gradient(to bottom, #F06292, #EC407A);
+      --spin-button-bg: linear-gradient(to bottom, #D32F2F, #B71C1C);
+      --spin-button-border: #7f0000;
+      --message-bg: rgba(255, 235, 238, 0.95);
+      --message-text-color: #6A1B9A;
+      --message-win-color: #FFAB00;
+      --message-bigwin-color: #D50000;
+      --paytable-bg: rgba(232, 190, 255, 0.90);
+      --paytable-text-color: #4A148C;
+      --paytable-header-bg: rgba(123, 31, 162, 0.85);
+
+      /* Bonus Game Colors & Sizes */
+      --bonus-bg: linear-gradient(135deg, #ff9a8b 0%, #ff6a88 50%, #ff99ac 100%);
+      --bonus-card-bg: #fff0f5;
+      --bonus-card-border: #e91e63;
+      --bonus-card-back-bg: linear-gradient(135deg, #f7797d, #fbd786);
+      --bonus-text-color: #4a0e3c;
+      --bonus-highlight-color: #00e676;
+      --bonus-countdown-color: #ffffff;
+      --bonus-grid-card-size: clamp(75px, 16vmin, 125px);
+      --bonus-grid-gap: clamp(8px, 2vmin, 15px);
+    }
+
+    body { margin: 0; font-family: 'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif; background: linear-gradient(135deg, var(--bg-color-accent) 0%, var(--bg-color-main) 100%); color: var(--paytable-text-color); display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+    #game-layout-container, #bonus-screen { display: flex; width: 100%; height: 100%; padding: 15px; box-sizing: border-box; gap: 15px; }
+
+    #bonus-screen {
+        display: none; flex-direction: column; align-items: center; justify-content: center;
+        background: var(--bonus-bg); color: var(--bonus-text-color); text-align: center;
+        position: fixed; top: 0; left: 0; z-index: 200;
+    }
+    #bonus-screen h2 { font-size: clamp(2em, 5vw, 3.5em); color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-bottom: 10px; }
+    #bonus-instructions {
+        font-size: clamp(1.2em, 3vw, 1.8em); color: var(--bonus-countdown-color);
+        background-color: rgba(0,0,0,0.3); padding: 20px; border-radius: 10px;
+        margin-bottom: 20px; line-height: 1.5;
+    }
+    #bonus-instructions button {
+        font-family: inherit;
+        font-size: 0.8em; padding: 10px 20px; margin-top: 15px;
+        border-radius: 5px; border: 2px solid var(--button-border);
+        background: var(--button-bg); color: #fff; cursor: pointer;
+        box-shadow: 0 2px 0px #6A003A;
+        transition: all 0.15s ease-out;
+    }
+     #bonus-instructions button:hover {
+        background: var(--button-hover-bg);
+        transform: translateY(-1px);
+    }
+    #bonus-countdown {
+        font-size: clamp(2em, 6vw, 4em);
+        color: var(--bonus-countdown-color);
+        text-shadow: 2px 2px 5px rgba(0,0,0,0.6); margin-bottom: 15px;
+        font-weight: bold; min-height: 1.2em;
+        background-color: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 5px;
+    }
+    #bonus-info {
+        font-size: clamp(1em, 2.2vw, 1.4em); margin-bottom: 15px;
+        background-color: rgba(255,255,255,0.7); padding: 8px 15px;
+        border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    #memory-grid {
+        display: grid;
+        grid-template-columns: repeat(4, var(--bonus-grid-card-size));
+        grid-template-rows: repeat(4, var(--bonus-grid-card-size));
+        gap: var(--bonus-grid-gap);
+        padding: 15px; background-color: rgba(255,255,255,0.3);
+        border-radius: 10px; margin-bottom: 15px;
+    }
+    .memory-card {
+        background-color: var(--bonus-card-bg); border: 3px solid var(--bonus-card-border);
+        border-radius: 10px; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: transform 0.3s ease, background-color 0.3s;
+        perspective: 1000px; transform-style: preserve-3d;
+    }
+    .memory-card .card-face { width: 100%; height: 100%; position: absolute; top:0; left:0; backface-visibility: hidden; transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1); display: flex; align-items: center; justify-content: center; border-radius: 7px; }
+    .memory-card .card-back { background: var(--bonus-card-back-bg); font-size: clamp(2em, 5vmin, 3.5em); color: #fff; transform: rotateY(0deg); }
+    .memory-card .card-front { background-color: #fff; transform: rotateY(180deg); }
+    .memory-card .card-front img { max-width: 90%; max-height: 90%; object-fit: contain; }
+    .memory-card .card-front .bonus-image-placeholder { font-size: clamp(2em, 5vmin, 3.5em); color: var(--bonus-card-border); } /* Style for placeholder text */
+    .memory-card.flipped .card-back { transform: rotateY(180deg); }
+    .memory-card.flipped .card-front { transform: rotateY(0deg); }
+    .memory-card.matched { cursor: default; opacity: 0.6; border-color: var(--bonus-highlight-color); box-shadow: 0 0 12px var(--bonus-highlight-color); }
+    #bonus-message { font-size: clamp(1em, 2vw, 1.3em); font-weight: bold; min-height: 2em; margin-top: 10px; }
+    #bonus-screen button#bonus-continue-button { font-family: inherit; font-size: clamp(1.2em, 3vw, 1.8em); padding: 12px 25px; margin-top: 15px; border-radius: 5px; border: 2px solid var(--button-border); background: var(--button-bg); color: #fff; cursor: pointer; box-shadow: 0 2px 0px #6A003A; }
+
+    #paytable-panel { flex: 0 0 330px; background: var(--paytable-bg); border-radius: 8px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,0.2); overflow-y: auto; border: 2px solid var(--machine-border); display: flex; flex-direction: column; max-height: calc(100vh - 30px); }
+    #paytable-panel h2 { text-align: center; color: var(--machine-border); font-family: 'Comic Sans MS', 'Chalkduster', 'cursive'; font-size: 2em; margin-top: 0; margin-bottom: 10px; text-shadow: 1px 1px 1px rgba(255,255,255,0.2); }
+    .paytable-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85em;}
+    .paytable-table th, .paytable-table td { border: 1px solid var(--button-border); padding: 6px; text-align: center; vertical-align: middle; }
+    .paytable-table th { background-color: var(--paytable-header-bg); color: #fff; font-weight: bold; }
+    .paytable-table td { color: var(--paytable-text-color); }
+    .paytable-symbol-image-cell img { width: 30px; height: 30px; object-fit: contain; vertical-align: middle; }
+    .paytable-symbol-image-cell span { /* For fallback text */ font-size: 1.5em; display: inline-block; width: 30px; height: 30px; line-height: 30px; text-align: center; }
+    .paytable-symbol-name { font-weight: bold; text-transform: capitalize; }
+    .paytable-wild-info, .paytable-scatter-pay-info { margin-top: 15px; font-size: 0.85em; text-align: center; color: var(--message-text-color); line-height: 1.4; }
+    .paytable-wild-info img, .paytable-scatter-pay-info img { width: 20px; height: 20px; vertical-align: middle; margin-right: 5px; object-fit: contain; }
+    .paytable-wild-info span, .paytable-scatter-pay-info span { /* For fallback text */ font-size: 1.2em; display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; vertical-align: middle; margin-right: 5px; font-weight: bold; }
+    @keyframes paytableWinFlashLove { 0%, 100% { background-color: transparent; color: var(--paytable-text-color); transform: scale(1); } 50% { background-color: var(--message-win-color); color: #4A148C; transform: scale(1.05); } }
+    .paytable-table td.paytable-win-flash { animation: paytableWinFlashLove 0.8s ease-in-out infinite; font-weight: bold; position: relative; z-index: 1; }
+    #main-game-area { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; overflow: hidden; min-width: 0; }
+    #slot-machine { background: linear-gradient(145deg, #e1bee7, #ce93d8); border: 6px solid var(--machine-border); border-radius: 10px; padding: 15px; box-shadow: 0 0 20px rgba(74,20,140,0.4), inset 0 0 10px rgba(0,0,0,0.2); text-align: center; width: 100%; height: 100%; max-width: calc(100vw - 330px - 30px - 30px); max-height: calc(100vh - 30px); box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-around; position: relative; z-index: 1; }
+    #title { font-size: clamp(1.7em, 3.3vw, 2.4em); font-weight: bold; color: var(--title-text-color); text-shadow: 1px 1px 2px var(--title-shadow); background: var(--title-bg); padding: 10px; margin: 0 0 10px 0; border-radius: 6px 6px 0 0; border-bottom: 3px solid var(--machine-border); line-height: 1.1; letter-spacing: 1px; width: 100%; box-sizing: border-box; font-family: 'Impact', 'Arial Black', sans-serif; }
+    #title .subtitle { font-size: clamp(0.4em, 1vw, 0.55em); color: #FFEBEE; font-weight: normal; display: block; margin-top: 3px; text-shadow: 1px 1px 1px rgba(0,0,0,0.4); }
+    #money-display { font-size: clamp(1.5em, 2.5vw, 1.9em); margin: 10px 0; color: var(--money-color); text-shadow: 1px 1px 2px #311B92; background-color: rgba(106, 27, 154, 0.7); padding: 8px 15px; border-radius: 4px; display: inline-block; border: 1px solid var(--money-color); font-weight: bold; }
+    #reels-container { display: grid; grid-template-columns: repeat(var(--num-reels), var(--reel-width)); grid-gap: var(--reel-gap); justify-content: center; margin-bottom: 15px; background: var(--reels-bg); padding: 15px; border-radius: 4px; border: 2px solid #AD1457; height: calc(var(--num-rows) * var(--reel-height)); position: relative; align-self: center; }
+    .reel { width: var(--reel-width); height: calc(var(--num-rows) * var(--reel-height)); overflow: hidden; background: var(--reel-bg); border-radius: 3px; position: relative; box-shadow: inset 0 0 4px rgba(0,0,0,0.25); }
+    .symbols-container { position: absolute; top: 0; left: 0; width: 100%; }
+    .reel.spinning .symbols-container { transition: transform 0.08s linear; filter: blur(1.5px) opacity(0.8); }
+    .reel.stopping .symbols-container { transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.3, 1); filter: blur(0px); }
+    .symbol { width: var(--reel-width); height: var(--reel-height); display: flex; align-items: center; justify-content: center; position: relative; box-sizing: border-box; line-height: 1; user-select: none; }
+    .symbol img { width: var(--symbol-size); height: var(--symbol-size); object-fit: contain; user-select: none; }
+    .symbol .symbol-placeholder { font-size: calc(var(--symbol-size) * 0.6); color: var(--machine-border); } /* Placeholder for missing reel images */
+    @keyframes symbolWinFlashLove { 0%,100%{transform:scale(1) rotate(0deg); opacity: 1; box-shadow: none;} 50%{transform:scale(1.2) rotate(5deg); opacity: 0.9; box-shadow: 0 0 12px var(--message-win-color), 0 0 5px var(--message-bigwin-color);} }
+    .symbol.winning img, .symbol.winning .symbol-placeholder { outline: 3px solid var(--message-win-color); border-radius: 10px; background-color: rgba(255, 235, 59, 0.2); }
+    @keyframes scatterFlash { 0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 5px #ffd700, 0 0 10px #ff8c00; } 50% { opacity: 0.7; transform: scale(1.1); box-shadow: 0 0 15px #ffc400, 0 0 25px #ff7700; } }
+    .symbol.scatter-highlight img, .symbol.scatter-highlight .symbol-placeholder { animation: scatterFlash 0.5s ease-in-out infinite; outline: 3px dashed #FFD700; background-color: rgba(255, 215, 0, 0.3); border-radius: 15px; }
+    #controls { margin: 15px 0 10px 0; display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(5px, 1vw, 10px); }
+    #controls input, #controls button { font-family: inherit; font-size: clamp(0.9em, 1.5vw, 1em); padding: clamp(8px, 1.2vw, 10px) clamp(12px, 1.8vw, 15px); margin: clamp(2px, 0.5vw, 4px); border-radius: 3px; border: 1px solid var(--button-border); background: var(--button-bg); color: #fff; cursor: pointer; transition: all 0.15s ease-out; box-shadow: 0 2px 0px #6A003A, 0 3px 4px rgba(0,0,0,0.3); text-shadow: 1px 1px 1px rgba(0,0,0,0.4); font-weight: bold; text-transform: uppercase; }
+    #controls input { width: clamp(70px, 10vw, 80px); text-align: center; background: #fff; color: #333; text-shadow: none; }
+    #controls button:hover:not(:disabled) { background: var(--button-hover-bg); transform: translateY(-1px); box-shadow: 0 3px 0px #9C27B0, 0 4px 6px rgba(0,0,0,0.4); }
+    #controls button:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0px #9C27B0, 0 1px 2px rgba(0,0,0,0.3); }
+    #controls button:disabled { cursor: not-allowed; opacity: 0.5; filter: grayscale(50%); box-shadow: 0 1px 0px #6A003A, 0 1px 2px rgba(0,0,0,0.2); }
+    #spin { font-size: clamp(1em, 1.8vw, 1.1em); padding: clamp(10px, 1.5vw, 12px) clamp(20px, 2.5vw, 22px); background: var(--spin-button-bg); border-color: var(--spin-button-border); color: #fff; }
+    #spin:hover:not(:disabled) { background: linear-gradient(to bottom, #EF5350, #E53935); border-color: #610000; }
+    #maxBet { background: linear-gradient(to bottom, #FFB74D, #FFA726); border-color: #E65100; color: #4A148C;}
+    #message { font-size: clamp(1em, 2vw, 1.2em); margin-top: 10px; min-height: clamp(40px, 8vh, 50px); padding: 10px; background-color: var(--message-bg); border-radius: 4px; color: var(--message-text-color); text-shadow: none; white-space: pre-line; line-height: 1.3; border: 1px solid #F48FB1; box-shadow: inset 0 0 5px rgba(0,0,0,0.15); font-weight: bold; width: 90%; align-self: center; box-sizing: border-box; }
+    #message.win { color: var(--message-win-color); font-weight: bold; text-shadow: 0 0 5px var(--message-win-color); }
+    @keyframes bigWinMessagePulseLove {0%{transform:scale(1);opacity:.9}100%{transform:scale(1.03);opacity:1}}
+    #message.big-win { font-size: clamp(1.2em, 2.5vw, 1.4em); color: var(--message-bigwin-color); animation: bigWinMessagePulseLove 0.7s infinite alternate; font-weight: bold; text-shadow: 0 0 8px var(--message-bigwin-color), 0 0 3px #AD1457; }
+    #title-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(135deg, #F48FB1, #E91E63 50%, #C2185B); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; color: #FDFEFE; }
+    #title-screen h1 { font-size: clamp(3rem, 9vw, 6.5rem); color: #FFFDE7; text-shadow: 3px 3px 0px #880E4F, 0 0 20px rgba(255,100,150,0.8); margin-bottom: 30px; letter-spacing: 1px; font-family: 'Luckiest Guy', 'Arial Black', cursive; }
+    #title-screen p { font-size: clamp(1.1rem, 3vw, 1.8rem); margin-bottom: 50px; max-width: 80%; line-height: 1.7; color: #FFEBEE; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+    #start-button { font-family: 'Arial Rounded MT Bold', sans-serif; font-size: clamp(1.6rem, 5.5vw, 2.8rem); padding: 18px 45px; border-radius: 8px; background: linear-gradient(145deg, #FFA726, #FF9800); border: 4px solid #FFFDE7; color: #795548; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 0 20px #FF9800, 0 6px 12px rgba(0, 0, 0, 0.4); text-shadow: 1px 1px 2px rgba(255,255,255,0.3); text-transform: uppercase; font-weight: bold; }
+    #start-button:hover { transform: scale(1.05); box-shadow: 0 0 30px #FF9800, 0 10px 20px rgba(0, 0, 0, 0.5); }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Luckiest+Guy&family=Arial+Rounded+MT+Bold&family=Comic+Sans+MS&family=Impact&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div id="title-screen">
+    <h1>Sweetheart Spins Deluxe V5!</h1>
+    <p>Spin for love, win anywhere on the line! <br> Find 3+ Greg Seymour AI hearts for a special Memory Match Bonus Round!</p>
+    <button id="start-button">Share the Love!</button>
+  </div>
+
+  <div id="game-layout-container" style="display: none;">
+      <aside id="paytable-panel">
+          <h2>Love Meter</h2>
+          <div id="paytable-content"></div>
+      </aside>
+      <main id="main-game-area">
+          <div id="slot-machine">
+            <div id="title">Sweetheart Spins Deluxe V5<span class="subtitle">Feel the Love! Bonus Inside!</span></div>
+            <div id="money-display">Love Tokens: $100</div>
+            <div id="reels-container"></div>
+            <div id="controls">
+              <label for="bet">Bet:</label>
+              <input type="number" id="bet" value="5" min="1">
+              <button id="maxBet">Max Love</button>
+              <button id="spin">Spin Heart!</button>
+              <button id="auto">Auto Love</button>
+              <button id="reset">End Date?</button>
+            </div>
+            <div id="message">Ready to find your true love match? Place your bet!</div>
+          </div>
+      </main>
+  </div>
+
+  <div id="bonus-screen">
+    <h2>Memory Match Bonus!</h2>
+    <div id="bonus-instructions" style="display:none;">
+        <p>You will see the cards for 5 seconds. Try to memorize their positions!</p>
+        <button id="bonus-start-instructions-button">Tap to Start!</button>
+    </div>
+    <div id="bonus-countdown" style="display:none;"></div>
+    <div id="memory-grid" style="display:none;"></div>
+    <div id="bonus-info" style="display:none;">
+        Mistakes Left: <span id="bonus-mistakes">3</span> | Matched Pairs: <span id="bonus-pairs-matched">0</span> / 8 <br>
+        Current Bonus: $<span id="bonus-current-win">0</span>
+    </div>
+    <div id="bonus-message" style="display:none;">Find all the matching pairs!</div>
+    <button id="bonus-continue-button" style="display:none;">Collect Winnings & Continue</button>
+  </div>
+
+  <audio id="spin-sound" src="sounds/romantic_spin_sound.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="sounds/gentle_win_chime.mp3" preload="auto"></audio>
+  <audio id="big-win-sound" src="sounds/celebratory_love_fanfare.mp3" preload="auto"></audio>
+  <audio id="reel-stop-sound" src="sounds/soft_click_hearts.mp3" preload="auto"></audio>
+  <audio id="button-click-sound" src="sounds/light_sparkle_click.mp3" preload="auto"></audio>
+  <audio id="bonus-trigger-sound" src="sounds/bonus_jingle.mp3" preload="auto"></audio>
+  <audio id="bonus-match-sound" src="sounds/bonus_card_match.mp3" preload="auto"></audio>
+  <audio id="bonus-nomatch-sound" src="sounds/bonus_card_nomatch.mp3" preload="auto"></audio>
+  <audio id="bonus-win-sound" src="sounds/bonus_total_win_fanfare.mp3" preload="auto"></audio>
+  <audio id="countdown-tick-sound" src="sounds/countdown_tick.mp3" preload="auto"></audio>
+
+  <script>
+    const config = {
+        money: 100, reelCount: 5, rowCount: 3, symbolHeight: 110,
+        spinDurationBase: 800, spinDurationVariance: 350, reelStopDelay: 100, autoSpinDelay: 1300,
+        symbols: [
+            { id: 'greg_seymour_ai', imageSrc: 'GregSeymourAI.png', name: 'Greg Seymour AI (Scatter)', scatter: true },
+            { id: 'me_and_you',      imageSrc: 'MeandYou.png',      name: 'Me and You',      payouts: { '3': 2,  '4': 5,  '5': 10 } },
+            { id: 'you_and_me',      imageSrc: 'YouandMe.png',      name: 'You and Me',      payouts: { '3': 3,  '4': 6,  '5': 15 } },
+            { id: 'love_you',        imageSrc: 'LoveYou.png',       name: 'Love You',        payouts: { '3': 5,  '4': 10, '5': 25 } },
+            { id: 'love_you_more',   imageSrc: 'LoveYouMore.png',   name: 'Love You More',   payouts: { '3': 6,  '4': 12, '5': 30 } },
+            { id: 'erin_loves_greg', imageSrc: 'ErinLovesGreg.png', name: 'Erin Loves Greg', payouts: { '3': 8,  '4': 15, '5': 40 } },
+            { id: 'greg_loves_erin', imageSrc: 'GregLovesErin.png', name: 'Greg Loves Erin', payouts: { '3': 8,  '4': 15, '5': 40 } },
+            { id: 'i_love_you',        imageSrc: 'ILoveYou.png',        name: 'I Love You',        payouts: { '3': 10, '4': 25, '5': 75 } },
+            { id: 'together_forever',  imageSrc: 'TogetherForever.png', name: 'Together Forever',  payouts: { '3': 15, '4': 40, '5': 100 } },
+            { id: 'true_love',         imageSrc: 'TrueLove.png',        name: 'True Love',         payouts: { '3': 20, '4': 60, '5': 150 } },
+            { id: 'endless_love',      imageSrc: 'EndlessLove.png',     name: 'Endless Love',      payouts: { '3': 25, '4': 75, '5': 200 } },
+            { id: 'wild_thing',        imageSrc: 'WildThing.png',       name: 'Wild Thing',        payouts: { '3': 50, '4': 150,'5': 500 }, wild: true },
+        ],
+        bonusExclusiveSymbols: [ // These need to exist in images/ folder
+            { id: 'bonus1', imageSrc: 'images/bonus1.png', name: 'Bonus Heart 1'},
+            { id: 'bonus2', imageSrc: 'images/bonus2.png', name: 'Bonus Heart 2'},
+            { id: 'bonus3', imageSrc: 'images/bonus3.png', name: 'Bonus Heart 3'},
+            { id: 'bonus4', imageSrc: 'images/bonus4.png', name: 'Bonus Heart 4'},
+        ],
+        winningLines: [
+            { id: 'line-h0', name: 'Sweet Nothings', indices: [0, 1, 2, 3, 4] },
+            { id: 'line-h1', name: 'Heartbeat Line', indices: [5, 6, 7, 8, 9] },
+            { id: 'line-h2', name: 'Eternal Vow', indices: [10, 11, 12, 13, 14] },
+        ],
+        bigWinThresholdMultiplier: 28,
+        bonusMistakesAllowed: 3, bonusMemoryGridSize: 16, bonusPairsToMatch: 8,
+        bonusCardRevealTime: 5000, bonusMatchValueMultiplier: 2, bonusClearBoardValueMultiplier: 25,
+        bonusScatterMultipliers: { 3: 1, 4: 2, 5: 3 },
+        bonusTriggerFlashDuration: 3000,
+    };
+
+    let money = config.money; let currentBet = 5; let autoMode = false; let spinning = false;
+    let reels = []; let finalSymbols = []; let autoSpinTimeout = null;
+    let bonusActive = false; let bonusMistakes = 0; let bonusPairsFound = 0; let bonusCurrentWinnings = 0;
+    let bonusFlippedCards = []; let bonusBoard = []; let bonusScatterTriggerCount = 0;
+
+    const moneyDisplay = document.getElementById('money-display');
+    const reelsContainer = document.getElementById('reels-container');
+    const betInput = document.getElementById('bet');
+    const maxBetButton = document.getElementById('maxBet');
+    const spinButton = document.getElementById('spin');
+    const autoButton = document.getElementById('auto');
+    const resetButton = document.getElementById('reset');
+    const messageDisplay = document.getElementById('message');
+    const titleScreen = document.getElementById('title-screen');
+    const startButton = document.getElementById('start-button');
+    const gameLayoutContainer = document.getElementById('game-layout-container');
+    const paytablePanelContent = document.getElementById('paytable-content');
+
+    const bonusScreen = document.getElementById('bonus-screen');
+    const bonusInstructionsDiv = document.getElementById('bonus-instructions');
+    const bonusStartInstructionsButton = document.getElementById('bonus-start-instructions-button');
+    const bonusCountdownDisplay = document.getElementById('bonus-countdown');
+    const bonusInfo = document.getElementById('bonus-info');
+    const bonusMistakesDisplay = document.getElementById('bonus-mistakes');
+    const bonusPairsMatchedDisplay = document.getElementById('bonus-pairs-matched');
+    const bonusCurrentWinDisplay = document.getElementById('bonus-current-win');
+    const memoryGrid = document.getElementById('memory-grid');
+    const bonusMessage = document.getElementById('bonus-message');
+    const bonusContinueButton = document.getElementById('bonus-continue-button');
+
+    const sounds = {
+        spin: document.getElementById('spin-sound'), win: document.getElementById('win-sound'),
+        bigWin: document.getElementById('big-win-sound'), reelStop: document.getElementById('reel-stop-sound'),
+        click: document.getElementById('button-click-sound'), bonusTrigger: document.getElementById('bonus-trigger-sound'),
+        bonusMatch: document.getElementById('bonus-match-sound'), bonusNoMatch: document.getElementById('bonus-nomatch-sound'),
+        bonusWin: document.getElementById('bonus-win-sound'), countdownTick: document.getElementById('countdown-tick-sound'),
+    };
+
+    function playSound(sound) {
+      if (sound) {
+        if (sound.readyState >= 2) { // HAVE_CURRENT_DATA or more
+          sound.currentTime = 0;
+          sound.play().catch(e => console.warn("Sound play failed:", e.message, e.name, sound.src));
+        } else {
+          // If not loaded, try to load. It might play on 'canplaythrough' if an event listener was attached.
+          // For immediate play after this call, it might fail.
+          sound.load();
+          console.warn("Sound not ready, attempting to load:", sound.src);
+           // Optionally, try to play after a small delay if load() is called
+          sound.addEventListener('canplaythrough', () => {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn("Delayed sound play failed:", e.message, e.name, sound.src));
+          }, { once: true });
+        }
+      } else {
+        console.warn("Attempted to play an undefined sound.");
+      }
+    }
+
+    function updateMoneyDisplay() { moneyDisplay.innerText = `Love Tokens: $${money.toLocaleString()}`; const maxBetForNextSpin = money > 0 ? money : 1; betInput.max = maxBetForNextSpin; let betValInInput = parseInt(betInput.value); if (isNaN(betValInInput) || betValInInput < 1) betInput.value = 1; else if (betValInInput > maxBetForNextSpin) betInput.value = maxBetForNextSpin; if (money <= 0 && !spinning) { if (parseInt(betInput.value) > 1) betInput.value = 1; disableControls(true, false); displayMessage("Love's run dry! (No Tokens)\n'End Date?' or try a $1 token.", false, false); if (autoMode) stopAutoSpin(); } }
+    function disableControls(disable = true, disableReset = disable) { if (bonusActive) { spinButton.disabled = true; maxBetButton.disabled = true; betInput.disabled = true; autoButton.disabled = true; resetButton.disabled = true; return; } spinButton.disabled = disable; maxBetButton.disabled = disable; betInput.disabled = disable; if (!spinning) autoButton.disabled = disable; resetButton.disabled = disableReset; if (money <= 0 && parseInt(betInput.value) === 1 && !spinning) spinButton.disabled = false; }
+    function displayMessage(msg, isWin = false, isBigWin = false) { messageDisplay.innerText = msg; messageDisplay.className = 'message'; if (isBigWin) messageDisplay.classList.add('big-win'); else if (isWin) messageDisplay.classList.add('win'); }
+
+    function createSymbolElement(symbolData) {
+        const div = document.createElement('div');
+        div.classList.add('symbol');
+        div.dataset.symbolId = symbolData.id;
+        const img = document.createElement('img');
+        img.src = symbolData.imageSrc;
+        img.alt = symbolData.name || symbolData.id.replace(/_/g, ' ');
+        img.onerror = function() {
+            console.warn(`Reel image not found: ${this.src}. Displaying placeholder for ${symbolData.name || symbolData.id}.`);
+            this.style.display = 'none'; // Hide broken image icon
+            const placeholder = document.createElement('div');
+            placeholder.classList.add('symbol-placeholder');
+            placeholder.textContent = '💔'; // Or any other placeholder text/icon
+            div.appendChild(placeholder);
+        };
+        div.appendChild(img);
+        return div;
+    }
+
+    function buildReels() { reelsContainer.innerHTML = ''; reels = []; config.symbolHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--reel-height')) || 110; for (let i = 0; i < config.reelCount; i++) { const reelElement = document.createElement('div'); reelElement.classList.add('reel'); const symbolsContainer = document.createElement('div'); symbolsContainer.classList.add('symbols-container'); const reelSymbolsData = []; const reelSymbolElements = []; for (let k = 0; k < 20; k++) { const shuffledSymbols = [...config.symbols].sort(() => Math.random() - 0.5); shuffledSymbols.forEach(symbolData => { const symbolElement = createSymbolElement(symbolData); symbolsContainer.appendChild(symbolElement); reelSymbolsData.push(symbolData); reelSymbolElements.push(symbolElement); }); } reelElement.appendChild(symbolsContainer); reelsContainer.appendChild(reelElement); reels.push({ element: reelElement, symbolsContainer: symbolsContainer, symbols: reelSymbolsData, symbolElements: reelSymbolElements, finalPosition: 0, failsafeTimeout: null }); } reels.forEach(reel => { const initialOffset = -(Math.floor(Math.random() * reel.symbols.length) * config.symbolHeight); reel.symbolsContainer.style.transition = 'none'; reel.symbolsContainer.style.transform = `translateY(${initialOffset}px)`; reel.finalPosition = initialOffset; void reel.symbolsContainer.offsetWidth; reel.symbolsContainer.style.transition = ''; }); }
+    function clearReelHighlights() { document.querySelectorAll('.symbol.winning, .symbol.scatter-highlight').forEach(el => { el.classList.remove('winning', 'scatter-highlight'); const img = el.querySelector('img'); if(img) { img.style.outline = ''; img.style.backgroundColor = ''; img.style.borderRadius = ''; img.style.animation = '';} const placeholder = el.querySelector('.symbol-placeholder'); if(placeholder) { placeholder.style.outline = ''; placeholder.style.backgroundColor = ''; placeholder.style.borderRadius = ''; placeholder.style.animation = '';} }); }
+    function clearPaytableHighlights() { document.querySelectorAll('.paytable-table td.paytable-win-flash').forEach(el => el.classList.remove('paytable-win-flash')); }
+    function highlightWinsOnReels(winningLinesInfo, scatterSymbolElements = []) { winningLinesInfo.forEach(winInfo => { winInfo.indices.forEach(gridIndex => { const reelIndex = gridIndex % config.reelCount; const visibleRowIndex = Math.floor(gridIndex / config.reelCount); const reel = reels[reelIndex]; const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight); const targetSymbolIndexInElementArray = (topVisibleSymbolIndex + visibleRowIndex + reel.symbolElements.length) % reel.symbolElements.length; const symbolElement = reel.symbolElements[targetSymbolIndexInElementArray]; if (symbolElement) symbolElement.classList.add('winning'); }); }); scatterSymbolElements.forEach(el => el.classList.add('scatter-highlight')); }
+    function highlightPaytableEntry(symbolId, winCount) { const row = paytablePanelContent.querySelector(`.paytable-table tr[data-symbol-id="${symbolId}"]`); if (row) { const cell = row.querySelector(`td[data-payout-count="${winCount}"]`); if (cell) cell.classList.add('paytable-win-flash');} }
+    function startSpin() { if (spinning || bonusActive) return; let betForThisSpin = parseInt(betInput.value); if (isNaN(betForThisSpin) || betForThisSpin < 1) betForThisSpin = 1; const maxAffordableBet = money > 0 ? money : 1; if (betForThisSpin > maxAffordableBet && money > 0) betForThisSpin = maxAffordableBet; else if (money <= 0 && betForThisSpin > 1) betForThisSpin = 1; betInput.value = betForThisSpin; currentBet = betForThisSpin; if (currentBet > money && money > 0) { displayMessage("Not enough Love Tokens for this bet!"); if (autoMode) stopAutoSpin(); disableControls(false, money <= 0); return; } clearTimeout(autoSpinTimeout); clearReelHighlights(); clearPaytableHighlights(); playSound(sounds.click); spinning = true; if (money > 0) money -= currentBet; else if (money <= 0 && currentBet === 1) displayMessage("One last chance for love... on the house!"); updateMoneyDisplay(); disableControls(true); spinButton.innerText = "Loving..."; if (!(money <= 0 && currentBet === 1 && (money + currentBet) <=0 )) displayMessage("Hearts are fluttering!"); playSound(sounds.spin); let reelsStoppedCount = 0; reels.forEach((reel, index) => { if (reel.failsafeTimeout) clearTimeout(reel.failsafeTimeout); const symbolsContainer = reel.symbolsContainer; const reelElement = reel.element; reelElement.classList.remove('stopping'); reelElement.classList.add('spinning'); const randomSymbolIndex = Math.floor(Math.random() * reel.symbols.length); const middleRowIndex = Math.floor(config.rowCount / 2); const targetTopIndex = (randomSymbolIndex - middleRowIndex + reel.symbols.length) % reel.symbols.length; reel.finalPosition = -(targetTopIndex * config.symbolHeight); const currentY = parseFloat(symbolsContainer.style.transform.replace(/[^0-9.-]/g, '')) || 0; const spinDistance = (reel.symbols.length * config.symbolHeight) * 3; symbolsContainer.style.transform = `translateY(${currentY - spinDistance}px)`; const totalSpinDuration = config.spinDurationBase + (index * config.reelStopDelay) + (Math.random() * config.spinDurationVariance); setTimeout(() => { reelElement.classList.remove('spinning'); reelElement.classList.add('stopping'); symbolsContainer.style.transform = `translateY(${reel.finalPosition}px)`; playSound(sounds.reelStop); const transitionEndHandler = (event) => { if (event.target === symbolsContainer && event.propertyName === 'transform') { symbolsContainer.removeEventListener('transitionend', transitionEndHandler); clearTimeout(reel.failsafeTimeout); reelElement.classList.remove('stopping'); reelsStoppedCount++; if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100); } }; symbolsContainer.addEventListener('transitionend', transitionEndHandler); reel.failsafeTimeout = setTimeout(() => { if (!reelElement.classList.contains('stopping')) return; console.warn(`Reel ${index} transitionEnd failsafe.`); symbolsContainer.removeEventListener('transitionend', transitionEndHandler); reelElement.classList.remove('stopping'); reelsStoppedCount++; if (reelsStoppedCount === config.reelCount) setTimeout(evaluateResult, 100); }, 1200); }, totalSpinDuration - 800); });}
+    function checkIfGroupMatches(groupSymbolsData, checkSymbolId, isWildTypeBeingChecked) { if (groupSymbolsData.some(s => !s)) return false; if (isWildTypeBeingChecked) { return groupSymbolsData.every(s => s.wild); } else { return groupSymbolsData.every(s => s.id === checkSymbolId || s.wild); } }
+    function evaluateResult() { let totalWinnings = 0; let combinedWinningLinesInfo = []; let isBigWinOverall = false; finalSymbols = []; let scatterSymbolElementsOnReels = []; for (let r = 0; r < config.rowCount; r++) { for (let c = 0; c < config.reelCount; c++) { const reel = reels[c]; const topVisibleSymbolIndex = Math.round(Math.abs(reel.finalPosition) / config.symbolHeight); const symbolIndexInDataArray = (topVisibleSymbolIndex + r + reel.symbols.length) % reel.symbols.length; const symbolData = reel.symbols[symbolIndexInDataArray]; finalSymbols.push(symbolData); if (symbolData && symbolData.id === 'greg_seymour_ai') { const symbolElement = reel.symbolElements[(topVisibleSymbolIndex + r + reel.symbolElements.length) % reel.symbolElements.length]; scatterSymbolElementsOnReels.push(symbolElement); } } } bonusScatterTriggerCount = scatterSymbolElementsOnReels.length; config.winningLines.forEach(line => { let bestWinOnThisLine = { amount: 0, count: 0, symbolId: null, indices: [], multiplier: 0, lineName: line.name }; config.symbols.forEach(symbolToCheck => { if (!symbolToCheck.payouts || symbolToCheck.scatter) return; const checkSymbolId = symbolToCheck.id; const isWildTypeBeingChecked = symbolToCheck.wild; for (let len = config.reelCount; len >= 3; len--) { for (let startOffset = 0; startOffset <= config.reelCount - len; startOffset++) { const groupIndicesOnCurrentLine = line.indices.slice(startOffset, startOffset + len); const groupSymbolsData = groupIndicesOnCurrentLine.map(globalIndex => finalSymbols[globalIndex]); if (checkIfGroupMatches(groupSymbolsData, checkSymbolId, isWildTypeBeingChecked)) { const payoutKey = len.toString(); if (symbolToCheck.payouts[payoutKey]) { const multiplier = symbolToCheck.payouts[payoutKey]; const amount = currentBet * multiplier; if (amount > bestWinOnThisLine.amount || (amount === bestWinOnThisLine.amount && len > bestWinOnThisLine.count)) { bestWinOnThisLine = { amount, count: len, symbolId: checkSymbolId, indices: groupIndicesOnCurrentLine, multiplier, lineName: line.name }; } } } } if (bestWinOnThisLine.symbolId === checkSymbolId && bestWinOnThisLine.count === len) { break; } } }); if (bestWinOnThisLine.amount > 0) { totalWinnings += bestWinOnThisLine.amount; combinedWinningLinesInfo.push(bestWinOnThisLine); if (bestWinOnThisLine.multiplier >= config.bigWinThresholdMultiplier) isBigWinOverall = true; } }); spinning = false; let mainGameMessage = ""; if (totalWinnings > 0) { money += totalWinnings; if (combinedWinningLinesInfo.length > 1) { mainGameMessage = "Lovely Combination! Multiple Matches!\n"; combinedWinningLinesInfo.forEach(info => { const displayName = config.symbols.find(s=>s.id === info.symbolId)?.name || info.symbolId.replace(/_/g, ' '); mainGameMessage += `${info.count}x ${displayName} (${info.lineName}) = $${info.amount.toLocaleString()}\n`;}); mainGameMessage += `Total Love Tokens: $${totalWinnings.toLocaleString()}`; } else if (combinedWinningLinesInfo.length === 1) { const winInfo = combinedWinningLinesInfo[0]; const displayName = config.symbols.find(s=>s.id === winInfo.symbolId)?.name || winInfo.symbolId.replace(/_/g, ' '); mainGameMessage = `Sweet Win! You matched ${winInfo.count}x ${displayName} on ${winInfo.lineName} = $${winInfo.amount.toLocaleString()}`; } if (isBigWinOverall) { const baseMsg = combinedWinningLinesInfo.length > 1 ? mainGameMessage.substring(mainGameMessage.indexOf('\n') + 1) : mainGameMessage; mainGameMessage = `!!! TRUE LOVE JACKPOT !!!\n` + baseMsg; playSound(sounds.bigWin); } else { playSound(sounds.win); } highlightWinsOnReels(combinedWinningLinesInfo); combinedWinningLinesInfo.forEach(winInfo => highlightPaytableEntry(winInfo.symbolId, winInfo.count)); } else { const moneyBeforeThisSpin = money + currentBet; if (!(moneyBeforeThisSpin <= 0 && currentBet === 1)) mainGameMessage = "Heartbreak... Try another spin!"; } if (bonusScatterTriggerCount >= 3) { highlightWinsOnReels(combinedWinningLinesInfo, scatterSymbolElementsOnReels); playSound(sounds.bonusTrigger); const bonusIntroMessage = (mainGameMessage ? mainGameMessage + "\n\n" : "") + `🎉 CONGRATULATIONS! 🎉\n${bonusScatterTriggerCount} Scatters trigger the BONUS ROUND!`; displayMessage(bonusIntroMessage, totalWinnings > 0 || true, isBigWinOverall || true); updateMoneyDisplay(); setTimeout(() => { clearReelHighlights(); startBonusGame(bonusScatterTriggerCount); }, config.bonusTriggerFlashDuration); } else { if (mainGameMessage) displayMessage(mainGameMessage, totalWinnings > 0, isBigWinOverall); highlightWinsOnReels(combinedWinningLinesInfo); updateMoneyDisplay(); disableControls(false, money <= 0 && parseInt(betInput.value) > 1); spinButton.innerText = "Spin Heart!"; if (autoMode) { let nextBetForAuto = parseInt(betInput.value); if(isNaN(nextBetForAuto) || nextBetForAuto < 1) nextBetForAuto = 1; if ((money >= nextBetForAuto && money > 0) || (money <= 0 && nextBetForAuto === 1) ) { autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay); } else { stopAutoSpin(); displayMessage(money <= 0 ? "Love's run dry! 'End Date?'" : "Not enough Love Tokens for Auto Love. Mode off.", false, money <= 0); } } } }
+    function stopAutoSpin() { autoMode = false; clearTimeout(autoSpinTimeout); autoButton.innerText = "Auto Love"; autoButton.style.background = ''; if (!spinning && !bonusActive) disableControls(false, money <= 0 && parseInt(betInput.value) > 1); }
+
+    function generateSidePayTable() {
+        paytablePanelContent.innerHTML = '';
+        const table = document.createElement('table');
+        table.classList.add('paytable-table');
+        const thead = table.createTHead();
+        const headerRow = thead.insertRow();
+        const headers = ['Icon', 'Heart', '3x', '4x', '5x'];
+        headers.forEach(text => { const th = document.createElement('th'); th.textContent = text; headerRow.appendChild(th); });
+        const tbody = table.createTBody();
+        config.symbols.forEach(symbolData => {
+            if (symbolData.payouts) {
+                const row = tbody.insertRow();
+                row.dataset.symbolId = symbolData.id;
+                const symbolDisplayCell = row.insertCell();
+                symbolDisplayCell.classList.add('paytable-symbol-image-cell');
+                const img = document.createElement('img');
+                img.src = symbolData.imageSrc;
+                img.alt = symbolData.name;
+                img.onerror = function(){ this.parentNode.innerHTML = '<span>💔</span>'; console.warn(`Paytable img error: ${this.src}`)};
+                symbolDisplayCell.appendChild(img);
+                const nameCell = row.insertCell(); nameCell.textContent = symbolData.name; nameCell.classList.add('paytable-symbol-name');
+                const p3 = symbolData.payouts['3']||0, p4 = symbolData.payouts['4']||0, p5 = symbolData.payouts['5']||0;
+                const p3Cell = row.insertCell(); p3Cell.textContent = p3>0?`${p3}x`:'-'; if(p3>0)p3Cell.dataset.payoutCount="3";
+                const p4Cell = row.insertCell(); p4Cell.textContent = p4>0?`${p4}x`:'-'; if(p4>0)p4Cell.dataset.payoutCount="4";
+                const p5Cell = row.insertCell(); p5Cell.textContent = p5>0?`${p5}x`:'-'; if(p5>0)p5Cell.dataset.payoutCount="5";
+            }
+        });
+        paytablePanelContent.appendChild(table);
+
+        const wildSymbol = config.symbols.find(s => s.wild);
+        const wildInfoDiv = document.createElement('div');
+        wildInfoDiv.classList.add('paytable-wild-info');
+        if (wildSymbol) {
+            const wildImgHTML = `<img src="${wildSymbol.imageSrc}" alt="${wildSymbol.name}" onerror="this.outerHTML='<span>W</span>'">`;
+            wildInfoDiv.innerHTML = `<b>${wildImgHTML}${(wildSymbol.name).toUpperCase()}</b> is WILD, substitutes (except Scatter).`;
+        }
+        paytablePanelContent.appendChild(wildInfoDiv);
+
+        const scatterSymbol = config.symbols.find(s => s.scatter);
+        const scatterInfoDiv = document.createElement('div');
+        scatterInfoDiv.classList.add('paytable-scatter-pay-info');
+        if (scatterSymbol) {
+            const scatterImgHTML = `<img src="${scatterSymbol.imageSrc}" alt="${scatterSymbol.name}" onerror="this.outerHTML='<span>S</span>'">`;
+            scatterInfoDiv.innerHTML = `<b>${scatterImgHTML}${(scatterSymbol.name).toUpperCase()}</b>: 3+ on reels trigger Memory Match Bonus! More scatters increase bonus win multiplier. (Does not pay directly).`;
+        }
+        paytablePanelContent.appendChild(scatterInfoDiv);
+    }
+    function requestFullScreenGame() { const elem = document.documentElement; if (elem.requestFullscreen) elem.requestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`)); else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen().catch(err => console.warn(`Fullscreen error: ${err.message}`)); else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`)); else if (elem.msRequestFullscreen) elem.msRequestFullscreen().catch(err => console.warn(`Fullscreen error: ${err.message}`)); }
+
+    // --- Bonus Game Functions ---
+    function startBonusGame(scatterCount) {
+        bonusActive = true; disableControls(true);
+        gameLayoutContainer.style.display = 'none';
+        bonusScreen.style.display = 'flex';
+
+        bonusInstructionsDiv.style.display = 'block';
+        bonusStartInstructionsButton.style.display = 'inline-block';
+        bonusCountdownDisplay.style.display = 'none';
+        memoryGrid.style.display = 'none'; // Keep grid hidden initially
+        bonusInfo.style.display = 'none';
+        bonusMessage.style.display = 'none';
+        bonusContinueButton.style.display = 'none';
+
+        bonusMistakes = 0; bonusPairsFound = 0; bonusCurrentWinnings = 0;
+        bonusFlippedCards = []; bonusBoard = []; bonusScatterTriggerCount = scatterCount;
+
+        bonusMistakesDisplay.textContent = config.bonusMistakesAllowed;
+        bonusPairsMatchedDisplay.textContent = `0 / ${config.bonusPairsToMatch}`;
+        bonusCurrentWinDisplay.textContent = '0';
+        memoryGrid.innerHTML = ''; // Clear previous grid if any
+    }
+
+    bonusStartInstructionsButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        bonusInstructionsDiv.style.display = 'none';
+        memoryGrid.style.display = 'grid'; // Now show the grid
+        bonusCountdownDisplay.style.display = 'block';
+        memoryGrid.style.pointerEvents = 'none'; // Disable clicks on grid during countdown
+
+        setupMemoryGridWithRevealedCards(); // This will build the grid with cards already revealed
+
+        let countdown = config.bonusCardRevealTime / 1000; // Use config value
+        bonusCountdownDisplay.textContent = `Memorize! Time: ${countdown}`;
+        playSound(sounds.countdownTick);
+
+        const revealInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                bonusCountdownDisplay.textContent = `Memorize! Time: ${countdown}`;
+                playSound(sounds.countdownTick);
+            } else if (countdown === 0) {
+                 bonusCountdownDisplay.textContent = "Time's Up! Match!";
+                 playSound(sounds.countdownTick); // Or a different sound for go
+            } else { // countdown < 0
+                clearInterval(revealInterval);
+                // Flip cards back
+                bonusBoard.forEach(cardData => {
+                    cardData.element.classList.remove('flipped');
+                    cardData.flipped = false; // Update internal state
+                });
+                // Add click listeners NOW, after cards are flipped back
+                bonusBoard.forEach(cardData => {
+                    if (!cardData.matched) { // Only add listeners to non-matched cards
+                        cardData.element.addEventListener('click', handleBonusCardClick);
+                    }
+                });
+
+                bonusCountdownDisplay.style.display = 'none';
+                bonusInfo.style.display = 'block';
+                bonusMessage.style.display = 'block';
+                bonusMessage.textContent = "Now find the matching pairs!";
+                memoryGrid.style.pointerEvents = 'auto'; // CRITICAL: Enable clicks on grid
+            }
+        }, 1000);
+    });
+
+    function setupMemoryGridWithRevealedCards() {
+        const regularSymbolsForBonusPool = config.symbols.filter(s => !s.scatter && !s.wild && s.payouts);
+        let allAvailableBonusSymbols = [...config.bonusExclusiveSymbols, ...regularSymbolsForBonusPool];
+
+        // Ensure enough unique symbols, duplicate if necessary but log it
+        if (allAvailableBonusSymbols.length < config.bonusPairsToMatch) {
+            console.warn(`Not enough unique symbols (${allAvailableBonusSymbols.length}) for ${config.bonusPairsToMatch} bonus pairs. Duplicating from available pool.`);
+            const needed = config.bonusPairsToMatch - allAvailableBonusSymbols.length;
+            for(let i=0; i < needed; i++) {
+                allAvailableBonusSymbols.push(allAvailableBonusSymbols[i % allAvailableBonusSymbols.length]); // Cycle through existing
+            }
+        }
+        shuffleArray(allAvailableBonusSymbols);
+
+        const symbolsForBonusPairs = allAvailableBonusSymbols.slice(0, config.bonusPairsToMatch);
+        let cardPairsData = [...symbolsForBonusPairs, ...symbolsForBonusPairs];
+        shuffleArray(cardPairsData);
+
+        bonusBoard = [];
+        memoryGrid.innerHTML = ''; // Clear previous grid content
+
+        for (let i = 0; i < config.bonusMemoryGridSize; i++) {
+            if (i >= cardPairsData.length) {
+                console.error("Mismatch between bonusMemoryGridSize and available cardPairsData. Grid may not be full.");
+                break;
+            }
+            const card = document.createElement('div'); card.classList.add('memory-card'); card.dataset.index = i;
+
+            const cardBack = document.createElement('div'); cardBack.classList.add('card-face', 'card-back'); cardBack.innerHTML = '💖'; card.appendChild(cardBack);
+            const cardFront = document.createElement('div'); cardFront.classList.add('card-face', 'card-front');
+
+            const symbolData = cardPairsData[i];
+            if (!symbolData) {
+                console.error(`Undefined symbolData for card index ${i}. Using fallback.`);
+                // Provide a fallback symbolData to prevent further errors
+                card.dataset.symbolId = `fallback_error_${i}`;
+                const placeholder = document.createElement('div');
+                placeholder.classList.add('bonus-image-placeholder');
+                placeholder.textContent = '🚫';
+                cardFront.appendChild(placeholder);
+            } else {
+                card.dataset.symbolId = symbolData.id;
+                const img = document.createElement('img');
+                img.src = symbolData.imageSrc;
+                img.alt = symbolData.name || symbolData.id;
+                img.onerror = function() {
+                    console.warn(`Bonus image not found: ${this.src}. Displaying placeholder for ${symbolData.name || symbolData.id}.`);
+                    this.style.display = 'none';
+                    const placeholder = document.createElement('div');
+                    placeholder.classList.add('bonus-image-placeholder');
+                    placeholder.textContent = '💔';
+                    cardFront.appendChild(placeholder);
+                };
+                cardFront.appendChild(img);
+            }
+            card.appendChild(cardFront);
+
+            bonusBoard.push({ element: card, symbolId: symbolData ? symbolData.id : `fallback_error_${i}`, matched: false, flipped: true }); // Start revealed
+            card.classList.add('flipped'); // Add class to show face
+            memoryGrid.appendChild(card);
+        }
+    }
+
+    function handleBonusCardClick(event) {
+        if (bonusFlippedCards.length >= 2) return;
+        const clickedCardElement = event.currentTarget;
+        const cardIndex = parseInt(clickedCardElement.dataset.index);
+        const cardData = bonusBoard[cardIndex];
+
+        if (!cardData || cardData.flipped || cardData.matched) return;
+
+        cardData.flipped = true;
+        clickedCardElement.classList.add('flipped');
+        bonusFlippedCards.push(cardData);
+        playSound(sounds.click);
+
+        if (bonusFlippedCards.length === 2) {
+            memoryGrid.style.pointerEvents = 'none'; // Prevent more clicks while checking
+            setTimeout(checkBonusMatch, 700);
+        }
+    }
+
+    function checkBonusMatch() {
+        const [card1, card2] = bonusFlippedCards;
+        if (card1.symbolId === card2.symbolId) {
+            playSound(sounds.bonusMatch);
+            card1.matched = true; card2.matched = true;
+            card1.element.classList.add('matched'); card2.element.classList.add('matched');
+            card1.element.removeEventListener('click', handleBonusCardClick); // Remove listener from matched cards
+            card2.element.removeEventListener('click', handleBonusCardClick);
+            bonusPairsFound++;
+            bonusCurrentWinnings += config.bonusMatchValueMultiplier * currentBet;
+            bonusPairsMatchedDisplay.textContent = `${bonusPairsFound} / ${config.bonusPairsToMatch}`;
+            bonusCurrentWinDisplay.textContent = bonusCurrentWinnings.toLocaleString();
+            bonusMessage.textContent = "Sweet Match! Keep going!";
+            if (bonusPairsFound === config.bonusPairsToMatch) {
+                bonusCurrentWinnings += config.bonusClearBoardValueMultiplier * currentBet;
+                bonusCurrentWinDisplay.textContent = bonusCurrentWinnings.toLocaleString();
+                bonusMessage.textContent = `Amazing! You matched all hearts! Total bonus: $${bonusCurrentWinnings.toLocaleString()}`;
+                endBonusGame(true);
+            }
+        } else {
+            playSound(sounds.bonusNoMatch);
+            bonusMistakes++;
+            bonusMistakesDisplay.textContent = Math.max(0, config.bonusMistakesAllowed - bonusMistakes);
+            bonusMessage.textContent = "Not a match. Try again!";
+            card1.flipped = false; card2.flipped = false;
+            setTimeout(() => { // Visual delay before flipping back
+                if (!card1.matched) card1.element.classList.remove('flipped');
+                if (!card2.matched) card2.element.classList.remove('flipped');
+            }, 800);
+            if (bonusMistakes >= config.bonusMistakesAllowed) {
+                bonusMessage.textContent = `Oh no! Too many mistakes. Bonus round over. You won: $${bonusCurrentWinnings.toLocaleString()}`;
+                endBonusGame(false);
+            }
+        }
+        bonusFlippedCards = [];
+        if (!bonusActive || (bonusPairsFound < config.bonusPairsToMatch && bonusMistakes < config.bonusMistakesAllowed) ) {
+             memoryGrid.style.pointerEvents = 'auto'; // Re-enable clicks if game continues
+        }
+    }
+
+    function endBonusGame(allMatched) {
+        // Ensure all event listeners are removed and grid is not clickable
+        bonusBoard.forEach(cardData => cardData.element.removeEventListener('click', handleBonusCardClick));
+        memoryGrid.style.pointerEvents = 'none';
+
+        if (!allMatched) { // Reveal unmatched cards if game ended due to mistakes
+            bonusBoard.forEach(cardData => {
+                if (!cardData.matched) {
+                    cardData.element.classList.add('flipped'); // Show what was missed
+                }
+            });
+        }
+
+        const scatterBonusMultiplier = config.bonusScatterMultipliers[bonusScatterTriggerCount] || 1;
+        const finalBonusAmount = bonusCurrentWinnings * scatterBonusMultiplier;
+        money += finalBonusAmount;
+        playSound(sounds.bonusWin);
+
+        let finalMessage = `Bonus Round Complete! You won an extra $${finalBonusAmount.toLocaleString()}!`;
+        if (allMatched) {
+            finalMessage = `Congratulations! You cleared the board and won $${finalBonusAmount.toLocaleString()}!`;
+        } else if (bonusCurrentWinnings > 0) {
+            finalMessage = `Nice try! You won $${finalBonusAmount.toLocaleString()} in the bonus!`;
+        } else {
+            finalMessage = `Better luck next time! Bonus ended.`;
+        }
+        bonusMessage.textContent = finalMessage;
+        bonusContinueButton.style.display = 'block'; // Show continue button
+    }
+
+    bonusContinueButton.addEventListener('click', () => {
+        playSound(sounds.click);
+        bonusActive = false; // Mark bonus as inactive
+        bonusScreen.style.display = 'none';
+        gameLayoutContainer.style.display = 'flex';
+        updateMoneyDisplay();
+        clearReelHighlights(); // Clear any lingering highlights from main game
+        disableControls(false, money <= 0 && parseInt(betInput.value) > 1);
+        spinButton.innerText = "Spin Heart!";
+        if (autoMode) {
+            let nextBetForAuto = parseInt(betInput.value);
+            if(isNaN(nextBetForAuto) || nextBetForAuto < 1) nextBetForAuto = 1;
+            if ((money >= nextBetForAuto && money > 0) || (money <= 0 && nextBetForAuto === 1) ) {
+                autoSpinTimeout = setTimeout(startSpin, config.autoSpinDelay);
+            } else {
+                stopAutoSpin();
+            }
+        }
+    });
+
+    function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
+    startButton.addEventListener('click', () => { playSound(sounds.click); requestFullScreenGame(); titleScreen.style.display = 'none'; gameLayoutContainer.style.display = 'flex'; initializeGame(); });
+    spinButton.addEventListener('click', () => { if (!spinning && !bonusActive) startSpin(); });
+    maxBetButton.addEventListener('click', () => { playSound(sounds.click); if (!spinning && !bonusActive) { const maxBetValue = money > 0 ? money : 1; betInput.value = maxBetValue; } });
+    autoButton.addEventListener('click', () => { playSound(sounds.click); if (bonusActive) return; if (autoMode) { stopAutoSpin(); if (!spinning) displayMessage("Auto Love OFF."); } else { let betForAuto = parseInt(betInput.value); if (isNaN(betForAuto)||betForAuto<1) betForAuto=1; const maxAffordableAuto = money > 0 ? money : 1; if (betForAuto > maxAffordableAuto && money > 0) betForAuto = maxAffordableAuto; else if (money <= 0 && betForAuto > 1) betForAuto = 1; betInput.value = betForAuto; if (!spinning && ((money >= betForAuto && money > 0) || (money <= 0 && betForAuto === 1))) { autoMode = true; autoButton.innerText = "Stop Love"; autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #c62828)'; displayMessage("Auto Love ON!"); startSpin(); } else if (spinning) { autoMode = true; autoButton.innerText = "Stop Love"; autoButton.style.background = 'linear-gradient(to bottom, #ef5350, #c62828)'; displayMessage("Auto Love after this spin."); } else { displayMessage(money <= 0 ? "Love's run dry!" : "Not enough Tokens!"); } } });
+    resetButton.addEventListener('click', () => { playSound(sounds.click); if (bonusActive) return; if (confirm("Start a new romance with $100 Love Tokens?")) { if (document.fullscreenElement) document.exitFullscreen().catch(e=>console.warn(e)); else if (document.mozCancelFullScreen) document.mozCancelFullScreen().catch(e=>console.warn(e)); else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(e=>console.warn(e)); else if (document.msExitFullscreen) document.msExitFullscreen().catch(e=>console.warn(e)); location.reload(); } });
+    betInput.addEventListener('blur', () => { if (bonusActive) return; let n = parseInt(betInput.value); const maxBetForNext = money > 0 ? money : 1; if (isNaN(n) || n < 1) n = 1; if (n > maxBetForNext && money > 0) n = maxBetForNext; else if (money <= 0 && n > 1) n = 1; betInput.value = n; });
+
+    function initializeGame() {
+        money = config.money;
+        let initialBetVal = parseInt(betInput.value);
+        if (isNaN(initialBetVal) || initialBetVal < 1) initialBetVal = 1;
+        const maxInitial = money > 0 ? money : 1;
+        if (initialBetVal > maxInitial && money > 0) initialBetVal = maxInitial;
+        else if (money <=0 && initialBetVal > 1) initialBetVal = 1;
+        betInput.value = initialBetVal;
+        currentBet = initialBetVal;
+        autoMode = false; spinning = false; bonusActive = false;
+        clearTimeout(autoSpinTimeout);
+        displayMessage("Ready to find your true love match? Place your bet!");
+        buildReels();
+        generateSidePayTable();
+        updateMoneyDisplay();
+        clearReelHighlights(); clearPaytableHighlights();
+        disableControls(false, money <= 0 && currentBet > 1);
+        autoButton.innerText = "Auto Love"; autoButton.style.background = '';
+        Object.values(sounds).forEach(sound => {
+            if (sound instanceof HTMLAudioElement) {
+                sound.load(); // Attempt to load all sounds
+                sound.onerror = () => console.warn(`Error loading sound: ${sound.src}`);
+            }
+        });
+    }
+  </script>
+</body>
+</html>
