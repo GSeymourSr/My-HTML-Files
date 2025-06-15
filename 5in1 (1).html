@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatic Random Animations Showcase</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; background: #111; color: #fff; }
+        #animationContainer { width: 100%; height: 100%; position: relative; background: #000; /* Default bg for container */ }
+        canvas { display: block; } /* Common for many animations */
+    </style>
+    <!-- THREE.JS and TWEEN.JS - needed by multiple animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+</head>
+<body>
+    <div id="animationContainer">
+        <!-- Animations will inject their canvas/DOM elements here -->
+    </div>
+
+    <script>
+        // --- Master Animation Control ---
+        const animationModules = {};
+        let currentAnimationKey = null;
+        let animationSwitchTimeoutId = null;
+        const animationContainer = document.getElementById('animationContainer');
+        const MODE_DURATION = 20000; // 20 seconds per animation mode
+
+        // General cleanup for Three.js based animations
+        function cleanupThreeJsAnimation(animObject) {
+            if (animObject.animationFrameId) {
+                cancelAnimationFrame(animObject.animationFrameId);
+                animObject.animationFrameId = null;
+            }
+            if (animObject.renderer) {
+                if (animObject.renderer.domElement && animObject.renderer.domElement.parentElement) {
+                    animObject.renderer.domElement.parentElement.removeChild(animObject.renderer.domElement);
+                }
+                animObject.renderer.dispose();
+                animObject.renderer = null;
+            }
+            if (animObject.scene) {
+                animObject.scene.traverse(object => {
+                    if (!object) return;
+                    if (object.isMesh) {
+                        if (object.geometry) object.geometry.dispose();
+                        if (object.material) {
+                            if (Array.isArray(object.material)) {
+                                object.material.forEach(material => { if(material && material.dispose) material.dispose(); });
+                            } else {
+                                if(object.material && object.material.dispose) object.material.dispose();
+                            }
+                        }
+                    }
+                    if (object.texture && object.texture.dispose) object.texture.dispose();
+                });
+                // Help GC by removing children one by one if traverse doesn't fully clear
+                while(animObject.scene.children.length > 0){ 
+                    animObject.scene.remove(animObject.scene.children[0]); 
+                }
+                animObject.scene = null;
+            }
+            if (animObject.camera) animObject.camera = null;
+            
+            if (animObject.resizeListener) {
+                window.removeEventListener('resize', animObject.resizeListener);
+                animObject.resizeListener = null;
+            }
+            if (typeof TWEEN !== 'undefined') {
+                TWEEN.removeAll();
+            }
+            if (animObject.activeShapes) { 
+                animObject.activeShapes.forEach(shape => {
+                    if (shape && shape.destroy) shape.destroy(); 
+                });
+                animObject.activeShapes = [];
+            }
+            if (animObject.stars) animObject.stars = []; 
+
+            if (animObject.extraElements) {
+                animObject.extraElements.forEach(el => { if (el && el.parentElement) el.parentElement.removeChild(el); });
+                animObject.extraElements = [];
+            }
+             // Clear all properties of the animObject to ensure no stale state
+            for (const key in animObject) {
+                if (Object.hasOwnProperty.call(animObject, key) && typeof animObject[key] !== 'function') {
+                    delete animObject[key];
+                }
+            }
+        }
+
+
+        function switchToRandomAnimation() {
+            if (animationSwitchTimeoutId) {
+                clearTimeout(animationSwitchTimeoutId);
+            }
+
+            if (currentAnimationKey && animationModules[currentAnimationKey] && animationModules[currentAnimationKey].destroy) {
+                console.log("Destroying animation:", currentAnimationKey);
+                try {
+                    animationModules[currentAnimationKey].destroy();
+                } catch (e) {
+                    console.error("Error destroying module " + currentAnimationKey + ":", e);
+                }
+            }
+            animationContainer.innerHTML = ''; 
+
+            const availableKeys = Object.keys(animationModules);
+            if (availableKeys.length === 0) {
+                console.warn("No animation modules defined.");
+                animationContainer.innerHTML = "<p style='padding:20px; text-align:center;'>No animations loaded.</p>";
+                return;
+            }
+
+            let nextAnimationKey;
+            if (availableKeys.length === 1) {
+                nextAnimationKey = availableKeys[0];
+            } else {
+                do {
+                    nextAnimationKey = availableKeys[Math.floor(Math.random() * availableKeys.length)];
+                } while (nextAnimationKey === currentAnimationKey && availableKeys.length > 1);
+            }
+            
+            console.log("Switching to animation:", nextAnimationKey);
+            if (animationModules[nextAnimationKey] && animationModules[nextAnimationKey].init) {
+                try {
+                    animationModules[nextAnimationKey].init(animationContainer);
+                    currentAnimationKey = nextAnimationKey;
+                } catch (e) {
+                    console.error("Error initializing module " + nextAnimationKey + ":", e);
+                    currentAnimationKey = null; // Prevent getting stuck
+                }
+            } else {
+                console.error("Selected animation module is invalid:", nextAnimationKey);
+                currentAnimationKey = null; 
+            }
+            animationSwitchTimeoutId = setTimeout(switchToRandomAnimation, MODE_DURATION);
+        }
+
+        // --- Animation Module: 2D Groovy Shapes (from 4in1 (5).html) ---
+        animationModules["2dGroovy"] = {
+            init: function(container) {
+                this.container = container;
+                this.canvas = document.createElement('canvas');
+                this.container.appendChild(this.canvas);
+                this.ctx = this.canvas.getContext('2d');
+                
+                const self = this; 
+                self.width = 0; self.height = 0;
+
+                function localResize() {
+                    self.width = self.canvas.width = self.container.offsetWidth;
+                    self.height = self.canvas.height = self.container.offsetHeight;
+                }
+                self.resizeListener = localResize;
+                window.addEventListener('resize', self.resizeListener);
+                localResize();
+
+                function rand(min, max) { return Math.random() * (max - min) + min; }
+                function randInt(min, max) { return Math.floor(rand(min, max)); }
+                function lerp(a, b, t) { return a + (b - a) * t; }
+                function adjustHSL(hslColor, dH = 0, dS = 0, dL = 0, newAlpha = -1) {
+                    if (!hslColor) return 'hsl(0,0%,0%)';
+                    const match = hslColor.match(/hsla?\((\d+),\s*([\d.]+)%,\s*([\d.]+)%(?:,\s*([\d.]+))?\)/);
+                    if (!match) return hslColor;
+                    let [h, s, l, a_val] = match.slice(1).map(val => parseFloat(val));
+                    h = (parseFloat(h) + dH + 360) % 360;
+                    s = Math.max(0, Math.min(100, parseFloat(s) + dS));
+                    l = Math.max(0, Math.min(100, parseFloat(l) + dL));
+                    let hasOriginalAlpha = !isNaN(a_val);
+                    let finalAlpha = newAlpha !== -1 ? newAlpha : (hasOriginalAlpha ? a_val : 1);
+                    if (finalAlpha < 1 || hasOriginalAlpha || newAlpha !== -1) { return `hsla(${h}, ${s}%, ${l}%, ${finalAlpha})`; }
+                    else { return `hsl(${h}, ${s}%, ${l}%)`; }
+                }
+
+                class Shape {
+                  constructor() { this.x = rand(0, self.width); this.y = rand(0, self.height); this.vx = rand(-1.5, 1.5); this.vy = rand(-1.5, 1.5); this.rotation = rand(0, Math.PI * 2); this.rotSpeed = rand(-0.015, 0.015); this.baseHue = randInt(0,360); this.color = `hsl(${this.baseHue}, ${rand(75,95)}%, ${rand(60,70)}%)`; this.outline = adjustHSL(this.color, randInt(0,360), rand(-10,0), -30); this.size = rand(25, 85); }
+                  move() { this.x += this.vx; this.y += this.vy; this.rotation += this.rotSpeed; const buffer = this.size * 1.5; if (this.x < -buffer) this.x = self.width + buffer; if (this.x > self.width + buffer) this.x = -buffer; if (this.y < -buffer) this.y = self.height + buffer; if (this.y > self.height + buffer) this.y = -buffer; }
+                  draw(ctx_param) {}
+                }
+                class Flower extends Shape { 
+                    constructor() { super(); this.petals = randInt(5, 12); const basePetalSize = this.size * 0.7; this.innerRadius = basePetalSize * rand(0.2, 0.4); this.outerRadius = basePetalSize * rand(0.8, 1.2); this.petalWidth = basePetalSize * rand(0.25, 0.6); this.centerColor = `hsl(${randInt(0,360)}, 90%, 75%)`; this.petalColors = []; const petalBaseHue = randInt(0,360); for (let i = 0; i < this.petals; i++) { this.petalColors.push(`hsl(${(petalBaseHue + i * randInt(5, 25)) % 360}, ${randInt(75,95)}%, ${randInt(60,75)}%)`); } this.outlineStrength = rand(1.5, 3.5); this.shadowBlurStrength = rand(8, 18); }
+                    draw(ctx_param) { ctx_param.save(); ctx_param.translate(this.x, this.y); ctx_param.rotate(this.rotation); for (let i = 0; i < this.petals; i++) { const angle = (Math.PI * 2 / this.petals) * i; const petalColor = this.petalColors[i % this.petalColors.length]; const gradX = Math.cos(angle) * this.outerRadius * 0.3; const gradY = Math.sin(angle) * this.outerRadius * 0.3; const gradient = ctx_param.createRadialGradient(0, 0, this.innerRadius * 0.05, gradX, gradY, this.outerRadius); gradient.addColorStop(0, adjustHSL(petalColor, 15, 5, 15)); gradient.addColorStop(0.7, petalColor); gradient.addColorStop(1, adjustHSL(petalColor, -10, -5, -10)); ctx_param.fillStyle = gradient; ctx_param.strokeStyle = this.outline; ctx_param.lineWidth = this.outlineStrength; const petalShadowColor = adjustHSL(petalColor, 0, 10, 5); ctx_param.shadowColor = petalShadowColor; ctx_param.shadowBlur = this.shadowBlurStrength; ctx_param.save(); ctx_param.rotate(angle); ctx_param.beginPath(); ctx_param.ellipse( this.innerRadius + (this.outerRadius - this.innerRadius) / 2, 0, (this.outerRadius - this.innerRadius) / 2, this.petalWidth / 2, 0, 0, Math.PI * 2 ); ctx_param.fill(); ctx_param.stroke(); ctx_param.restore(); } ctx_param.beginPath(); ctx_param.fillStyle = this.centerColor; ctx_param.strokeStyle = adjustHSL(this.centerColor, 0, 0, -20); ctx_param.lineWidth = 2; ctx_param.shadowColor = this.centerColor; ctx_param.shadowBlur = 8; ctx_param.arc(0, 0, this.innerRadius * 0.75, 0, Math.PI * 2); ctx_param.fill(); ctx_param.stroke(); ctx_param.restore(); }
+                }
+                class Heart extends Shape {
+                    constructor() { super(); this.filled = Math.random() < 0.65; this.scale = rand(0.7, 1.3); this.useGradient = Math.random() < 0.75; this.outlineWidth = rand(2.5, 5); this.glowColor = adjustHSL(this.color, randInt(-10,10), 10, 10); this.multiStrokeLayers = this.filled ? 0 : randInt(0, 3); }
+                    draw(ctx_param) { const s = this.size * this.scale; ctx_param.save(); ctx_param.translate(this.x, this.y); ctx_param.rotate(this.rotation); const drawHeartPath = () => { ctx_param.beginPath(); ctx_param.moveTo(0, -s/3.5); ctx_param.bezierCurveTo(s/1.9, -s/1.0, s*1.1, s/3.5, 0, s); ctx_param.bezierCurveTo(-s*1.1, s/3.5, -s/1.9, -s/1.0, 0, -s/3.5); ctx_param.closePath(); }; drawHeartPath(); if (this.filled) { if (this.useGradient) { const gradient = ctx_param.createRadialGradient(0, s*0.05, s*0.1, 0, 0, s*1.1); gradient.addColorStop(0, adjustHSL(this.color, 20, 10, 15)); gradient.addColorStop(0.6, this.color); gradient.addColorStop(1, adjustHSL(this.color, -15, 0, -20)); ctx_param.fillStyle = gradient; } else { ctx_param.fillStyle = this.color; } ctx_param.fill(); if (Math.random() < 0.5) { ctx_param.save(); ctx_param.clip(); ctx_param.beginPath(); const si = s * 0.9; ctx_param.moveTo(0, -si/3.5 + s*0.08); ctx_param.bezierCurveTo(si/1.9 -s*0.05, -si/1.0 + s*0.05, si*1.1 -s*0.1, si/3.5, 0, si - s*0.15); ctx_param.strokeStyle = `hsla(0, 0%, 100%, 0.25)`; ctx_param.lineWidth = rand(1.5,3); ctx_param.shadowColor = 'transparent'; ctx_param.stroke(); ctx_param.restore(); } } ctx_param.lineWidth = this.outlineWidth; ctx_param.strokeStyle = this.outline; ctx_param.shadowColor = this.glowColor; ctx_param.shadowBlur = rand(10, 20); ctx_param.stroke(); if (!this.filled && this.multiStrokeLayers > 0) { ctx_param.save(); ctx_param.globalCompositeOperation = 'lighter'; for (let i = 1; i <= this.multiStrokeLayers; i++) { drawHeartPath(); ctx_param.strokeStyle = adjustHSL(this.glowColor, i * 25, 5, 5, 0.8 - i * 0.2); ctx_param.lineWidth = this.outlineWidth + i * 2; ctx_param.stroke(); } ctx_param.restore(); } ctx_param.restore(); }
+                }
+                class PeaceSign extends Shape {
+                    constructor() { super(); this.baseLineWidth = rand(5, 11); this.circleColor = this.color; this.linesBaseColor = adjustHSL(this.color, randInt(120, 240), rand(-5,5) , rand(0,10) ); this.hasFill = Math.random() < 0.45; if (this.hasFill) { this.fillColor = adjustHSL(this.circleColor, randInt(-30,30), rand(-10,10), rand(-10,0), rand(0.25, 0.55)); } this.varyLineColors = Math.random() < 0.65; if (this.varyLineColors) { this.verticalLineColor = adjustHSL(this.linesBaseColor, randInt(-10,10)); this.diagLineColor1 = adjustHSL(this.linesBaseColor, randInt(15,35)); this.diagLineColor2 = adjustHSL(this.linesBaseColor, randInt(-35,-15)); } else { this.verticalLineColor = this.linesBaseColor; this.diagLineColor1 = this.linesBaseColor; this.diagLineColor2 = this.linesBaseColor; } this.circleLineWidth = this.baseLineWidth * rand(0.9, 1.3); this.centerLineWidth = this.baseLineWidth * rand(0.7, 1.0); this.circleShadowColor = adjustHSL(this.circleColor, 0, 5, 10); this.linesShadowColor = adjustHSL(this.linesBaseColor, 0, 8, 12); }
+                    draw(ctx_param) { const r = this.size * 0.9; ctx_param.save(); ctx_param.translate(this.x, this.y); ctx_param.rotate(this.rotation); ctx_param.lineCap = 'round'; if (this.hasFill) { ctx_param.beginPath(); ctx_param.fillStyle = this.fillColor; ctx_param.arc(0,0,r,0,Math.PI*2); ctx_param.fill(); } ctx_param.lineWidth = this.circleLineWidth; ctx_param.strokeStyle = this.circleColor; ctx_param.shadowColor = this.circleShadowColor; ctx_param.shadowBlur = rand(8, 16); ctx_param.beginPath(); ctx_param.arc(0,0,r,0,Math.PI*2); ctx_param.stroke(); ctx_param.shadowColor = this.linesShadowColor; ctx_param.shadowBlur = rand(6, 12); ctx_param.lineWidth = this.centerLineWidth; ctx_param.strokeStyle = this.verticalLineColor; ctx_param.beginPath(); ctx_param.moveTo(0, -r); ctx_param.lineTo(0, r); ctx_param.stroke(); const anglesForDiagonals = [-40, 40]; ctx_param.strokeStyle = this.diagLineColor1; ctx_param.beginPath(); ctx_param.moveTo(0,0); ctx_param.lineTo(r * Math.sin(anglesForDiagonals[0] * Math.PI/180), r * Math.cos(anglesForDiagonals[0] * Math.PI/180)); ctx_param.stroke(); ctx_param.strokeStyle = this.diagLineColor2; ctx_param.beginPath(); ctx_param.moveTo(0,0); ctx_param.lineTo(r * Math.sin(anglesForDiagonals[1] * Math.PI/180), r * Math.cos(anglesForDiagonals[1] * Math.PI/180)); ctx_param.stroke(); ctx_param.restore(); }
+                }
+                class HappyFace extends Shape {
+                    constructor() { super(); this.eyeRadius = this.size * rand(0.09, 0.16); this.eyeFillColor = `hsl(${randInt(0,360)}, ${rand(60,85)}%, ${rand(65,80)}%)`; this.pupilColor = `hsl(${randInt(0,360)}, ${rand(75,95)}%, ${rand(15,35)}%)`; this.hasPupil = Math.random() > 0.2; this.hasSparkle = Math.random() > 0.4; this.smileLineWidth = rand(3.5, 7); this.smileColor = Math.random() < 0.6 ? adjustHSL(this.color, randInt(120,240), 10, rand(5,15)) : adjustHSL(this.outline, 0, 10, 20); this.smileType = ['arc_open', 'arc_closed', 'line', 'wavy'][randInt(0,4)]; this.isSmileFilled = (this.smileType === 'arc_closed' && Math.random() < 0.75); this.smileFillColor = adjustHSL(this.smileColor, randInt(-10,10), rand(-10,0), rand(-15,15)); this.headOutlineColor = adjustHSL(this.color, randInt(-15,15), 0, -25); this.headOutlineWidth = rand(2.5,5.5); this.headGlowColor = adjustHSL(this.color, 0, 5, 12); this.winkEye = Math.random() < 0.18 ? (Math.random() < 0.5 ? -1 : 1) : 0; }
+                    draw(ctx_param) { ctx_param.save(); ctx_param.translate(this.x, this.y); ctx_param.rotate(this.rotation); ctx_param.beginPath(); ctx_param.fillStyle = this.color; ctx_param.strokeStyle = this.headOutlineColor; ctx_param.lineWidth = this.headOutlineWidth; ctx_param.shadowColor = this.headGlowColor; ctx_param.shadowBlur = rand(10,18); ctx_param.arc(0, 0, this.size, 0, Math.PI*2); ctx_param.fill(); ctx_param.stroke(); ctx_param.shadowColor = 'transparent'; [-1,1].forEach((m)=>{ const eyeX = m * this.size * 0.38; const eyeY = -this.size * 0.22; if (this.winkEye === m) { ctx_param.beginPath(); ctx_param.strokeStyle = this.pupilColor; ctx_param.lineWidth = this.eyeRadius * 0.45; ctx_param.lineCap = 'round'; ctx_param.arc(eyeX, eyeY + this.eyeRadius*0.2, this.eyeRadius * 0.9, Math.PI * 0.2, Math.PI * 0.8); ctx_param.stroke(); } else { ctx_param.beginPath(); ctx_param.fillStyle = this.eyeFillColor; ctx_param.arc(eyeX, eyeY, this.eyeRadius, 0, Math.PI*2); ctx_param.fill(); if(Math.random() < 0.3){ ctx_param.strokeStyle = adjustHSL(this.eyeFillColor, 0, 0, -20); ctx_param.lineWidth = 1; ctx_param.stroke(); } if (this.hasPupil) { ctx_param.beginPath(); ctx_param.fillStyle = this.pupilColor; const pupilOffsetX = rand(-0.15, 0.15) * this.eyeRadius; const pupilOffsetY = rand(-0.15, 0.15) * this.eyeRadius; ctx_param.arc(eyeX + pupilOffsetX, eyeY + pupilOffsetY, this.eyeRadius * rand(0.5,0.7), 0, Math.PI*2); ctx_param.fill(); if (this.hasSparkle) { ctx_param.beginPath(); ctx_param.fillStyle = 'white'; ctx_param.arc(eyeX + pupilOffsetX + this.eyeRadius * 0.25, eyeY + pupilOffsetY - this.eyeRadius * 0.25, this.eyeRadius * rand(0.2,0.3), 0, Math.PI*2); ctx_param.fill(); } } } }); ctx_param.beginPath(); ctx_param.strokeStyle = this.smileColor; ctx_param.lineWidth = this.smileLineWidth; ctx_param.lineCap = 'round'; const smileYBase = this.size * 0.18; const smileWidth = this.size * 0.6; const smileHeight = this.size * 0.3; switch(this.smileType) { case 'arc_open': ctx_param.arc(0, smileYBase, smileWidth * 0.8, 0.2 * Math.PI, 0.8 * Math.PI); ctx_param.stroke(); break; case 'arc_closed': ctx_param.arc(0, smileYBase, smileWidth*0.8, 0.2 * Math.PI, 0.8 * Math.PI); ctx_param.closePath(); if (this.isSmileFilled) { ctx_param.fillStyle = this.smileFillColor; ctx_param.fill(); } ctx_param.stroke(); break; case 'line': ctx_param.moveTo(-smileWidth * 0.6, smileYBase + this.size * 0.2); ctx_param.lineTo(smileWidth * 0.6, smileYBase + this.size * 0.2); ctx_param.stroke(); break; case 'wavy': ctx_param.moveTo(-smileWidth * 0.7, smileYBase + this.size * 0.15); ctx_param.quadraticCurveTo(0, smileYBase + this.size * 0.15 + smileHeight * rand(0.4,0.8), smileWidth*0.7, smileYBase + this.size * 0.15); ctx_param.stroke(); break; } ctx_param.restore(); }
+                }
+                
+                class Manager { 
+                    constructor() { this.shapes = []; this.bgStart = Date.now(); this.bgDuration = 12000; this.colorA = {h: randInt(0,360), s:70, l:8}; this.colorB = {h: randInt(0,360), s:70, l:8}; this.scenarioDuration = 30000; this.scenarioStartTime = 0; this.availableScenarios = ['ALL_TOGETHER', 'FLOWERS_ONLY', 'HEARTS_ONLY', 'PEACE_SIGNS_ONLY', 'SMILEYS_ONLY']; this.currentScenario = ''; this.shapesPerTypeInAllMode = 2; this.shapesInSingleMode = 8; this.switchScenario(); }
+                    switchScenario() { let nextScenario; if (this.availableScenarios.length > 1) { do { nextScenario = this.availableScenarios[randInt(0, this.availableScenarios.length)]; } while (nextScenario === this.currentScenario); } else { nextScenario = this.availableScenarios[0]; } this.currentScenario = nextScenario; this.scenarioStartTime = Date.now(); this.populateShapesForCurrentScenario(); }
+                    populateShapesForCurrentScenario() { this.shapes = []; switch(this.currentScenario) { case 'ALL_TOGETHER': for(let i=0; i < this.shapesPerTypeInAllMode; i++) { this.shapes.push(new Flower()); this.shapes.push(new Heart()); this.shapes.push(new PeaceSign()); this.shapes.push(new HappyFace()); } break; case 'FLOWERS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) this.shapes.push(new Flower()); break; case 'HEARTS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) this.shapes.push(new Heart()); break; case 'PEACE_SIGNS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) this.shapes.push(new PeaceSign()); break; case 'SMILEYS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) this.shapes.push(new HappyFace()); break; } }
+                    updateBG() { const elapsed = Date.now() - this.bgStart; let t = (elapsed % this.bgDuration) / this.bgDuration; t = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; if (elapsed > this.bgDuration && (elapsed % this.bgDuration < 50)) { this.colorA = {...this.colorB}; this.colorB = {h: randInt(0,360), s:rand(60,80), l:rand(8,12)}; this.bgStart = Date.now(); } const h = lerp(this.colorA.h, this.colorB.h, t); const s = lerp(this.colorA.s, this.colorB.s, t); const l = lerp(this.colorA.l, this.colorB.l, t); self.container.style.background = `hsl(${h},${s}%,${l}%)`; }
+                    animate() { if(!self.ctx || !self.canvas) return; self.ctx.clearRect(0, 0, self.width, self.height); this.updateBG(); if (Date.now() - this.scenarioStartTime > this.scenarioDuration) { this.switchScenario(); } this.shapes.forEach(s=>{ s.move(); s.draw(self.ctx); }); self.animationFrameId = requestAnimationFrame(()=>this.animate()); }
+                }
+                self.manager = new Manager();
+                self.manager.animate(); 
+            },
+            destroy: function() {
+                if (this.animationFrameId) {
+                    cancelAnimationFrame(this.animationFrameId);
+                    this.animationFrameId = null;
+                }
+                if (this.resizeListener) {
+                    window.removeEventListener('resize', this.resizeListener);
+                    this.resizeListener = null;
+                }
+                if (this.canvas && this.canvas.parentElement) {
+                    this.canvas.parentElement.removeChild(this.canvas);
+                }
+                this.manager = null; 
+                this.canvas = null;
+                this.ctx = null;
+                if(this.container) this.container.style.background = '#000'; // Reset container background
+            }
+        };
+
+        // --- Animation Module: 3D Miami Advanced (from 4in1 (8).html) ---
+        animationModules["3dMiamiAdvanced"] = {
+            init: function(container) {
+                this.container = container;
+                const self = this; 
+                self.width = self.container.offsetWidth;
+                self.height = self.container.offsetHeight;
+
+                self.scene = new THREE.Scene();
+                self.camera = new THREE.PerspectiveCamera(75, self.width / self.height, 0.1, 1000);
+                self.camera.position.z = 18;
+
+                self.renderer = new THREE.WebGLRenderer({ antialias: true });
+                self.renderer.setSize(self.width, self.height);
+                self.container.appendChild(self.renderer.domElement);
+
+                self.ambientLight = new THREE.AmbientLight(0x555555);
+                self.scene.add(self.ambientLight);
+                self.mainLight = new THREE.PointLight(0xffffff, 0.9, 150);
+                self.mainLight.position.set(15, 15, 25);
+                self.scene.add(self.mainLight);
+                
+                const MIAMI_COLORS = [0xFF1493,0x00FFFF,0xFF4500,0x7FFFD4,0xFF69B4,0x00FF00,0xFFD700,0x1E90FF,0xFF00FF,0x32CD32];
+                const STARFIELD_BOUNDS = 200;
+
+                function onWindowResizeLocal() {
+                    if (!self.camera || !self.renderer) return; // Guard
+                    self.width = self.container.offsetWidth;
+                    self.height = self.container.offsetHeight;
+                    self.camera.aspect = self.width / self.height;
+                    self.camera.updateProjectionMatrix();
+                    self.renderer.setSize(self.width, self.height);
+                }
+                self.resizeListener = onWindowResizeLocal;
+                window.addEventListener('resize', self.resizeListener, false);
+
+                function rand(min, max) { return Math.random() * (max - min) + min; }
+                function randInt(min, max) { return Math.floor(rand(min, max)); }
+                function lerp(a, b, t) { return a + (b - a) * t; }
+                function getRandomMiamiColor() { return MIAMI_COLORS[randInt(0, MIAMI_COLORS.length)]; }
+                function adjustTHREEColorHSL(threeColor, dH = 0, dS_percent = 0, dL_percent = 0) {
+                    const hsl = {}; threeColor.getHSL(hsl);
+                    hsl.h = (hsl.h + (dH / 360) + 1) % 1;
+                    hsl.s = Math.max(0, Math.min(1, hsl.s + (dS_percent / 100)));
+                    hsl.l = Math.max(0, Math.min(1, hsl.l + (dL_percent / 100)));
+                    const newColor = new THREE.Color(); newColor.setHSL(hsl.h, hsl.s, hsl.l); return newColor;
+                }
+
+                class Shape3D {
+                    constructor() {
+                        this.object = new THREE.Group(); if(self.scene) self.scene.add(this.object);
+                        const spawnBounds = 12; this.object.position.set(rand(-spawnBounds, spawnBounds), rand(-spawnBounds, spawnBounds), rand(-spawnBounds / 2, spawnBounds / 2));
+                        this.velocity = new THREE.Vector3(rand(-0.025, 0.025), rand(-0.025, 0.025), rand(-0.008, 0.008));
+                        this.rotationSpeed = new THREE.Vector3(rand(-0.025, 0.025), rand(-0.025, 0.025), rand(-0.025, 0.025));
+                        this.baseColor = new THREE.Color(getRandomMiamiColor()); this.emissiveColor = adjustTHREEColorHSL(this.baseColor, 0, 0, 10);
+                        this.pulseSpeed = rand(0.05, 0.15); this.pulsePhase = rand(0, Math.PI * 2); this.baseScale = rand(0.6, 1.3);
+                        this.screenBounds = { x: 15, y: 10, z: 10 };
+                    }
+                    move() { this.object.position.add(this.velocity); this.object.rotation.x += this.rotationSpeed.x; this.object.rotation.y += this.rotationSpeed.y; this.object.rotation.z += this.rotationSpeed.z; this.pulsePhase += this.pulseSpeed; const pulseFactor = 1 + Math.sin(this.pulsePhase) * 0.15; const currentScale = this.baseScale * pulseFactor; this.object.scale.set(currentScale, currentScale, currentScale); if (this.object.position.x > this.screenBounds.x) this.object.position.x = -this.screenBounds.x; if (this.object.position.x < -this.screenBounds.x) this.object.position.x = this.screenBounds.x; if (this.object.position.y > this.screenBounds.y) this.object.position.y = -this.screenBounds.y; if (this.object.position.y < -this.screenBounds.y) this.object.position.y = this.screenBounds.y; if (this.object.position.z > this.screenBounds.z) this.object.position.z = -this.screenBounds.z; if (this.object.position.z < -this.screenBounds.z) this.object.position.z = this.screenBounds.z; }
+                    destroy() { if(self.scene) self.scene.remove(this.object); this.object.traverse(child => { if (child.isMesh) { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) { child.material.forEach(mat => {if(mat.dispose)mat.dispose();}); } else { if(child.material.dispose)child.material.dispose(); } } } }); }
+                    createMesh() {}
+                }
+                class Heart3D extends Shape3D { 
+                    constructor() { super(); this.createMesh(); }
+                    createMesh() { const heartShape = new THREE.Shape(); heartShape.moveTo(0.5, 0.5); heartShape.bezierCurveTo(0.5, 0.5, 0.4, 0, 0, 0); heartShape.bezierCurveTo(-0.6, 0, -0.6, 0.7, -0.6, 0.7); heartShape.bezierCurveTo(-0.6, 1.1, -0.3, 1.54, 0.5, 1.9); heartShape.bezierCurveTo(1.2, 1.54, 1.6, 1.1, 1.6, 0.7); heartShape.bezierCurveTo(1.6, 0.7, 1.6, 0, 1, 0); heartShape.bezierCurveTo(0.7, 0, 0.5, 0.5, 0.5, 0.5); const extrudeSettings = { depth: 0.3, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.1, bevelThickness: 0.1 }; const geometry = new THREE.ExtrudeGeometry(heartShape, extrudeSettings); geometry.center(); const material = new THREE.MeshPhongMaterial({ color: this.baseColor, emissive: this.emissiveColor, emissiveIntensity: 0.6, shininess: 80, specular: 0xffffff }); const heartMesh = new THREE.Mesh(geometry, material); this.object.add(heartMesh); }
+                }
+                class Flower3D extends Shape3D {
+                    constructor() { super(); this.numPetals = randInt(5, 9); this.petalLength = rand(0.8, 1.5); this.petalWidth = rand(0.4, 0.7); this.centerRadius = rand(0.3, 0.5); this.createMesh(); }
+                    createMesh() { const centerGeom = new THREE.SphereGeometry(this.centerRadius, 16, 16); const centerMat = new THREE.MeshPhongMaterial({ color: getRandomMiamiColor(), emissive: adjustTHREEColorHSL(new THREE.Color(getRandomMiamiColor()),0,0,15), emissiveIntensity: 0.5, shininess: 50 }); const centerMesh = new THREE.Mesh(centerGeom, centerMat); this.object.add(centerMesh); const petalShape = new THREE.Shape(); petalShape.ellipse(0, this.petalLength / 2, this.petalWidth / 2, this.petalLength / 2, 0, Math.PI * 2, false, 0); const extrudeSettings = { depth: 0.1, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05 }; const petalGeom = new THREE.ExtrudeGeometry(petalShape, extrudeSettings); for (let i = 0; i < this.numPetals; i++) { const angle = (Math.PI * 2 / this.numPetals) * i; const petalMat = new THREE.MeshPhongMaterial({ color: this.baseColor, emissive: this.emissiveColor, emissiveIntensity: 0.4, shininess: 70 }); const petalMesh = new THREE.Mesh(petalGeom, petalMat); petalMesh.position.set( Math.cos(angle) * (this.centerRadius + 0.05), Math.sin(angle) * (this.centerRadius + 0.05), 0 ); petalMesh.rotation.z = angle + Math.PI / 2; this.object.add(petalMesh); } }
+                }
+                class PeaceSign3D extends Shape3D {
+                    constructor() { super(); this.radius = rand(0.9, 1.4); this.ringThickness = this.radius * 0.12; this.lineThickness = this.radius * 0.1; this.createMesh(); }
+                    createMesh() { const material = new THREE.MeshPhongMaterial({ color: this.baseColor, emissive: this.emissiveColor, emissiveIntensity: 0.5, shininess: 60, flatShading: false }); const ringGeom = new THREE.TorusGeometry(this.radius, this.ringThickness, 24, 80); const ringMesh = new THREE.Mesh(ringGeom, material); this.object.add(ringMesh); const hubRadius = this.lineThickness * 1.1; const hubGeom = new THREE.SphereGeometry(hubRadius, 12, 12); const hubMesh = new THREE.Mesh(hubGeom, material); this.object.add(hubMesh); const innerRingRadius = this.radius - this.ringThickness; const verticalLineLength = innerRingRadius * 2; const verticalLineGeom = new THREE.CylinderGeometry(this.lineThickness, this.lineThickness, verticalLineLength, 12); const verticalLineMesh = new THREE.Mesh(verticalLineGeom, material); this.object.add(verticalLineMesh); const diagonalAngle = Math.PI / 4.2; const diagonalLineLength = innerRingRadius * 0.95; const diagonalLineGeom = new THREE.CylinderGeometry(this.lineThickness, this.lineThickness, diagonalLineLength, 12); const diag1Mesh = new THREE.Mesh(diagonalLineGeom, material); diag1Mesh.rotation.z = Math.PI / 2 + diagonalAngle; diag1Mesh.position.x = Math.cos(Math.PI + diagonalAngle) * (diagonalLineLength / 2); diag1Mesh.position.y = Math.sin(Math.PI + diagonalAngle) * (diagonalLineLength / 2); this.object.add(diag1Mesh); const diag2Mesh = new THREE.Mesh(diagonalLineGeom, material); diag2Mesh.rotation.z = Math.PI / 2 - diagonalAngle; diag2Mesh.position.x = Math.cos(-diagonalAngle) * (diagonalLineLength / 2); diag2Mesh.position.y = Math.sin(-diagonalAngle) * (diagonalLineLength / 2); this.object.add(diag2Mesh); }
+                }
+                class HappyFace3D extends Shape3D {
+                    constructor() { super(); this.headRadius = rand(0.7, 1.1); this.eyeRadius = this.headRadius * 0.15; this.createMesh(); }
+                    createMesh() { const headGeom = new THREE.SphereGeometry(this.headRadius, 32, 32); const headMat = new THREE.MeshPhongMaterial({ color: this.baseColor, emissive: this.emissiveColor, emissiveIntensity: 0.3, shininess: 90 }); const headMesh = new THREE.Mesh(headGeom, headMat); this.object.add(headMesh); const eyeColor = Math.random() < 0.5 ? 0x000000 : getRandomMiamiColor(); const eyeMat = new THREE.MeshPhongMaterial({ color: eyeColor, emissive: eyeColor, emissiveIntensity: 0.2, shininess: 30 }); const eyeGeom = new THREE.SphereGeometry(this.eyeRadius, 16, 16); const leftEyeMesh = new THREE.Mesh(eyeGeom, eyeMat); leftEyeMesh.position.set( -this.headRadius * 0.4, this.headRadius * 0.25, this.headRadius * 0.85 ); this.object.add(leftEyeMesh); const rightEyeMesh = new THREE.Mesh(eyeGeom, eyeMat); rightEyeMesh.position.set( this.headRadius * 0.4, this.headRadius * 0.25, this.headRadius * 0.85 ); this.object.add(rightEyeMesh); const smileRadius = this.headRadius * 0.5; const smileTube = this.headRadius * 0.08; const smileGeom = new THREE.TorusGeometry(smileRadius, smileTube, 8, 20, Math.PI * 0.7); const smileMat = new THREE.MeshPhongMaterial({ color: 0x222222, emissive: 0x111111, shininess: 10 }); const smileMesh = new THREE.Mesh(smileGeom, smileMat); smileMesh.position.set(0, -this.headRadius * 0.25, this.headRadius * 0.75); smileMesh.rotation.x = Math.PI * 0.05; smileMesh.rotation.z = Math.PI; this.object.add(smileMesh); }
+                }
+                
+                self.stars = []; // Store stars on self for cleanup
+                function createStarfield() { const starGeometry = new THREE.SphereGeometry(0.05, 8, 8); for (let i = 0; i < 1500; i++) { const starMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(rand(0,1),0.1,rand(0.4,0.8)) }); const star = new THREE.Mesh(starGeometry, starMaterial); star.position.set( rand(-STARFIELD_BOUNDS, STARFIELD_BOUNDS), rand(-STARFIELD_BOUNDS, STARFIELD_BOUNDS), rand(-STARFIELD_BOUNDS, STARFIELD_BOUNDS) ); if(self.scene) self.scene.add(star); self.stars.push(star); } }
+                
+                function createShootingStar() {
+                    if (!self.scene) return; 
+                    const starGeometry = new THREE.SphereGeometry(0.12, 16, 16); const starMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.9 }); const shootingStar = new THREE.Mesh(starGeometry, starMaterial); const startX = rand(-STARFIELD_BOUNDS/3, STARFIELD_BOUNDS/3); const startY = rand(STARFIELD_BOUNDS/4, STARFIELD_BOUNDS/3); const startZ = rand(-STARFIELD_BOUNDS/2, -STARFIELD_BOUNDS/4); shootingStar.position.set(startX, startY, startZ); self.scene.add(shootingStar); const travelTime = rand(1500, 3500); const endX = startX + rand(-STARFIELD_BOUNDS/1.5, STARFIELD_BOUNDS/1.5); const endY = startY - rand(STARFIELD_BOUNDS/2.5, STARFIELD_BOUNDS/1.5); new TWEEN.Tween(shootingStar.position) .to({ x: endX, y: endY, z: startZ + rand(20,40) }, travelTime) .easing(TWEEN.Easing.Quadratic.Out) .onUpdate(() => { if(shootingStar.material.opacity > 0.01) shootingStar.material.opacity *= 0.985; }) .onComplete(() => { if(self.scene) self.scene.remove(shootingStar); if(shootingStar.geometry) shootingStar.geometry.dispose(); if(shootingStar.material) shootingStar.material.dispose(); }) .start(); 
+                    self.shootingStarTimeoutId = setTimeout(createShootingStar, rand(2000, 6000));
+                }
+
+                class Manager { 
+                    constructor() { self.activeShapes = []; this.bgStart = Date.now(); this.bgDuration = 20000; this.colorA = {h: randInt(0,360), s:70, l:3}; this.colorB = {h: randInt(0,360), s:70, l:5}; this.scenarioDuration = 10000; this.scenarioStartTime = 0; this.availableScenarios = ['ALL_TOGETHER', 'FLOWERS_ONLY', 'HEARTS_ONLY', 'PEACE_SIGNS_ONLY', 'SMILEYS_ONLY']; this.currentScenario = ''; this.shapesPerTypeInAllMode = 3; this.shapesInSingleMode = 12; this.switchScenario(); }
+                    switchScenario() { if(self.activeShapes) self.activeShapes.forEach(shape => shape.destroy()); self.activeShapes = []; let nextScenario; if (this.availableScenarios.length > 1) { do { nextScenario = this.availableScenarios[randInt(0, this.availableScenarios.length)]; } while (nextScenario === this.currentScenario); } else { nextScenario = this.availableScenarios[0]; } this.currentScenario = nextScenario; this.scenarioStartTime = Date.now(); this.populateShapesForCurrentScenario(); }
+                    populateShapesForCurrentScenario() { switch(this.currentScenario) { case 'ALL_TOGETHER': for(let i=0; i < this.shapesPerTypeInAllMode; i++) { self.activeShapes.push(new Flower3D()); self.activeShapes.push(new Heart3D()); self.activeShapes.push(new PeaceSign3D()); self.activeShapes.push(new HappyFace3D()); } break; case 'FLOWERS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) self.activeShapes.push(new Flower3D()); break; case 'HEARTS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) self.activeShapes.push(new Heart3D()); break; case 'PEACE_SIGNS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) self.activeShapes.push(new PeaceSign3D()); break; case 'SMILEYS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) self.activeShapes.push(new HappyFace3D()); break; } }
+                    updateBGStyle() { const elapsed = Date.now() - this.bgStart; let t = (elapsed % this.bgDuration) / this.bgDuration; t = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; if (elapsed > this.bgDuration && (elapsed % this.bgDuration < 50)) { this.colorA = {...this.colorB}; this.colorB = {h: randInt(0,360), s:rand(60,80), l:rand(2,6)}; this.bgStart = Date.now(); } const h = lerp(this.colorA.h, this.colorB.h, t); const s = lerp(this.colorA.s, this.colorB.s, t); const l = lerp(this.colorA.l, this.colorB.l, t); if (self.scene && self.scene.fog) { self.scene.fog.color.setHSL(h/360, s/100, l/100); } else if (self.scene) { self.scene.fog = new THREE.FogExp2(new THREE.Color().setHSL(h/360, s/100, l/100), 0.007); } }
+                    animateLoop() { if (!self.renderer) return; self.animationFrameId = requestAnimationFrame(() => this.animateLoop()); TWEEN.update(); this.updateBGStyle(); if (Date.now() - this.scenarioStartTime > this.scenarioDuration) { this.switchScenario(); } if(self.activeShapes) self.activeShapes.forEach(shape => { shape.move(); }); if(self.mainLight) {self.mainLight.position.x = Math.sin(Date.now() * 0.00025) * 20; self.mainLight.position.y = Math.cos(Date.now() * 0.00035) * 20;} if(self.renderer && self.scene && self.camera) self.renderer.render(self.scene, self.camera); }
+                }
+
+                createStarfield();
+                createShootingStar();
+                
+                self.managerInstance = new Manager();
+                self.managerInstance.animateLoop();
+            },
+            destroy: function() {
+                if(this.shootingStarTimeoutId) clearTimeout(this.shootingStarTimeoutId);
+                this.shootingStarTimeoutId = null;
+                cleanupThreeJsAnimation(this); 
+                this.managerInstance = null;
+            }
+        };
+
+        // --- Animation Module: 3D Hypercolor (from 4in1 (1).html) ---
+        animationModules["3dHypercolor"] = {
+            init: function(container) {
+                this.container = container;
+                const self = this; 
+                self.width = self.container.offsetWidth;
+                self.height = self.container.offsetHeight;
+                self.scene = new THREE.Scene();
+                self.camera = new THREE.PerspectiveCamera(75, self.width / self.height, 0.1, 1000);
+                self.camera.position.z = 18;
+                self.renderer = new THREE.WebGLRenderer({ antialias: true });
+                self.renderer.setSize(self.width, self.height);
+                self.container.appendChild(self.renderer.domElement);
+
+                self.ambientLight = new THREE.AmbientLight(0x606060);
+                self.scene.add(self.ambientLight);
+                self.mainLight = new THREE.PointLight(0xffffff, 1.0, 180);
+                self.mainLight.position.set(20, 20, 30);
+                self.scene.add(self.mainLight);
+                
+                const STARFIELD_BOUNDS = 250;
+
+                function onWindowResizeLocalHyper() {
+                    if (!self.camera || !self.renderer) return; // Guard
+                    self.width = self.container.offsetWidth;
+                    self.height = self.container.offsetHeight;
+                    self.camera.aspect = self.width / self.height;
+                    self.camera.updateProjectionMatrix();
+                    self.renderer.setSize(self.width, self.height);
+                }
+                self.resizeListener = onWindowResizeLocalHyper;
+                window.addEventListener('resize', self.resizeListener, false);
+
+                function rand(min, max) { return Math.random() * (max - min) + min; }
+                function randInt(min, max) { return Math.floor(rand(min, max)); }
+                function lerp(a, b, t) { return a + (b - a) * t; }
+                function getRandomVibrantThreeColor() { const color = new THREE.Color(); color.setHSL(Math.random(), rand(0.75, 1.0), rand(0.5, 0.7)); return color; }
+                function adjustTHREEColorHSL(threeColor, dH = 0, dS_percent = 0, dL_percent = 0) { const hsl = {}; threeColor.getHSL(hsl); hsl.h = (hsl.h + (dH / 360) + 1) % 1; hsl.s = Math.max(0, Math.min(1, hsl.s + (dS_percent / 100))); hsl.l = Math.max(0, Math.min(1, hsl.l + (dL_percent / 100))); const newColor = new THREE.Color(); newColor.setHSL(hsl.h, hsl.s, hsl.l); return newColor; }
+
+                class Shape3D {
+                    constructor() { this.object = new THREE.Group(); if(self.scene) self.scene.add(this.object); const spawnBounds = 12; this.object.position.set(rand(-spawnBounds, spawnBounds), rand(-spawnBounds, spawnBounds), rand(-spawnBounds / 2, spawnBounds / 2)); this.velocity = new THREE.Vector3(rand(-0.025, 0.025), rand(-0.025, 0.025), rand(-0.008, 0.008)); this.rotationSpeed = new THREE.Vector3(rand(-0.025, 0.025), rand(-0.025, 0.025), rand(-0.025, 0.025)); this.baseColor = getRandomVibrantThreeColor(); this.emissiveColor = adjustTHREEColorHSL(this.baseColor, 0, 0, 10); this.pulseSpeed = rand(0.05, 0.15); this.pulsePhase = rand(0, Math.PI * 2); this.baseScale = rand(0.6, 1.3); this.screenBounds = { x: 15, y: 10, z: 10 }; }
+                    move() { this.object.position.add(this.velocity); this.object.rotation.x += this.rotationSpeed.x; this.object.rotation.y += this.rotationSpeed.y; this.object.rotation.z += this.rotationSpeed.z; this.pulsePhase += this.pulseSpeed; const pulseFactor = 1 + Math.sin(this.pulsePhase) * 0.15; const currentScale = this.baseScale * pulseFactor; this.object.scale.set(currentScale, currentScale, currentScale); if (this.object.position.x > this.screenBounds.x) this.object.position.x = -this.screenBounds.x + 0.1; if (this.object.position.x < -this.screenBounds.x) this.object.position.x = this.screenBounds.x - 0.1; if (this.object.position.y > this.screenBounds.y) this.object.position.y = -this.screenBounds.y + 0.1; if (this.object.position.y < -this.screenBounds.y) this.object.position.y = this.screenBounds.y - 0.1; if (this.object.position.z > this.screenBounds.z) this.object.position.z = -this.screenBounds.z + 0.1; if (this.object.position.z < -this.screenBounds.z) this.object.position.z = this.screenBounds.z - 0.1; }
+                    destroy() { if(self.scene) self.scene.remove(this.object); this.object.traverse(child => { if (child.isMesh) { if (child.geometry) child.geometry.dispose(); if (child.material) { if (Array.isArray(child.material)) child.material.forEach(mat => {if(mat.dispose)mat.dispose();}); else if(child.material.dispose) child.material.dispose();}}});}
+                    createMesh() {}
+                }
+                class Heart3D extends Shape3D {
+                    constructor() { super(); this.createMesh(); }
+                    createMesh() { const heartShape = new THREE.Shape(); heartShape.moveTo(0.5, 0.5); heartShape.bezierCurveTo(0.5, 0.5, 0.4, 0, 0, 0); heartShape.bezierCurveTo(-0.6, 0, -0.6, 0.7, -0.6, 0.7); heartShape.bezierCurveTo(-0.6, 1.1, -0.3, 1.54, 0.5, 1.9); heartShape.bezierCurveTo(1.2, 1.54, 1.6, 1.1, 1.6, 0.7); heartShape.bezierCurveTo(1.6, 0.7, 1.6, 0, 1, 0); heartShape.bezierCurveTo(0.7, 0, 0.5, 0.5, 0.5, 0.5); const extrudeSettings = { depth: 0.3, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.1, bevelThickness: 0.1 }; const geometry = new THREE.ExtrudeGeometry(heartShape, extrudeSettings); geometry.center(); const heartColor = getRandomVibrantThreeColor(); const material = new THREE.MeshPhongMaterial({ color: heartColor, emissive: adjustTHREEColorHSL(heartColor, 0, 0, 15), emissiveIntensity: 0.7, shininess: 90, specular: 0xffffff }); const heartMesh = new THREE.Mesh(geometry, material); this.object.add(heartMesh); }
+                }
+                class Flower3D extends Shape3D {
+                    constructor() { super(); this.numPetals = randInt(5, 9); this.petalLength = rand(0.8, 1.5); this.petalWidth = rand(0.4, 0.7); this.centerRadius = rand(0.3, 0.5); this.createMesh(); }
+                    createMesh() { const centerColor = getRandomVibrantThreeColor(); const centerGeom = new THREE.SphereGeometry(this.centerRadius, 16, 16); const centerMat = new THREE.MeshPhongMaterial({ color: centerColor, emissive: adjustTHREEColorHSL(centerColor, 0, 0, 15), emissiveIntensity: 0.6, shininess: 60 }); const centerMesh = new THREE.Mesh(centerGeom, centerMat); this.object.add(centerMesh); const petalShape = new THREE.Shape(); petalShape.ellipse(0, this.petalLength / 2, this.petalWidth / 2, this.petalLength / 2, 0, Math.PI * 2, false, 0); const extrudeSettings = { depth: 0.1, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05 }; const petalGeom = new THREE.ExtrudeGeometry(petalShape, extrudeSettings); for (let i = 0; i < this.numPetals; i++) { const angle = (Math.PI * 2 / this.numPetals) * i; const petalColor = getRandomVibrantThreeColor(); const petalMat = new THREE.MeshPhongMaterial({ color: petalColor, emissive: adjustTHREEColorHSL(petalColor, 0, 0, 10), emissiveIntensity: 0.5, shininess: 70 }); const petalMesh = new THREE.Mesh(petalGeom, petalMat); petalMesh.position.set( Math.cos(angle) * (this.centerRadius + 0.05), Math.sin(angle) * (this.centerRadius + 0.05), 0 ); petalMesh.rotation.z = angle + Math.PI / 2; this.object.add(petalMesh);}}
+                }
+                class PeaceSign3D extends Shape3D {
+                    constructor() { super(); this.radius = rand(0.9, 1.4); this.ringThickness = this.radius * 0.12; this.lineThickness = this.radius * 0.1; this.ringColor = getRandomVibrantThreeColor(); this.linesColor = getRandomVibrantThreeColor(); while(this.linesColor.equals(this.ringColor)) { this.linesColor = getRandomVibrantThreeColor(); } this.createMesh(); }
+                    createMesh() { const ringMaterial = new THREE.MeshPhongMaterial({ color: this.ringColor, emissive: adjustTHREEColorHSL(this.ringColor,0,0,10), emissiveIntensity: 0.5, shininess: 60, flatShading: false }); const linesMaterial = new THREE.MeshPhongMaterial({ color: this.linesColor, emissive: adjustTHREEColorHSL(this.linesColor,0,0,10), emissiveIntensity: 0.5, shininess: 60, flatShading: false }); const ringGeom = new THREE.TorusGeometry(this.radius, this.ringThickness, 24, 80); const ringMesh = new THREE.Mesh(ringGeom, ringMaterial); this.object.add(ringMesh); const hubRadius = this.lineThickness * 1.1; const hubGeom = new THREE.SphereGeometry(hubRadius, 12, 12); const hubMesh = new THREE.Mesh(hubGeom, linesMaterial); this.object.add(hubMesh); const innerRingRadius = this.radius - this.ringThickness; const verticalLineLength = innerRingRadius * 2; const verticalLineGeom = new THREE.CylinderGeometry(this.lineThickness, this.lineThickness, verticalLineLength, 12); const verticalLineMesh = new THREE.Mesh(verticalLineGeom, linesMaterial); this.object.add(verticalLineMesh); const diagonalAngle = Math.PI / 4.2; const diagonalLineLength = innerRingRadius * 0.95; const diagonalLineGeom = new THREE.CylinderGeometry(this.lineThickness, this.lineThickness, diagonalLineLength, 12); const diag1Mesh = new THREE.Mesh(diagonalLineGeom, linesMaterial); diag1Mesh.rotation.z = Math.PI / 2 + diagonalAngle; diag1Mesh.position.x = Math.cos(Math.PI + diagonalAngle) * (diagonalLineLength / 2); diag1Mesh.position.y = Math.sin(Math.PI + diagonalAngle) * (diagonalLineLength / 2); this.object.add(diag1Mesh); const diag2Mesh = new THREE.Mesh(diagonalLineGeom, linesMaterial); diag2Mesh.rotation.z = Math.PI / 2 - diagonalAngle; diag2Mesh.position.x = Math.cos(-diagonalAngle) * (diagonalLineLength / 2); diag2Mesh.position.y = Math.sin(-diagonalAngle) * (diagonalLineLength / 2); this.object.add(diag2Mesh); }
+                }
+                class HappyFace3D extends Shape3D {
+                    constructor() { super(); this.headRadius = rand(0.7, 1.1); this.eyeRadius = this.headRadius * 0.15; this.createMesh(); }
+                    createMesh() { const headColor = getRandomVibrantThreeColor(); const headGeom = new THREE.SphereGeometry(this.headRadius, 32, 32); const headMat = new THREE.MeshPhongMaterial({ color: headColor, emissive: adjustTHREEColorHSL(headColor,0,0,5), emissiveIntensity: 0.3, shininess: 90 }); const headMesh = new THREE.Mesh(headGeom, headMat); this.object.add(headMesh); const eyeGeom = new THREE.SphereGeometry(this.eyeRadius, 16, 16); const leftEyeColor = getRandomVibrantThreeColor(); const leftEyeMat = new THREE.MeshPhongMaterial({ color: leftEyeColor, emissive: leftEyeColor, emissiveIntensity: 0.4, shininess: 40 }); const leftEyeMesh = new THREE.Mesh(eyeGeom, leftEyeMat); leftEyeMesh.position.set( -this.headRadius * 0.4, this.headRadius * 0.25, this.headRadius * 0.85 ); this.object.add(leftEyeMesh); const rightEyeColor = getRandomVibrantThreeColor(); const rightEyeMat = new THREE.MeshPhongMaterial({ color: rightEyeColor, emissive: rightEyeColor, emissiveIntensity: 0.4, shininess: 40 }); const rightEyeMesh = new THREE.Mesh(eyeGeom, rightEyeMat); rightEyeMesh.position.set( this.headRadius * 0.4, this.headRadius * 0.25, this.headRadius * 0.85 ); this.object.add(rightEyeMesh); const smileColor = getRandomVibrantThreeColor(); const smileRadius = this.headRadius * 0.5; const smileTube = this.headRadius * 0.08; const smileGeom = new THREE.TorusGeometry(smileRadius, smileTube, 8, 20, Math.PI * 0.7); const smileMat = new THREE.MeshPhongMaterial({ color: smileColor, emissive: adjustTHREEColorHSL(smileColor,0,0,5), emissiveIntensity: 0.3, shininess: 20 }); const smileMesh = new THREE.Mesh(smileGeom, smileMat); smileMesh.position.set(0, -this.headRadius * 0.25, this.headRadius * 0.75); smileMesh.rotation.x = Math.PI * 0.05; smileMesh.rotation.z = Math.PI; this.object.add(smileMesh); }
+                }
+                
+                self.stars = [];
+                function createStarfield() { const starGeometry = new THREE.SphereGeometry(0.06, 8, 8); for (let i = 0; i < 2000; i++) { const starMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(rand(0,1),0.1,rand(0.5,0.9)) }); const star = new THREE.Mesh(starGeometry, starMaterial); star.position.set( rand(-STARFIELD_BOUNDS, STARFIELD_BOUNDS), rand(-STARFIELD_BOUNDS, STARFIELD_BOUNDS), rand(-STARFIELD_BOUNDS, STARFIELD_BOUNDS) ); if(self.scene) self.scene.add(star); self.stars.push(star); } }
+                
+                function createShootingStar() {
+                    if(!self.scene) return;
+                    const starGeometry = new THREE.SphereGeometry(0.12, 16, 16); const starMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.9 }); const shootingStar = new THREE.Mesh(starGeometry, starMaterial); const startX = rand(-STARFIELD_BOUNDS/3, STARFIELD_BOUNDS/3); const startY = rand(STARFIELD_BOUNDS/4, STARFIELD_BOUNDS/3); const startZ = rand(-STARFIELD_BOUNDS/2, -STARFIELD_BOUNDS/4); shootingStar.position.set(startX, startY, startZ); self.scene.add(shootingStar); const travelTime = rand(1500, 3500); const endX = startX + rand(-STARFIELD_BOUNDS/1.5, STARFIELD_BOUNDS/1.5); const endY = startY - rand(STARFIELD_BOUNDS/2.5, STARFIELD_BOUNDS/1.5); new TWEEN.Tween(shootingStar.position) .to({ x: endX, y: endY, z: startZ + rand(20,40) }, travelTime) .easing(TWEEN.Easing.Quadratic.Out) .onUpdate(() => { if(shootingStar.material.opacity > 0.01) shootingStar.material.opacity *= 0.985; }) .onComplete(() => { if(self.scene) self.scene.remove(shootingStar); if(shootingStar.geometry)shootingStar.geometry.dispose(); if(shootingStar.material)shootingStar.material.dispose(); }) .start(); 
+                    self.shootingStarTimeoutIdHyper = setTimeout(createShootingStar, rand(2000, 5000));
+                }
+
+                self.skydomeTargetColors = { top: getRandomVibrantThreeColor(), middle: getRandomVibrantThreeColor(), bottom: getRandomVibrantThreeColor() };
+                self.skydomeCurrentColors = { top: self.skydomeTargetColors.top.clone(), middle: self.skydomeTargetColors.middle.clone(), bottom: self.skydomeTargetColors.bottom.clone() };
+                self.skydomeColorChangeTime = 0; const SKYDOME_COLOR_DURATION = 15000;
+
+                function createSkydome() {
+                    if(!self.scene) return;
+                    self.skydomeGeometry = new THREE.SphereGeometry(STARFIELD_BOUNDS * 0.95, 32, 24); self.skydomeGeometry.scale(-1, 1, 1); 
+                    const skydomeMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide });
+                    self.skydome = new THREE.Mesh(self.skydomeGeometry, skydomeMaterial); self.scene.add(self.skydome);
+                    self.scene.fog = new THREE.FogExp2(0x000000, 0.003); 
+                    updateSkydomeColors(true);
+                }
+                function updateSkydomeColors(forceImmediate = false) {
+                    if (!self.skydomeGeometry || !self.scene) return;
+                    const now = Date.now();
+                    if (now - self.skydomeColorChangeTime > SKYDOME_COLOR_DURATION || forceImmediate) { self.skydomeTargetColors.top = getRandomVibrantThreeColor(); self.skydomeTargetColors.middle = getRandomVibrantThreeColor(); self.skydomeTargetColors.bottom = getRandomVibrantThreeColor(); self.skydomeColorChangeTime = now; }
+                    self.skydomeCurrentColors.top.lerp(self.skydomeTargetColors.top, 0.01); self.skydomeCurrentColors.middle.lerp(self.skydomeTargetColors.middle, 0.01); self.skydomeCurrentColors.bottom.lerp(self.skydomeTargetColors.bottom, 0.01);
+                    const positions = self.skydomeGeometry.attributes.position.array; const vertexColors = []; const tempColor = new THREE.Color();
+                    for (let i = 0; i < positions.length / 3; i++) { const y = self.skydomeGeometry.attributes.position.getY(i); const normalizedY = (y / (STARFIELD_BOUNDS * 0.95) + 1) / 2; if (normalizedY > 0.5) { tempColor.copy(self.skydomeCurrentColors.middle).lerp(self.skydomeCurrentColors.top, (normalizedY - 0.5) * 2); } else { tempColor.copy(self.skydomeCurrentColors.bottom).lerp(self.skydomeCurrentColors.middle, normalizedY * 2); } vertexColors.push(tempColor.r, tempColor.g, tempColor.b); }
+                    if (self.skydomeGeometry.attributes.color) self.skydomeGeometry.attributes.color.needsUpdate = false; // dispose existing one if any?
+                    self.skydomeGeometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3)); self.skydomeGeometry.attributes.color.needsUpdate = true;
+                }
+                
+                createSkydome();
+
+                class Manager { 
+                    constructor() { self.activeShapes = []; this.scenarioDuration = 10000; this.scenarioStartTime = 0; this.availableScenarios = ['ALL_TOGETHER', 'FLOWERS_ONLY', 'HEARTS_ONLY', 'PEACE_SIGNS_ONLY', 'SMILEYS_ONLY']; this.currentScenario = ''; this.shapesPerTypeInAllMode = 3; this.shapesInSingleMode = 12; this.switchScenario(); }
+                    switchScenario() { if(self.activeShapes) self.activeShapes.forEach(shape => shape.destroy()); self.activeShapes = []; let nextScenario; if (this.availableScenarios.length > 1) { do { nextScenario = this.availableScenarios[randInt(0, this.availableScenarios.length)]; } while (nextScenario === this.currentScenario); } else { nextScenario = this.availableScenarios[0]; } this.currentScenario = nextScenario; this.scenarioStartTime = Date.now(); this.populateShapesForCurrentScenario(); }
+                    populateShapesForCurrentScenario() { switch(this.currentScenario) { case 'ALL_TOGETHER': for(let i=0; i < this.shapesPerTypeInAllMode; i++) { self.activeShapes.push(new Flower3D()); self.activeShapes.push(new Heart3D()); self.activeShapes.push(new PeaceSign3D()); self.activeShapes.push(new HappyFace3D()); } break; case 'FLOWERS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) self.activeShapes.push(new Flower3D()); break; case 'HEARTS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) self.activeShapes.push(new Heart3D()); break; case 'PEACE_SIGNS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) self.activeShapes.push(new PeaceSign3D()); break; case 'SMILEYS_ONLY': for(let i=0; i < this.shapesInSingleMode; i++) self.activeShapes.push(new HappyFace3D()); break; } }
+                    animateLoop() { if (!self.renderer) return; self.animationFrameId = requestAnimationFrame(() => this.animateLoop()); TWEEN.update(); updateSkydomeColors(); if (Date.now() - this.scenarioStartTime > this.scenarioDuration) { this.switchScenario(); } if(self.activeShapes) self.activeShapes.forEach(shape => { shape.move(); }); if(self.mainLight) {self.mainLight.position.x = Math.sin(Date.now() * 0.00025) * 25; self.mainLight.position.y = Math.cos(Date.now() * 0.00035) * 25;} if(self.renderer && self.scene && self.camera) self.renderer.render(self.scene, self.camera); }
+                }
+                
+                createStarfield();
+                createShootingStar();
+                self.managerInstance = new Manager();
+                self.managerInstance.animateLoop();
+            },
+            destroy: function() {
+                if(this.shootingStarTimeoutIdHyper) clearTimeout(this.shootingStarTimeoutIdHyper);
+                this.shootingStarTimeoutIdHyper = null;
+                if (this.skydome && this.skydome.geometry) this.skydome.geometry.dispose();
+                if (this.skydome && this.skydome.material) this.skydome.material.dispose();
+                this.skydome = null;
+                this.skydomeGeometry = null;
+                cleanupThreeJsAnimation(this);
+                this.managerInstance = null;
+            }
+        };
+
+        // --- Animation Module: 2D Pygame-Style (Converted from 3in1-3.py) ---
+        animationModules["2dPygameStyle"] = {
+            init: function(container) {
+                this.container = container;
+                this.canvas = document.createElement('canvas');
+                this.container.appendChild(this.canvas);
+                this.ctx = this.canvas.getContext('2d');
+                
+                const self = this;
+                self.width = 0; self.height = 0;
+
+                function localResizePygame() {
+                    self.width = self.canvas.width = self.container.offsetWidth;
+                    self.height = self.canvas.height = self.container.offsetHeight;
+                }
+                self.resizeListener = localResizePygame;
+                window.addEventListener('resize', self.resizeListener);
+                localResizePygame();
+
+                self.COLORS_PYGAME = [ "rgb(255,0,0)", "rgb(0,255,0)", "rgb(0,0,255)", "rgb(255,255,0)", "rgb(255,165,0)", "rgb(255,192,203)", "rgb(128,0,128)", "rgb(0,255,255)", "rgb(255,20,147)", "rgb(75,0,130)" ];
+                function getRandomPygameColor() { return self.COLORS_PYGAME[Math.floor(Math.random() * self.COLORS_PYGAME.length)]; }
+
+                class PygameFlower {
+                    constructor() { this.x = Math.random() * self.width; this.y = Math.random() * self.height; this.size = Math.random() * 55 + 25; this.petal_color = getRandomPygameColor(); this.center_color = getRandomPygameColor(); this.speed = Math.random() * 1.5 + 0.5; this.angle = Math.random() * 2 * Math.PI; this.rotation = 0; this.rotation_speed = Math.random() * 0.1 - 0.05; this.petals = Math.floor(Math.random() * 6) + 3; }
+                    move() { this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed; this.rotation += this.rotation_speed; return !(0 <= this.x && this.x <= self.width && 0 <= this.y && this.y <= self.height); }
+                    draw(ctx) { const petal_radius = this.size / 3; ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation); for (let i = 0; i < this.petals; i++) { const angle = 2 * Math.PI * i / this.petals; const petal_x = Math.cos(angle) * this.size / 2; const petal_y = Math.sin(angle) * this.size / 2; ctx.beginPath(); ctx.fillStyle = this.petal_color; ctx.arc(petal_x, petal_y, petal_radius, 0, 2 * Math.PI); ctx.fill(); } ctx.beginPath(); ctx.fillStyle = this.center_color; ctx.arc(0, 0, this.size / 4, 0, 2 * Math.PI); ctx.fill(); ctx.restore(); }
+                }
+                class PygameHeart {
+                    constructor() { this.x = Math.random() * (self.width - 200) + 100; this.y = Math.random() * (self.height - 200) + 100; this.scale = Math.random() * 0.4 + 0.1; this.color = getRandomPygameColor(); this.filled = Math.random() < 0.5; this.dx = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 2 + 1); this.dy = (Math.random() < 0.5 ? -1 : 1) * (Math.random() * 2 + 1); this.rotation = 0; this.rotation_speed = Math.random() * 0.1 - 0.05; }
+                    move() { this.x += this.dx; this.y += this.dy; this.rotation += this.rotation_speed; return !(-50 <= this.x && this.x <= self.width + 50 && -50 <= this.y && this.y <= self.height + 50); }
+                    draw(ctx) { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation); ctx.beginPath(); const points = []; for (let t_deg = 0; t_deg < 360; t_deg++) { const t = t_deg * Math.PI / 180; const x_pos = 16 * Math.pow(Math.sin(t), 3); const y_pos = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t); points.push({x: this.scale * x_pos * 10, y: -this.scale * y_pos * 10}); } ctx.moveTo(points[0].x, points[0].y); for(let i = 1; i < points.length; i++) { ctx.lineTo(points[i].x, points[i].y); } ctx.closePath(); if (this.filled) { ctx.fillStyle = this.color; ctx.fill(); } else { ctx.strokeStyle = this.color; ctx.lineWidth = 2; ctx.stroke(); } ctx.restore(); }
+                }
+                class PygamePeaceSign {
+                    constructor() { this.x = Math.random() < 0.5 ? -50 : self.width + 50; this.y = Math.random() < 0.5 ? -50 : self.height + 50; this.size = Math.random() * 55 + 25; this.color = `rgb(${Math.floor(Math.random()*256)},${Math.floor(Math.random()*256)},${Math.floor(Math.random()*256)})`; this.outline_color = `rgb(${Math.floor(Math.random()*256)},${Math.floor(Math.random()*256)},${Math.floor(Math.random()*256)})`; this.angle_deg = 0; this.rotation_speed_deg = Math.random() * 4 - 2; this.speed_x = Math.random() * 6 - 3; this.speed_y = Math.random() * 6 - 3; this.circle_thickness = Math.random() * 2 + 10; this.outline_width = this.circle_thickness + 2; }
+                    move() { this.x += this.speed_x; this.y += this.speed_y; this.angle_deg = (this.angle_deg + this.rotation_speed_deg) % 360; return !(-this.size <= this.x && this.x <= self.width + this.size && -this.size <= this.y && this.y <= self.height + this.size); }
+                    draw(ctx) { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle_deg * Math.PI / 180); ctx.lineWidth = this.circle_thickness; ctx.strokeStyle = this.color; ctx.beginPath(); ctx.arc(0, 0, this.size, 0, 2 * Math.PI); ctx.stroke(); ctx.lineWidth = this.outline_width; ctx.strokeStyle = this.outline_color; ctx.beginPath(); ctx.arc(0, 0, this.size + (this.outline_width-this.circle_thickness)/2, 0, 2 * Math.PI); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, -this.size); ctx.lineTo(0, 0); ctx.stroke(); ctx.lineWidth = this.circle_thickness; ctx.strokeStyle = this.color; ctx.beginPath(); ctx.moveTo(0, -this.size); ctx.lineTo(0, 0); ctx.stroke(); for (let angle_diag of [-40, 40]) { const rad_diag = angle_diag * Math.PI / 180; const endX = this.size * Math.sin(rad_diag); const endY = this.size * Math.cos(rad_diag); ctx.lineWidth = this.outline_width; ctx.strokeStyle = this.outline_color; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(endX, endY); ctx.stroke(); ctx.lineWidth = this.circle_thickness; ctx.strokeStyle = this.color; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(endX, endY); ctx.stroke(); } ctx.restore(); }
+                }
+                class PygameHappyFace {
+                    constructor() { this.size = Math.random() * 55 + 25; this.colors = { head: getRandomPygameColor(), eyes: getRandomPygameColor(), smile: getRandomPygameColor(), head_outline: getRandomPygameColor(), eye_outline: getRandomPygameColor() }; this.angle_deg = Math.random() * 360; this.speed = Math.random() + 1; this.rotation_direction = Math.random() < 0.5 ? -1 : 1; this.rotation_speed_deg = Math.random() * 2 + 1; this._initialize_position(); }
+                    _initialize_position() { const max_size = this.size * 2; const perimeter_position = Math.random() * 2 * (self.width + self.height); if (perimeter_position < self.width) { this.x = perimeter_position; this.y = -max_size; this.dy = this.speed; this.dx = (Math.random() < 0.5 ? -1 : 1) * this.speed; } else if (perimeter_position < self.width + self.height) { this.x = self.width + max_size; this.y = perimeter_position - self.width; this.dx = -this.speed; this.dy = (Math.random() < 0.5 ? -1 : 1) * this.speed; } else if (perimeter_position < 2 * self.width + self.height) { this.x = perimeter_position - (self.width + self.height); this.y = self.height + max_size; this.dy = -this.speed; this.dx = (Math.random() < 0.5 ? -1 : 1) * this.speed; } else { this.x = -max_size; this.y = perimeter_position - (2 * self.width + self.height); this.dx = this.speed; this.dy = (Math.random() < 0.5 ? -1 : 1) * this.speed; } }
+                    move() { this.x += this.dx; this.y += this.dy; this.angle_deg = (this.angle_deg + (this.rotation_speed_deg * this.rotation_direction)) % 360; const max_size = this.size * 2; return !(-max_size <= this.x && this.x <= self.width + max_size && -max_size <= this.y && this.y <= self.height + max_size); }
+                    draw(ctx) { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle_deg * Math.PI / 180); ctx.fillStyle = this.colors.head; ctx.strokeStyle = this.colors.head_outline; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, this.size, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); const eye_radius = this.size / 5; const eye_offset = this.size / 3; const eye_y = -eye_offset; for (let eye_x_mult of [-1, 1]) { const eye_x = eye_x_mult * eye_offset; ctx.fillStyle = this.colors.eyes; ctx.strokeStyle = this.colors.eye_outline; ctx.beginPath(); ctx.arc(eye_x, eye_y, eye_radius, 0, 2 * Math.PI); ctx.fill(); ctx.stroke(); } ctx.strokeStyle = this.colors.smile; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, this.size / 2, Math.PI * 0.25, Math.PI * 0.75); ctx.stroke(); ctx.restore(); }
+                }
+
+                class PygameAnimationManager {
+                    constructor() { this.shapes = []; this.spawn_timer = Date.now(); this.next_spawn_time = Math.random() * 0; this.background_color = "rgb(0,0,0)"; this.background_color_target = this.get_random_color_local(); this.background_transition_time = 5000; this.background_transition_start = Date.now(); this.mode_duration = 20000; this.mode_start_time = Date.now(); this.available_shapes_pygame = [PygameFlower, PygameHeart, PygamePeaceSign, PygameHappyFace]; this.current_mode_index = 0; this.initialize_shapes(); }
+                    get_random_color_local() { return `rgb(${Math.floor(Math.random()*256)},${Math.floor(Math.random()*256)},${Math.floor(Math.random()*256)})`; }
+                    initialize_shapes() { this.shapes = []; if (this.current_mode_index === 0) { for (let i = 0; i < 5; i++) { for (let ShapeClass of this.available_shapes_pygame) { this.shapes.push(new ShapeClass()); } } } else { const ShapeClass = this.available_shapes_pygame[this.current_mode_index - 1]; for (let i = 0; i < 10; i++) { this.shapes.push(new ShapeClass()); } } }
+                    update_mode() { const current_time = Date.now(); if (current_time - this.mode_start_time > this.mode_duration) { this.current_mode_index = (this.current_mode_index + 1) % (this.available_shapes_pygame.length + 1); this.mode_start_time = current_time; this.initialize_shapes(); } }
+                    update_background() { const current_time = Date.now(); if (current_time - this.background_transition_start > this.background_transition_time) { this.background_color = this.background_color_target; this.background_color_target = this.get_random_color_local(); this.background_transition_start = current_time; } else { const progress = (current_time - this.background_transition_start) / this.background_transition_time; const startRGBMatch = this.background_color.match(/\d+/g); const targetRGBMatch = this.background_color_target.match(/\d+/g); if(startRGBMatch && targetRGBMatch){ const startRGB = startRGBMatch.map(Number); const targetRGB = targetRGBMatch.map(Number); const currentRGB = startRGB.map((start, i) => Math.floor(start + (targetRGB[i] - start) * progress)); this.background_color = `rgb(${currentRGB.join(',')})`; } else { this.background_color = this.background_color_target; /* fallback */ } } }
+                    update() { this.update_mode(); const current_time = Date.now(); if (current_time - this.spawn_timer > this.next_spawn_time) { let new_shape; if (this.current_mode_index === 0) { new_shape = new (this.available_shapes_pygame[Math.floor(Math.random() * this.available_shapes_pygame.length)])(); } else { new_shape = new (this.available_shapes_pygame[this.current_mode_index - 1])(); } this.shapes.push(new_shape); this.next_spawn_time = Math.random() * 0 + 25000; this.spawn_timer = current_time; } for (let i = this.shapes.length - 1; i >= 0; i--) { if (this.shapes[i].move()) { this.shapes.splice(i, 1); let new_shape_replace; if (this.current_mode_index === 0) { new_shape_replace = new (this.available_shapes_pygame[Math.floor(Math.random() * this.available_shapes_pygame.length)])(); } else { new_shape_replace = new (this.available_shapes_pygame[this.current_mode_index - 1])(); } this.shapes.push(new_shape_replace); } } this.update_background(); }
+                    draw(ctx) { if(!ctx || !self.canvas) return; ctx.fillStyle = this.background_color; ctx.fillRect(0, 0, self.width, self.height); this.shapes.forEach(shape => shape.draw(ctx)); }
+                }
+                
+                self.managerInstancePygame = new PygameAnimationManager();
+                function animatePygame() {
+                    if(!self.managerInstancePygame || !self.canvas) return; // Guard against destroyed state
+                    self.managerInstancePygame.update();
+                    self.managerInstancePygame.draw(self.ctx);
+                    self.animationFrameId = requestAnimationFrame(animatePygame);
+                }
+                animatePygame();
+            },
+            destroy: function() {
+                if (this.animationFrameId) { cancelAnimationFrame(this.animationFrameId); this.animationFrameId = null; }
+                if (this.resizeListener) { window.removeEventListener('resize', this.resizeListener); this.resizeListener = null;}
+                if (this.canvas && this.canvas.parentElement) { this.canvas.parentElement.removeChild(this.canvas); }
+                this.managerInstancePygame = null; this.canvas = null; this.ctx = null;
+            }
+        };
+
+        // --- Initial Start ---
+        if (Object.keys(animationModules).length > 0) {
+            switchToRandomAnimation(); 
+        } else {
+            animationContainer.innerHTML = "<p style='padding:20px; text-align:center;'>No animations loaded. Please check the script.</p>";
+        }
+
+    </script>
+</body>
+</html>
