@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heart Fireworks Screensaver</title>
+  <style>
+    /* Full-screen black canvas with hidden overflow and no cursor */
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+      cursor: none;
+    }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // === Resize canvas to fill window ===
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // === Utility: Random within range ===
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    // === Heart drawing (same Bézier approach) ===
+    function drawHeart(ctx, x, y, size) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.bezierCurveTo(x - size / 2, y - size / 2, x - size, y + size / 3, x, y + size);
+      ctx.bezierCurveTo(x + size, y + size / 3, x + size / 2, y - size / 2, x, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // === Particle for trails & stars ===
+    class Particle {
+      constructor(x, y, dx, dy, size, life, hue) {
+        this.x = x;
+        this.y = y;
+        this.dx = dx;
+        this.dy = dy;
+        this.size = size;
+        this.life = life;       // lifespan in frames
+        this.remaining = life;  // remaining life
+        this.hue = hue;
+      }
+      update() {
+        // apply velocity
+        this.x += this.dx;
+        this.y += this.dy;
+        // gravity helps hearts later; trails ignore gravity
+        this.remaining--;
+      }
+      draw() {
+        // fade out alpha with life
+        const alpha = Math.max(this.remaining / this.life, 0);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = `hsl(${this.hue},100%,80%)`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      isDead() {
+        return this.remaining <= 0;
+      }
+    }
+
+    // === Firework shell class ===
+    class Firework {
+      constructor() {
+        // spawn at bottom, random X
+        this.x = rand(50, canvas.width - 50);
+        this.y = canvas.height + 10;
+        this.dx = rand(-0.5, 0.5);
+        this.dy = rand(-8, -12);  // upward velocity
+        this.hue = rand(0, 360);
+        this.trail = [];  // will hold tiny trail particles
+        this.exploded = false;
+      }
+      update() {
+        if (!this.exploded) {
+          // emit a tiny trail particle each frame
+          this.trail.push(new Particle(
+            this.x, this.y,
+            rand(-1,1), rand(-1,1),
+            2, 30, this.hue
+          ));
+
+          // update position
+          this.x += this.dx;
+          this.y += this.dy;
+          // gravity slows ascent
+          this.dy += 0.2;
+
+          // apex detection: when upward velocity reduces to ~0
+          if (this.dy >= 0) {
+            this.explode();
+            this.exploded = true;
+          }
+        }
+
+        // update all trail particles
+        this.trail.forEach(p => p.update());
+        // remove dead trails
+        this.trail = this.trail.filter(p => !p.isDead());
+      }
+      draw() {
+        // draw trails with additive blending for glow
+        ctx.globalCompositeOperation = 'lighter';
+        this.trail.forEach(p => p.draw());
+        ctx.globalCompositeOperation = 'source-over';
+
+        if (!this.exploded) {
+          // draw the ascending shell
+          ctx.fillStyle = `hsl(${this.hue},100%,50%)`;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      explode() {
+        // On explosion, generate hearts in radial burst
+        const count = rand(30, 50) | 0;
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 / count) * i;
+          const speed = rand(2,6);
+          const h = new Heart(
+            this.x, this.y,
+            Math.cos(angle)*speed, Math.sin(angle)*speed,
+            this.hue
+          );
+          hearts.push(h);
+        }
+      }
+      isDone() {
+        // done when all trails have faded post-explosion
+        return this.exploded && this.trail.length === 0;
+      }
+    }
+
+    // === Heart particle with physics ===
+    class Heart {
+      constructor(x, y, dx, dy, hue) {
+        this.x = x;
+        this.y = y;
+        this.dx = dx;
+        this.dy = dy;
+        this.hue = hue;
+        this.size = rand(8, 20);
+        this.pulsePhase = rand(0, Math.PI*2);
+        this.pulseSpeed = rand(0.05, 0.15);
+      }
+      update() {
+        // apply gravity
+        this.dy += 0.05;
+        // apply drag
+        this.dx *= 0.99;
+        this.dy *= 0.99;
+
+        this.x += this.dx;
+        this.y += this.dy;
+
+        // pulse size
+        this.pulsePhase += this.pulseSpeed;
+      }
+      draw() {
+        const pulse = this.size * (1 + Math.sin(this.pulsePhase)*0.2);
+        // glow shadow
+        ctx.shadowBlur = pulse * 0.6;
+        ctx.shadowColor = `hsl(${this.hue},100%,50%)`;
+        // heart gradient
+        const grad = ctx.createRadialGradient(
+          this.x - pulse*0.3, this.y - pulse*0.3, pulse*0.1,
+          this.x, this.y, pulse
+        );
+        grad.addColorStop(0, '#fff');
+        grad.addColorStop(0.3, `hsl(${this.hue},100%,60%)`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        drawHeart(ctx, this.x, this.y - pulse/4, pulse);
+        // reset shadow
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // === Stars background ===
+    const stars = [];
+    for (let i = 0; i < 200; i++) {
+      stars.push(new Particle(
+        rand(0,canvas.width), rand(0,canvas.height),
+        0,0, rand(0.5,1.5),Infinity, rand(200,360)
+      ));
+    }
+
+    // === Main animation arrays ===
+    const fireworks = [];
+    const hearts = [];
+    let timer = 0;
+
+    // === Animation loop ===
+    function animate() {
+      // draw background gradient
+      const gradBG = ctx.createLinearGradient(0,0,0,canvas.height);
+      gradBG.addColorStop(0, '#001');
+      gradBG.addColorStop(1, '#000');
+      ctx.fillStyle = gradBG;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+
+      // draw twinkling stars
+      stars.forEach(s => s.draw());
+
+      // spawn new fireworks every 60-120 frames (~1-2s)
+      if (timer-- <= 0) {
+        fireworks.push(new Firework());
+        timer = rand(60,120)|0;
+      }
+
+      // update & draw fireworks
+      for (let i = fireworks.length-1; i >= 0; i--) {
+        fireworks[i].update();
+        fireworks[i].draw();
+        if (fireworks[i].isDone()) fireworks.splice(i,1);
+      }
+
+      // update & draw hearts
+      for (let i = hearts.length-1; i >= 0; i--) {
+        hearts[i].update();
+        hearts[i].draw();
+        // remove if fallen off screen bottom
+        if (hearts[i].y - hearts[i].size > canvas.height) hearts.splice(i,1);
+      }
+
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    // === Click to launch custom firework ===
+    document.addEventListener('click', e => {
+      const fw = new Firework();
+      fw.x = e.clientX;
+      fw.y = canvas.height + 10;
+      fw.dy = rand(-10,-14);
+      fireworks.push(fw);
+    });
+  </script>
+</body>
+</html>
