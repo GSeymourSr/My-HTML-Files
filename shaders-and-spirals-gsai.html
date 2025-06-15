@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Shadies & Fuse2 Combined Animation - Blended</title>
+  <style>
+    /* --- Global Resets & Page Setup --- */
+    html, body {
+      margin: 0; /* Remove default browser margins */
+      padding: 0; /* Remove default browser padding */
+      width: 100%; /* Ensure full viewport width */
+      height: 100%; /* Ensure full viewport height */
+      overflow: hidden; /* Prevent scrollbars, as content is full-screen canvas */
+      background: #000; /* Default background color, visible if canvases are transparent or not covering */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* A more modern sans-serif font stack */
+      color: #fff; /* Default text color for any GUI elements not specifically styled */
+      touch-action: none; /* Prevent pull-to-refresh and other touch gestures on the body */
+    }
+
+    /* --- Canvas Styling --- */
+    .fullscreen-canvas {
+      display: block; /* Canvases are block elements to take up full width */
+      width: 100%;
+      height: 100%;
+      position: absolute; /* Positioned relative to the body */
+      top: 0;
+      left: 0;
+      cursor: none; /* Hide cursor on canvases */
+    }
+    #shaderCanvas { z-index: 1; }
+    #spiralsCanvas { z-index: 2; }
+
+    /* --- Title Overlay Styles (from File B) --- */
+    #titleOverlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.95); color: #fff;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      text-align: center; z-index: 10000; /* Ensure on top */
+      opacity: 1; transition: opacity 1s ease-out;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px; box-sizing: border-box;
+      pointer-events: none; /* Default to no interaction */
+    }
+    #titleOverlay.interactive {
+        pointer-events: auto; /* Allow interaction when class is present */
+    }
+    #titleOverlay h1 { font-size: 2.5em; margin-bottom: 15px; line-height: 1.2; }
+    #titleOverlay p { font-size: 1.2em; margin-bottom: 8px; }
+    #titleOverlay ul { list-style: none; padding: 0; font-size: 0.9em; }
+    #titleOverlay ul li { margin-bottom: 4px; }
+    @media (max-width: 600px) { /* Adjust for smaller screens */
+        #titleOverlay h1 { font-size: 1.8em; }
+        #titleOverlay p { font-size: 1em; }
+        #titleOverlay ul { font-size: 0.8em; }
+    }
+  </style>
+</head>
+<body>
+  <div id="titleOverlay">
+    <h1>Psychedelic Fun by: GregSeymourAI</h1>
+    <p>Controls:</p>
+    <ul>
+      <li>1: Shaders Only</li>
+      <li>2: Spirals Only</li>
+      <li>3: Blend Both</li>
+      <li>4: Shaders Surprise Preset</li>
+      <li>5: Spirals Surprise Preset</li>
+      <li>6: Blended Surprise Preset</li>
+      <li>N: Cycle Visual Mode</li>
+      <li>Space / Touch: Random Mode & Visuals</li>
+      <li>R (Spirals Active): Randomize Spirals</li>
+      <li>P (Spirals Active): Spirals Party Mode</li>
+      <li>Mouse Move: Show this info</li>
+    </ul>
+  </div>
+
+  <!-- Canvas for Shadies WebGL rendering -->
+  <canvas id="shaderCanvas" class="fullscreen-canvas"></canvas>
+  <!-- Canvas for Fuse2 2D rendering -->
+  <canvas id="spiralsCanvas" class="fullscreen-canvas"></canvas>
+
+  <!-- Vertex Shader (from File A - identical in B) -->
+  <script id="vertexShader" type="x-shader/x-vertex">
+    attribute vec2 aVertexPosition;
+    void main() {
+      gl_Position = vec4(aVertexPosition, 0.0, 1.0);
+    }
+  </script>
+
+  <!-- Fragment Shader (Extended version from File B) -->
+  <script id="fragmentShader" type="x-shader/x-fragment">
+    precision highp float;uniform vec2 uResolution;uniform float uTime;uniform float uIterations;uniform float uColorShift;uniform float uZoom;uniform vec3 uColor1;uniform vec3 uColor2;uniform vec3 uColor3;uniform vec3 uColor4;uniform float uMirrors;uniform float uRotation;uniform float uRotation2;uniform float uPulse;uniform float uPulseSpeed;uniform float uLayerMix;uniform float uWaveAmplitude;uniform float uWaveFrequency;uniform float uSwirl;uniform float uEffectMode;vec3 palette(float t){vec3 a=uColor1;vec3 b=uColor2;vec3 c=uColor3;vec3 d=uColor4;return a+b*cos(6.28318*(c*t+d));}void main(){vec2 uv=(gl_FragCoord.xy*2.0-uResolution.xy)/uResolution.y;float pulse=1.0+sin(uTime*uPulseSpeed)*uPulse;uv*=pulse;vec2 uv1=uv;vec2 uv2=uv;float cosRot1=cos(uRotation);float sinRot1=sin(uRotation);uv1=mat2(cosRot1,-sinRot1,sinRot1,cosRot1)*uv1;float cosRot2=cos(uRotation2);float sinRot2=sin(uRotation2);uv2=mat2(cosRot2,-sinRot2,sinRot2,cosRot2)*uv2;float mixFactor=smoothstep(0.0,1.0,length(uv))*uLayerMix;uv=mix(uv1,uv2,mixFactor);uv*=uZoom;float angle=atan(uv.y,uv.x);float dist=length(uv);float sector=6.28318/uMirrors;angle=mod(angle,sector);if(mod(floor(atan(uv.y,uv.x)/sector),2.0)==1.0)angle=sector-angle;uv=vec2(cos(angle),sin(angle))*dist;if(uEffectMode<100.0){if(uEffectMode<1.0){}else if(uEffectMode<2.0){uv.x+=sin(uv.y*uWaveFrequency+uTime)*uWaveAmplitude;uv.y+=cos(uv.x*uWaveFrequency+uTime)*uWaveAmplitude;}else if(uEffectMode<3.0){float swirlAngle=uSwirl*sin(uTime*0.5);uv=mat2(cos(swirlAngle),-sin(swirlAngle),sin(swirlAngle),cos(swirlAngle))*uv;}else if(uEffectMode<4.0){float r=length(uv);float a=atan(uv.y,uv.x);a+=sin(r*10.0+uTime)*0.5;uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<5.0){uv+=vec2(sin(uTime*5.0),cos(uTime*5.0))*0.05;}else if(uEffectMode<6.0){uv=vec2(1.0)-uv;}else if(uEffectMode<7.0){uv*=(1.0+0.3*sin(uTime*2.0));}else if(uEffectMode<8.0){float t=atan(uv.y,uv.x)+sin(uv.x*10.0+uTime)*0.2;float r=length(uv);uv=vec2(cos(t),sin(t))*r;}else if(uEffectMode<9.0){uv=floor(uv*10.0)/10.0;}else if(uEffectMode<10.0){uv+=0.1*vec2(sin(uv.y*20.0+uTime),cos(uv.x*20.0+uTime));}else if(uEffectMode<11.0){float r=length(uv);uv=normalize(uv)*pow(r,0.8);}else if(uEffectMode<12.0){float angle2=sin(uTime+length(uv)*10.0)*0.5;uv=mat2(cos(angle2),-sin(angle2),sin(angle2),cos(angle2))*uv;}else if(uEffectMode<13.0){float a=atan(uv.y,uv.x);float r=length(uv);a+=exp(-r)*0.5;uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<14.0){uv=fract(uv*5.0)-0.5;}else if(uEffectMode<15.0){uv=mix(uv,vec2(uv.y,uv.x),step(uv.x,uv.y));}else if(uEffectMode<16.0){uv.x*=sin(uTime+uv.y*5.0)*1.5;}else if(uEffectMode<17.0){uv.y*=cos(uTime+uv.x*5.0)*1.5;}else if(uEffectMode<18.0){float r=length(uv);float a=atan(uv.y,uv.x)+uTime*0.3;uv=vec2(cos(a),sin(a))*sqrt(r);}else if(uEffectMode<19.0){uv+=0.1*vec2(sin(uv.x*15.0+uTime),cos(uv.y*15.0+uTime));}else if(uEffectMode<20.0){uv=abs(sin(uv+uTime));}else if(uEffectMode<21.0){float a=atan(uv.y,uv.x);float r=length(uv)+0.1*sin(10.0*a+uTime);uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<22.0){for(int i=0;i<3;i++){uv=fract(uv*1.5)-0.5;}}else if(uEffectMode<23.0){uv+=0.05*vec2(fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453),fract(cos(dot(uv,vec2(12.9898,78.233)))*43758.5453));}else if(uEffectMode<24.0){uv=vec2(1.0)-uv+0.1*sin(uTime+uv.x*10.0);}else if(uEffectMode<25.0){float r=length(uv);float a=atan(uv.y,uv.x)+uTime;uv=vec2(cos(a),sin(a))*pow(r,0.9);}else if(uEffectMode<26.0){uv=vec2(uv.x+0.3*uv.y,uv.y+0.3*uv.x);}else if(uEffectMode<27.0){uv+=0.1*sin(uv*10.0+uTime);}else if(uEffectMode<28.0){float r=length(uv);uv=uv/(r+0.5);}else if(uEffectMode<29.0){uv=abs(uv);}else if(uEffectMode<30.0){uv=mat2(cos(uTime*0.5),-sin(uTime*0.5),sin(uTime*0.5),cos(uTime*0.5))*uv;uv+=0.05*vec2(sin(uv.y*20.0),cos(uv.x*20.0));}else if(uEffectMode<31.0){uv+=0.05*sin(vec2(uv.x*15.0,uv.y*15.0)+uTime);}else if(uEffectMode<32.0){uv.x+=sin(uv.y*20.0)*0.1;uv.y+=sin(uv.x*20.0)*0.1;}else if(uEffectMode<33.0){uv+=0.1*normalize(uv)*sin(5.0*length(uv)-uTime);}else if(uEffectMode<34.0){float r=length(uv);float a=atan(uv.y,uv.x)+log(r+1.0)*0.5;uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<35.0){uv=vec2(sin(uv.x+uTime),sin(uv.y+uTime));}else if(uEffectMode<36.0){uv+=0.05*sin(vec2(uv.x*20.0,uv.y*20.0)+uTime);}else if(uEffectMode<37.0){uv=fract(uv*6.0)-0.5;}else if(uEffectMode<38.0){uv=abs(uv);float a=atan(uv.y,uv.x)+uTime;float r=length(uv);uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<39.0){uv.x*=sin(uTime+uv.y*7.0)*1.5;}else if(uEffectMode<40.0){uv.y*=cos(uTime+uv.x*7.0)*1.5;}else if(uEffectMode<41.0){uv=mat2(cos(uTime+length(uv)),-sin(uTime+length(uv)),sin(uTime+length(uv)),cos(uTime+length(uv)))*uv;}else if(uEffectMode<42.0){float a=atan(uv.y,uv.x)+sin(uTime+length(uv)*10.0)*0.5;float r=length(uv);uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<43.0){uv+=0.1*vec2(sin(uv.y*10.0+uTime),cos(uv.x*10.0+uTime));}else if(uEffectMode<44.0){uv+=0.05*vec2(fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453),fract(cos(dot(uv,vec2(12.9898,78.233)))*43758.5453));}else if(uEffectMode<45.0){float r=length(uv);uv=normalize(uv)*sqrt(r);}else if(uEffectMode<46.0){uv=abs(uv);}else if(uEffectMode<47.0){float a=sin(uTime+uv.x*3.0)*0.5;uv=mat2(cos(a),-sin(a),sin(a),cos(a))*uv;uv+=0.1*sin(uv*10.0+uTime);}else if(uEffectMode<48.0){uv+=0.2*vec2(sin(uv.y*20.0+uTime),sin(uv.x*20.0+uTime));}else if(uEffectMode<49.0){uv+=0.1*sin(uv.yx*20.0+uTime);}else if(uEffectMode<50.0){float r=length(uv);float a=atan(uv.y,uv.x)+uTime*0.5;uv=vec2(cos(a),sin(a))*(r+0.2*sin(r*10.0-uTime));}else if(uEffectMode<51.0){uv=abs(fract(uv*4.0)-0.5)*2.0-1.0;uv+=0.1*sin(uTime+uv.x+uv.y);}else if(uEffectMode<52.0){float d=length(uv);uv*=1.0+0.5*smoothstep(0.0,0.5,d)*sin(uTime*2.0);}else if(uEffectMode<53.0){uv+=0.2*vec2(sin(uTime*3.0+uv.y*10.0),cos(uTime*3.0+uv.x*10.0));}else if(uEffectMode<54.0){uv+=0.05*vec2(sin(uv.y*20.0+uTime*2.0),cos(uv.x*20.0+uTime*2.0));}else if(uEffectMode<55.0){uv=floor(uv*20.0)/20.0;uv+=0.1*(fract(sin(uTime+uv.x*50.0)*43758.5453)-0.5);}else if(uEffectMode<56.0){float a=atan(uv.y,uv.x);float r=length(uv);a=mod(a*6.0,3.14159);uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<57.0){uv=fract(uv*5.0)-0.5;uv+=0.05*sin(uTime+uv.x+uv.y);}else if(uEffectMode<58.0){float r=length(uv);float a=atan(uv.y,uv.x);uv.x+=0.1*sin(a*4.0+uTime);uv.y+=0.1*cos(a*4.0+uTime);}else if(uEffectMode<59.0){uv+=0.1*vec2(fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453),fract(cos(dot(uv,vec2(12.9898,78.233)))*43758.5453))-0.05;}else if(uEffectMode<60.0){float r=length(uv);float a=atan(uv.y,uv.x)+uTime+0.5*sin(r*20.0-uTime);uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<61.0){uv.y+=0.1*sin(uv.x*10.0+uTime);}else if(uEffectMode<62.0){uv=fract(uv*3.0)-0.5;uv*=1.0+0.3*sin(uTime*3.0);}else if(uEffectMode<63.0){uv=fract(uv*7.0+vec2(sin(uTime),cos(uTime)))-0.5;}else if(uEffectMode<64.0){uv+=0.05*vec2(sin(uTime+uv.y*15.0),cos(uTime+uv.x*15.0));}else if(uEffectMode<65.0){float d=length(uv);uv+=(uv/d)*sin(d*10.0-uTime)*0.1;}else if(uEffectMode<66.0){float d=length(uv);uv+=(uv/d)*sin(d*10.0-uTime)*0.1;}else if(uEffectMode<67.0){uv+=0.1*cos(uv*10.0+uTime);}else if(uEffectMode<68.0){uv+=0.15*vec2(sin(uv.y*20.0+uTime),sin(uv.x*20.0+uTime));}else if(uEffectMode<69.0){uv=mix(uv,1.0-uv,0.5);}else if(uEffectMode<70.0){float r=length(uv);float a=atan(uv.y,uv.x)+cos(r*10.0+uTime)*0.5;uv=vec2(cos(a),sin(a))*r;}else if(uEffectMode<71.0){float angle_eff70=sin(uTime+uv.x*3.0)*3.14159;uv=mat2(cos(angle_eff70),-sin(angle_eff70),sin(angle_eff70),cos(angle_eff70))*uv;}else if(uEffectMode<72.0){uv+=0.05*vec2(sin(uv.x*12.0+uTime),cos(uv.y*12.0+uTime));}else if(uEffectMode<73.0){uv=vec2(sin(uv.x*3.0+uTime),sin(uv.y*3.0+uTime));}else if(uEffectMode<74.0){float r=length(uv);float a=atan(uv.y,uv.x)+uTime;uv=vec2(cos(a),sin(a))*(r+0.1*sin(r*5.0));}else if(uEffectMode<75.0){float r=length(uv);uv=uv/(r+0.1);}else if(uEffectMode<76.0){uv=1.0-uv+0.05*vec2(sin(uTime*3.0),cos(uTime*3.0));}else if(uEffectMode<77.0){uv*=1.0+0.2*sin(uTime*3.0);}else if(uEffectMode<78.0){uv=1.0-uv+0.1*sin(uTime*4.0);}else if(uEffectMode<79.0){uv=floor(uv*8.0)/8.0+0.02*sin(uTime*5.0);}else if(uEffectMode<80.0){float a=atan(uv.y,uv.x)+sin(uTime+length(uv)*5.0)*0.3;uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<81.0){uv=fract(uv*4.0)-0.5;uv=mat2(cos(uTime),-sin(uTime),sin(uTime),cos(uTime))*uv;}else if(uEffectMode<82.0){uv+=vec2(sin(uv.x*10.0+uTime),sin(uv.y*10.0+uTime))*0.05;}else if(uEffectMode<83.0){uv=vec2(cos(uv.x+uTime),cos(uv.y+uTime));}else if(uEffectMode<84.0){uv*=1.0+0.3*sin(uTime*2.0);}else if(uEffectMode<85.0){uv+=0.1*vec2(fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453),fract(cos(dot(uv,vec2(12.9898,78.233)))*43758.5453));}else if(uEffectMode<86.0){uv=mix(uv,1.0-uv,0.3);}else if(uEffectMode<87.0){float a=atan(uv.y,uv.x)+sin(uTime+length(uv)*10.0)*0.2;uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<88.0){uv=mat2(cos(uTime*0.5),-sin(uTime*0.5),sin(uTime*0.5),cos(uTime*0.5))*uv;uv+=0.05;}else if(uEffectMode<89.0){uv=abs(uv);uv=vec2(uv.y,uv.x)+0.1*sin(uTime);}else if(uEffectMode<90.0){uv+=0.05*vec2(sin(uv.x*15.0+uTime),cos(uv.y*15.0+uTime));}else if(uEffectMode<91.0){float a=atan(uv.y,uv.x)+log(length(uv)+1.0)*0.5;uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<92.0){uv=pow(abs(uv),vec2(0.8))*sign(uv)+0.1*sin(uTime);}else if(uEffectMode<93.0){uv=abs(uv-0.5)*2.0-1.0;}else if(uEffectMode<94.0){uv+=0.1*sin(uv*20.0+uTime);}else if(uEffectMode<95.0){uv=mix(uv,fract(uv*3.0)-0.5,0.5);}else if(uEffectMode<96.0){float r=length(uv);uv*=1.0+0.2*sin(r*10.0-uTime);}else if(uEffectMode<97.0){float a=atan(uv.y,uv.x)+0.5*sin(uTime+length(uv)*8.0);uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<98.0){uv=fract(uv*6.0)-0.5;uv=mat2(cos(uTime),-sin(uTime),sin(uTime),cos(uTime))*uv;}else if(uEffectMode<99.0){uv=1.0-sin(uv+uTime);}else{float a=atan(uv.y,uv.x)+uTime;uv=vec2(cos(a),sin(a))*length(uv)+0.1*sin(uv*10.0);}}else if(uEffectMode<130.0){if(uEffectMode<101.0){uv+=0.05*sin(uTime+uv.x*15.0);}else if(uEffectMode<102.0){uv=abs(uv);}else if(uEffectMode<103.0){uv+=0.05*cos(uTime+uv.y*15.0);}else if(uEffectMode<104.0){uv=mix(uv,1.0-uv,0.5);}else if(uEffectMode<105.0){float a=atan(uv.y,uv.x)+sin(uTime)*0.3;uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<106.0){uv*=1.0+0.2*sin(uTime);}else if(uEffectMode<107.0){uv+=0.1*fract(sin(dot(uv,vec2(12.9898,78.233)))*43758.5453);}else if(uEffectMode<108.0){uv=abs(uv);}else if(uEffectMode<109.0){float r=length(uv);uv*=1.0+0.1*sin(r*20.0+uTime);}else if(uEffectMode<110.0){uv+=0.05*vec2(sin(uTime+uv.x*20.0),cos(uTime+uv.y*20.0));}else if(uEffectMode<111.0){float a=atan(uv.y,uv.x)+uTime*0.5;uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<112.0){uv+=0.1*vec2(fract(sin(uv.x*10.0+uTime)*43758.5453)-0.5,fract(cos(uv.y*10.0+uTime)*43758.5453)-0.5);}else if(uEffectMode<113.0){uv.x+=0.1*sin(uTime+uv.y*25.0);}else if(uEffectMode<114.0){uv*=1.0+0.3*sin(uTime*2.0);}else if(uEffectMode<115.0){uv=vec2(uv.x+0.05*uv.y,uv.y+0.05*uv.x);}else if(uEffectMode<116.0){uv=fract(uv*4.0)-0.5;}else if(uEffectMode<117.0){uv=mat2(cos(uTime),-sin(uTime),sin(uTime),cos(uTime))*uv;}else if(uEffectMode<118.0){uv+=0.05*vec2(sin(uv.x*30.0+uTime),cos(uv.y*30.0+uTime));}else if(uEffectMode<119.0){float a=atan(uv.y,uv.x)+cos(uTime)*0.3;uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<120.0){uv+=0.05*(sin(uTime+uv.x*10.0)+cos(uTime+uv.y*10.0));}else if(uEffectMode<121.0){uv=fract(uv*8.0)-0.5;uv+=0.1*vec2(sin(uTime+uv.x),sin(uTime+uv.y));}else if(uEffectMode<122.0){uv+=0.1*vec2(sin(uTime+uv.x*8.0),cos(uTime+uv.y*8.0));}else if(uEffectMode<123.0){float a=atan(uv.y,uv.x)+sin(uTime*2.0)*0.4;uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<124.0){uv+=0.1*fract(sin(uv.x*15.0+uTime)*43758.5453);}else if(uEffectMode<125.0){uv=mix(uv,1.0-uv,0.4);}else if(uEffectMode<126.0){float a=atan(uv.y,uv.x)+cos(uTime)*0.3;uv=vec2(cos(a),sin(a))*length(uv);}else if(uEffectMode<127.0){uv+=0.1*cos(uv*15.0+uTime);}else if(uEffectMode<128.0){uv=mix(uv,fract(uv*4.0)-0.5,0.6);}else if(uEffectMode<129.0){uv+=0.08*vec2(sin(uTime+uv.x*20.0),cos(uTime+uv.y*20.0));}else{uv=fract(uv*8.0)-0.5;}}else if(uEffectMode<140.0){if(uEffectMode<131.0){uv=abs(fract(uv*vec2(2.0,1.0))-0.5)*2.0;float d=length(uv);uv/=dot(uv,uv)*max(0.5,sin(uTime*0.2)*2.0);uv*=abs(sin(d*5.0-uTime*0.5))*0.5+0.2;}else if(uEffectMode<132.0){vec2 grid=floor(uv*10.0);uv=fract(uv*10.0)-0.5;uv+=0.4*sin(grid.xy+uTime);}else if(uEffectMode<133.0){float r=length(uv);float bands=sin(r*20.0-uTime*2.0)*0.5+0.5;uv*=mix(1.0,1.5,bands);}else if(uEffectMode<134.0){float n=0.0;for(float i=0.0;i<3.0;i++){vec2 gv=fract(uv*vec2(5.0+i*2.0,8.0-i*1.5))-0.5;float d=length(gv);float id=floor(d*10.0);n+=sin(id*0.5+uTime+i*0.5)*0.1/(d+0.1);}uv+=n;}else if(uEffectMode<135.0){uv.y+=sin(uv.x*10.0+uTime)*0.1*cos(uTime*0.3);uv.x+=cos(uv.y*8.0-uTime*0.5)*0.05;}else if(uEffectMode<136.0){vec2 centerDist=abs(uv);float cross=min(centerDist.x,centerDist.y)*10.0;uv*=1.0+sin(cross+uTime)*0.3;}else if(uEffectMode<137.0){uv.x=sin(uv.x*20.0+uTime*0.5+sin(uv.y*15.0+uTime))*0.5;uv.y=cos(uv.y*20.0-uTime*0.5+cos(uv.x*15.0-uTime))*0.5;}else if(uEffectMode<138.0){vec2 block=floor(uv*12.0);uv=fract(uv*12.0)-0.5;if(mod(block.x+block.y,2.0)==0.0)uv=mat2(cos(uTime),-sin(uTime),sin(uTime),cos(uTime))*uv;else uv+=0.2*sin(uTime);}else if(uEffectMode<139.0){float r=length(uv);float a=atan(uv.y,uv.x);float noise=fract(sin(dot(uv,vec2(12.9898,78.233))+uTime)*43758.5453)*0.1;uv=vec2(cos(a+noise*5.0),sin(a+noise*5.0))*(r+noise*0.5);}else{float r=length(uv);uv=uv/dot(uv,uv)*abs(sin(uTime))*0.3;uv+=0.1*vec2(sin(r*10.0-uTime),cos(r*10.0+uTime));}}vec2 uv0=uv;vec3 finalColor=vec3(0.0);for(float i=0.0;i<10.0;i++){if(i>=uIterations)break;uv=fract(uv*1.5)-0.5;float d=length(uv)*exp(-length(uv0));vec3 col=palette(length(uv0)+i*uColorShift+uTime*0.4);d=sin(d*8.0+uTime)/8.0;d=abs(d);d=pow(0.01/d,1.2);finalColor+=col*d;}gl_FragColor=vec4(finalColor,1.0);}
+  </script>
+
+  <script>
+    // --- Strict Mode ---
+    'use strict';
+
+    // --- requestAnimationFrame Polyfill ---
+    window.requestAnimationFrame = window.requestAnimationFrame ||
+                                 window.webkitRequestAnimationFrame || // Chrome/Safari
+                                 window.mozRequestAnimationFrame ||    // Firefox
+                                 function(callback) {
+                                   window.setTimeout(callback, 1000 / 60); // Fallback to 60 FPS
+                                 };
+
+    // --- SHADIESAPP: WebGL Background Animation (Blended Structure) ---
+    function ShadiesApp() {
+        const self = this;
+        self.canvas = document.getElementById('shaderCanvas');
+        self.gl = null; self.program = null; self.positionBuffer = null;
+        self.positionAttributeLocation = null; self.resolutionUniformLocation = null; self.timeUniformLocation = null;
+        self.iterationsUniformLocation = null; self.colorShiftUniformLocation = null; self.zoomUniformLocation = null;
+        self.color1UniformLocation = null; self.color2UniformLocation = null; self.color3UniformLocation = null; self.color4UniformLocation = null;
+        self.mirrorsUniformLocation = null; self.rotationUniformLocation = null; self.rotation2UniformLocation = null;
+        self.pulseUniformLocation = null; self.pulseSpeedUniformLocation = null; self.layerMixUniformLocation = null;
+        self.waveAmplitudeUniformLocation = null; self.waveFrequencyUniformLocation = null; self.swirlUniformLocation = null; self.effectModeUniformLocation = null;
+
+        self.rAFId = null; self.previousTime = 0; self.inDisplayMode = false; // inDisplayMode is true once rendering starts
+        self.parameters = {
+            speed: 0.5, iterations: 10, colorShift: 0.5, zoom: 1.0,
+            color1: [1.0, 0.0, 0.0], color2: [0.0, 1.0, 0.0], color3: [0.0, 0.0, 1.0], color4: [1.0, 1.0, 1.0],
+            mirrors: 5, pulse: 0.1, pulseSpeed: 1.0, layerMix: 0.5,
+            waveAmplitude: 0.03, waveFrequency: 10.0, swirl: 1.0, effectMode: 0.0
+        };
+        self.currentRotation = 0; self.currentRotation2 = 0;
+        self.rotationSpeed = 0.1; self.rotation2Speed = -0.1;
+
+        self.selectedEffects = []; // Will be populated with all effect indices
+        self.currentEffectIndex = 0; // Index within selectedEffects
+
+        self.focusedRandomizationTimer = null;
+        self.isFocusedRandomActive = false;
+
+        // Effect names updated to match File B's extended shader
+        const effectNames = [
+            "Original","Wave Distortion","Swirl Distortion","Spiral Distortion","Jitter","Inversion Twist","Zoom Distortion","Kaleidoscopic Twist","Pixelation","Turbulence","Ripple","Fisheye","Sine Swirl","Exponential Twist","Grid Distortion","Diagonal Mirror","Sinusoidal Stretch","Cosine Compression","Twisted Tunnel","Complex Ripple","Mirror Warp","Circular Wave","Fractal-like Distortion","Random Jitter","Wavy Inversion","Spiral Zoom","Shear Distortion","Oscillatory Distortion","Hyperbolic Distortion","Absolute Mirror","Combined Rotation & Jitter","Wave Grid","Zigzag Distortion","Radial Displacement","Logarithmic Spiral","Sine Wave Mirror","Ripple Grid (High Freq)","Checkerboard Distortion","Swirl Mirror","Sin Stretch Variant","Cos Compress Variant","Complex Swirl Variant","Twirl Effect Variant","Distorted Grid Variant","Random Noise Variant","Spherical Distortion","Plasma Swirl","Lightning Bolts","Glass Distortion","Tunnel Vortex","Crystal Shards","Ink Spread","Rainbow Fire","Heat Mirage","Underwater Waves","Pixel Explosion","Kaleidoscope Warp","Neon Wireframe","DNA Helix","Glitch Scramble","Hypnotic Spiral","Melting Colors","Fractal Bloom","Shifting Mosaic","Ghostly Trails","Dynamic Ripple","Cosine Ripple","Double Frequency Wave","Exponential Mirror","Radial Cosine Twist","Jittered Sine Twist","Noise Twist","Sine Mirror","Spiral Vortex","Hyperbolic Inversion","Twisted Inversion","Fractal Zoom","Inverted Fractal","Pixel Shift","Spiral Stretch","Rotating Grid","Diagonal Wave","Cosine Swirl","Sine Zoom","Fractal Noise","Wave Mirror","Twisted Fractal","Distorted Rotation","Mirror Twist","Zigzag Wave","Log Spiral","Exponential Swirl","Dynamic Mirror","Sine Fractal","Noise Mirror","Radial Wave","Circular Twist","Swirl Pixel","Inverted Sine","Final Vortex",
+            "Sine Distortion II","Absolute Value II","Cosine Distortion II","Mix Inversion II","Swirl Twist II","Scaling Distortion II","Fractal Noise II","Mirror Effect II","Radial Pulse II","Displacement II","Twisting II","Jitter II","Horizontal Wave II","Zoom II","Diagonal Distortion II","Fractal Bloom II","Rotating Distortion II","Complex Noise II","Cosine Twist II","Combined Sine-Cosine II", // Ends at 119
+            // New effects from File B's shader (indices 130-139, originally 10 added after 129)
+            "UV Square Tunnel", "Sinusoidal Grid Warp", "Radial Bands", "Cellular Noise", "Water Reflection FX", "Zooming Crosses", "Interlaced Lines FX", "Glitchy Blocks FX", "Whispy Smoke FX", "Starburst Pinch FX"
+        ];
+
+
+        self.init = function() {
+            try {
+                self.gl = self.canvas.getContext('webgl') || self.canvas.getContext('experimental-webgl');
+            } catch (e) {
+                console.error("ShadiesApp: WebGL context creation failed.", e);
+            }
+            if (!self.gl) {
+                alert('ShadiesApp: WebGL is not supported or could not be initialized in your browser.');
+                throw new Error('ShadiesApp: WebGL not supported or failed to initialize.');
+            }
+
+            self.resizeCanvas();
+            window.addEventListener('resize', self.resizeCanvas.bind(self), false);
+
+            const vertexShaderSource = document.getElementById('vertexShader').textContent;
+            const fragmentShaderSource = document.getElementById('fragmentShader').textContent;
+            self.program = self.createProgram(vertexShaderSource, fragmentShaderSource);
+            self.gl.useProgram(self.program);
+
+            self.cacheUniformLocations();
+            self.setupQuadBuffer();
+
+            // Simplified init: Shadies is always in "display mode" once started by MasterControl
+            self.inDisplayMode = true; // Will be set to true when MasterControl starts it.
+            self.selectedEffects = effectNames.map((_, idx) => idx); // All effects are "selected"
+
+            if (self.selectedEffects.length > 0) {
+                self.parameters.effectMode = self.selectedEffects[0];
+                self.currentEffectIndex = 0; // Start with the first effect
+            } else {
+                self.parameters.effectMode = 0; // Fallback
+            }
+            self.randomizeOtherParameters(); // Initial randomization
+            console.log("ShadiesApp: Initialized. Effects available: " + effectNames.length + " (Max effect mode " + (effectNames.length -1) +")");
+        };
+
+        self.compileShader = function(source, type) {
+            const shader = self.gl.createShader(type);
+            self.gl.shaderSource(shader, source);
+            self.gl.compileShader(shader);
+            if (!self.gl.getShaderParameter(shader, self.gl.COMPILE_STATUS)) {
+                const errorMsg = `ShadiesApp shader compilation error (${type === self.gl.VERTEX_SHADER ? 'Vertex' : 'Fragment'} Shader):\n` + self.gl.getShaderInfoLog(shader);
+                console.error(errorMsg);
+                self.gl.deleteShader(shader);
+                throw new Error(errorMsg);
+            }
+            return shader;
+        };
+
+        self.createProgram = function(vertexSource, fragmentSource) {
+            const vertexShader = self.compileShader(vertexSource, self.gl.VERTEX_SHADER);
+            const fragmentShader = self.compileShader(fragmentSource, self.gl.FRAGMENT_SHADER);
+            const program = self.gl.createProgram();
+            self.gl.attachShader(program, vertexShader);
+            self.gl.attachShader(program, fragmentShader);
+            self.gl.linkProgram(program);
+            if (!self.gl.getProgramParameter(program, self.gl.LINK_STATUS)) {
+                const errorMsg = "ShadiesApp program linking error:\n" + self.gl.getProgramInfoLog(program);
+                console.error(errorMsg);
+                self.gl.deleteProgram(program);
+                self.gl.deleteShader(vertexShader);
+                self.gl.deleteShader(fragmentShader);
+                throw new Error(errorMsg);
+            }
+            self.gl.deleteShader(vertexShader); // Clean up linked shaders
+            self.gl.deleteShader(fragmentShader);
+            return program;
+        };
+
+        self.resizeCanvas = function() {
+            if (!self.gl) return;
+            self.canvas.width = window.innerWidth;
+            self.canvas.height = window.innerHeight;
+            self.gl.viewport(0, 0, self.canvas.width, self.canvas.height);
+        };
+
+        self.cacheUniformLocations = function() {
+            self.positionAttributeLocation = self.gl.getAttribLocation(self.program, 'aVertexPosition');
+            self.resolutionUniformLocation = self.gl.getUniformLocation(self.program, 'uResolution');
+            self.timeUniformLocation = self.gl.getUniformLocation(self.program, 'uTime');
+            self.iterationsUniformLocation = self.gl.getUniformLocation(self.program, 'uIterations');
+            self.colorShiftUniformLocation = self.gl.getUniformLocation(self.program, 'uColorShift');
+            self.zoomUniformLocation = self.gl.getUniformLocation(self.program, 'uZoom');
+            self.color1UniformLocation = self.gl.getUniformLocation(self.program, 'uColor1');
+            self.color2UniformLocation = self.gl.getUniformLocation(self.program, 'uColor2');
+            self.color3UniformLocation = self.gl.getUniformLocation(self.program, 'uColor3');
+            self.color4UniformLocation = self.gl.getUniformLocation(self.program, 'uColor4');
+            self.mirrorsUniformLocation = self.gl.getUniformLocation(self.program, 'uMirrors');
+            self.rotationUniformLocation = self.gl.getUniformLocation(self.program, 'uRotation');
+            self.rotation2UniformLocation = self.gl.getUniformLocation(self.program, 'uRotation2');
+            self.pulseUniformLocation = self.gl.getUniformLocation(self.program, 'uPulse');
+            self.pulseSpeedUniformLocation = self.gl.getUniformLocation(self.program, 'uPulseSpeed');
+            self.layerMixUniformLocation = self.gl.getUniformLocation(self.program, 'uLayerMix');
+            self.waveAmplitudeUniformLocation = self.gl.getUniformLocation(self.program, 'uWaveAmplitude');
+            self.waveFrequencyUniformLocation = self.gl.getUniformLocation(self.program, 'uWaveFrequency');
+            self.swirlUniformLocation = self.gl.getUniformLocation(self.program, 'uSwirl');
+            self.effectModeUniformLocation = self.gl.getUniformLocation(self.program, 'uEffectMode');
+        };
+
+        self.setupQuadBuffer = function() {
+            self.positionBuffer = self.gl.createBuffer();
+            self.gl.bindBuffer(self.gl.ARRAY_BUFFER, self.positionBuffer);
+            const positions = [-1, -1,  1, -1,  -1, 1,  1, 1];
+            self.gl.bufferData(self.gl.ARRAY_BUFFER, new Float32Array(positions), self.gl.STATIC_DRAW);
+        };
+
+        self.randomizeOtherParameters = function() {
+            self.parameters.speed = 0.3 + Math.random() * 2.2;
+            self.parameters.iterations = Math.floor(Math.random() * 10) + 3;
+            self.parameters.colorShift = Math.random() * 2.5;
+            self.parameters.zoom = 0.25 + Math.random() * 2.25;
+            self.parameters.mirrors = Math.floor(Math.random() * 30) + 3;
+            self.parameters.pulse = Math.random() * 0.35;
+            self.parameters.pulseSpeed = 0.4 + Math.random() * 2.1;
+            self.parameters.layerMix = Math.random();
+            self.parameters.color1 = [Math.random(), Math.random(), Math.random()];
+            self.parameters.color2 = [Math.random(), Math.random(), Math.random()];
+            self.parameters.color3 = [Math.random(), Math.random(), Math.random()];
+            self.parameters.color4 = [Math.random(), Math.random(), Math.random()];
+            self.parameters.waveAmplitude = 0.005 + Math.random() * 0.095;
+            self.parameters.waveFrequency = 3.0 + Math.random() * 17.0;
+            self.parameters.swirl = 0.3 + Math.random() * 1.7;
+            self.rotationSpeed = (Math.random() - 0.5) * 0.5;
+            self.rotation2Speed = (Math.random() - 0.5) * 0.5;
+            if (Math.abs(self.rotationSpeed - self.rotation2Speed) < 0.05) {
+                self.rotation2Speed = -self.rotationSpeed + (Math.random() - 0.5) * 0.1;
+            }
+        };
+
+        // Combines nextRandomEffect and parameter randomization
+        self.nextRandomEffectAndParams = function() {
+            if (self.selectedEffects.length > 0) {
+                let newEffectModeValue = self.parameters.effectMode;
+                 // Ensure a different effect is chosen if possible
+                if (self.selectedEffects.length > 1) {
+                    while (newEffectModeValue === self.parameters.effectMode) {
+                        const newSelectedEffectIndex = Math.floor(Math.random() * self.selectedEffects.length);
+                        newEffectModeValue = self.selectedEffects[newSelectedEffectIndex];
+                        self.currentEffectIndex = newSelectedEffectIndex; // Keep track of the index in the full list
+                    }
+                } else { // Only one effect "selected" (or available)
+                     newEffectModeValue = self.selectedEffects[0];
+                     self.currentEffectIndex = 0;
+                }
+                self.parameters.effectMode = newEffectModeValue;
+            } else {
+                 // Fallback if selectedEffects is somehow empty
+                self.parameters.effectMode = Math.floor(Math.random() * effectNames.length);
+            }
+            self.randomizeOtherParameters();
+             // console.log("ShadiesApp: Switched to effect " + self.parameters.effectMode + " (" + (effectNames[self.parameters.effectMode] || 'Unknown') + ")");
+        };
+
+        self.setToSurprisePreset = function(presetName = "Cosmic Bloom") {
+            console.log(`ShadiesApp: Setting to surprise preset: ${presetName}`);
+            if (presetName === "Cosmic Bloom") {
+                self.parameters.speed = 0.6; self.parameters.iterations = 12; self.parameters.colorShift = 1.5; self.parameters.zoom = 0.8;
+                self.parameters.color1 = [0.8, 0.2, 0.5]; self.parameters.color2 = [0.1, 0.8, 0.7]; self.parameters.color3 = [0.9, 0.9, 0.2]; self.parameters.color4 = [0.5, 0.3, 0.8];
+                self.parameters.mirrors = 7; self.parameters.pulse = 0.15; self.parameters.pulseSpeed = 0.8; self.parameters.layerMix = 0.6;
+                self.parameters.effectMode = effectNames.indexOf("Fractal Bloom II"); if (self.parameters.effectMode === -1) self.parameters.effectMode = 115; // Fallback index
+                self.rotationSpeed = 0.05; self.rotation2Speed = -0.08;
+            } else if (presetName === "Deep Hypnosis") {
+                self.parameters.speed = 0.25; self.parameters.iterations = 8; self.parameters.colorShift = 0.3; self.parameters.zoom = 1.1;
+                self.parameters.color1 = [0.1, 0.1, 0.3]; self.parameters.color2 = [0.3, 0.05, 0.2]; self.parameters.color3 = [0.05, 0.2, 0.1]; self.parameters.color4 = [0.2, 0.2, 0.2];
+                self.parameters.mirrors = 4; self.parameters.pulse = 0.05; self.parameters.pulseSpeed = 0.3; self.parameters.layerMix = 0.8;
+                self.parameters.effectMode = effectNames.indexOf("Swirl Distortion"); if (self.parameters.effectMode === -1) self.parameters.effectMode = 2; // Fallback index
+                self.parameters.swirl = 1.5;
+                self.rotationSpeed = 0.02; self.rotation2Speed = 0.03;
+            }
+            // Update currentEffectIndex to match the preset's effectMode if it's in selectedEffects (which it should be as selectedEffects = all effects)
+            const effectIdxInSelected = self.selectedEffects.indexOf(self.parameters.effectMode);
+            if (effectIdxInSelected !== -1) self.currentEffectIndex = effectIdxInSelected;
+        };
+
+        self.beginInternalCyclicRandomization = function(minIntervalMs, maxIntervalMs) {
+            self.stopInternalCyclicRandomization(); // Clear any existing timer
+            self.isFocusedRandomActive = true;
+            const newInterval = Math.random() * (maxIntervalMs - minIntervalMs) + minIntervalMs;
+            self.focusedRandomizationTimer = setTimeout(() => {
+                if(self.isFocusedRandomActive && self.inDisplayMode) { // Check inDisplayMode too
+                    self.nextRandomEffectAndParams();
+                    self.beginInternalCyclicRandomization(minIntervalMs, maxIntervalMs); // Reschedule
+                }
+            }, newInterval);
+        };
+
+        self.stopInternalCyclicRandomization = function() {
+            if (self.focusedRandomizationTimer) clearTimeout(self.focusedRandomizationTimer);
+            self.focusedRandomizationTimer = null;
+            self.isFocusedRandomActive = false;
+        };
+
+        self.render = function(time) {
+            if (!self.gl || !self.program) {
+                 if (self.rAFId) cancelAnimationFrame(self.rAFId);
+                 self.rAFId = null;
+                 return;
+            }
+
+            const currentTimeSeconds = time * 0.001;
+            const deltaTime = (self.previousTime === 0) ? 0 : (currentTimeSeconds - self.previousTime);
+            self.previousTime = currentTimeSeconds;
+
+            self.gl.clearColor(0, 0, 0, 1);
+            self.gl.clear(self.gl.COLOR_BUFFER_BIT);
+            self.gl.useProgram(self.program);
+            self.gl.enableVertexAttribArray(self.positionAttributeLocation);
+            self.gl.bindBuffer(self.gl.ARRAY_BUFFER, self.positionBuffer);
+            self.gl.vertexAttribPointer(self.positionAttributeLocation, 2, self.gl.FLOAT, false, 0, 0);
+
+            self.gl.uniform2f(self.resolutionUniformLocation, self.canvas.width, self.canvas.height);
+            self.gl.uniform1f(self.timeUniformLocation, currentTimeSeconds * self.parameters.speed);
+            self.gl.uniform1f(self.iterationsUniformLocation, self.parameters.iterations);
+            self.gl.uniform1f(self.colorShiftUniformLocation, self.parameters.colorShift);
+            self.gl.uniform1f(self.zoomUniformLocation, self.parameters.zoom);
+            self.gl.uniform3fv(self.color1UniformLocation, self.parameters.color1);
+            self.gl.uniform3fv(self.color2UniformLocation, self.parameters.color2);
+            self.gl.uniform3fv(self.color3UniformLocation, self.parameters.color3);
+            self.gl.uniform3fv(self.color4UniformLocation, self.parameters.color4);
+            self.gl.uniform1f(self.mirrorsUniformLocation, self.parameters.mirrors);
+
+            if (self.inDisplayMode) { // Rotation updates only when displaying
+                self.currentRotation += self.rotationSpeed * deltaTime;
+                self.currentRotation2 += self.rotation2Speed * deltaTime;
+            }
+            self.gl.uniform1f(self.rotationUniformLocation, self.currentRotation);
+            self.gl.uniform1f(self.rotation2UniformLocation, self.currentRotation2);
+
+            self.gl.uniform1f(self.pulseUniformLocation, self.parameters.pulse);
+            self.gl.uniform1f(self.pulseSpeedUniformLocation, self.parameters.pulseSpeed);
+            self.gl.uniform1f(self.layerMixUniformLocation, self.parameters.layerMix);
+            self.gl.uniform1f(self.waveAmplitudeUniformLocation, self.parameters.waveAmplitude);
+            self.gl.uniform1f(self.waveFrequencyUniformLocation, self.parameters.waveFrequency);
+            self.gl.uniform1f(self.swirlUniformLocation, self.parameters.swirl);
+            self.gl.uniform1f(self.effectModeUniformLocation, self.parameters.effectMode);
+
+            self.gl.drawArrays(self.gl.TRIANGLE_STRIP, 0, 4);
+            self.rAFId = requestAnimationFrame(self.render.bind(self));
+        };
+
+        self.start = function() {
+            if (!self.gl) { // Lazy initialization
+                try { self.init(); } catch(e) { console.error("ShadiesApp: Failed to initialize on start command.", e); return; }
+            }
+            if (self.rAFId) cancelAnimationFrame(self.rAFId);
+            self.rAFId = null;
+            self.previousTime = 0; // Reset time for smooth start
+            self.inDisplayMode = true; // Mark as active for rendering logic
+            self.rAFId = requestAnimationFrame(self.render.bind(self));
+            console.log("ShadiesApp: Rendering started.");
+        };
+
+        self.stop = function() {
+            if (self.rAFId) {
+                cancelAnimationFrame(self.rAFId);
+                self.rAFId = null;
+            }
+            self.inDisplayMode = false; // Mark as inactive
+            self.stopInternalCyclicRandomization(); // Also stop its internal timer
+            console.log("ShadiesApp: Rendering stopped.");
+        };
+
+        self.setVisibility = function(visible) { // Simplified
+            self.canvas.style.display = visible ? 'block' : 'none';
+        };
+    } // End of ShadiesApp
+
+
+    // --- FUSE2APP: 2D Canvas Spiral Animation (Blended Structure) ---
+    function Fuse2App() {
+        const self = this;
+        self.canvas = document.getElementById('spiralsCanvas');
+        self.ctx = null; self.rAFId = null; self.width = 0; self.height = 0;
+
+        // Constants from File B, with potentially adjusted randomization intervals
+        self.C = {
+            FOV_PLUS_Z_THRESHOLD: 1e-5, MAX_RENDER_RADIUS_FACTOR_MODERN: 1.7, MAX_RENDER_RADIUS_FACTOR_CLASSIC: 1.5,
+            GLOW_MIN_SIZE: 1, GLOW_RADIUS_FACTOR: 1.5,
+            NUM_ARMS_MIN_CLASSIC: 2, NUM_ARMS_MAX_CLASSIC: 15, NUM_ARMS_MIN_MODERN: 1, NUM_ARMS_MAX_MODERN: 15,
+            DEFAULT_FADE_ALPHA: 0.08, EPSILON: 1e-6,
+        };
+        // Default auto-randomization intervals (when not "focused")
+        self.defaultMinAutoRandomMs = 7000;
+        self.defaultMaxAutoRandomMs = 15000;
+
+
+        class ClassicConfig { constructor(params) { Object.assign(this, params); this.is_classic_mode = true; } }
+        class ModernConfig { constructor(params) { Object.assign(this, params); this.is_classic_mode = false; } }
+
+        self.current_configs = null; self.current_fade_alpha = self.C.DEFAULT_FADE_ALPHA;
+        self.start_time_sim_ms = 0; self.last_parameter_reset_time_ms = 0; self.parameter_reset_interval_ms = 0;
+        self.all_last_points_for_lines = {}; self.dynamic_bg_hue = Math.random(); self.dynamic_bg_alpha = 0.01;
+
+        self.isFocusedRandomActive = false; // For MasterControl to manage
+
+        // --- Utility Helper Functions (from File B for brevity/completeness) ---
+        const randint = (min,max) => Math.floor(Math.random()*(max-min+1))+min; const uniform = (min,max) => Math.random()*(max-min)+min; const choice = (arr) => arr[Math.floor(Math.random()*arr.length)];
+        const hsvToRgb = (h,s,v) => { let r,g,b;let i=Math.floor(h*6);let f=h*6-i;let p=v*(1-s);let q=v*(1-f*s);let t=v*(1-(1-f)*s);switch(i%6){case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;case 5:r=v;g=p;b=q;break;}return [Math.round(r*255),Math.round(g*255),Math.round(b*255)]; };
+        const colorArrayToString = (cA,a=1) => `rgba(${cA[0]},${cA[1]},${cA[2]},${a})`;
+        const rotate_3d = (x,y,z,cRx,sRx,cRy,sRy,cRz,sRz) => {let yRx=y*cRx-z*sRx,zRx=y*sRx+z*cRx;y=yRx;z=zRx;let xRy=x*cRy+z*sRy,zRy=-x*sRy+z*cRy;x=xRy;z=zRy;let xRz=x*cRz-y*sRz,yRz=x*sRz+y*cRz;return[xRz,yRz,z];};
+        const project_3d_to_2d = (x,y,z,fov,cW,cH) => {const d=fov+z;if(d<=self.C.FOV_PLUS_Z_THRESHOLD)return[null,1.0];const p=fov/d;return[[Math.round(x*p+cW/2),Math.round(y*p+cH/2)],p];};
+
+        // Palettes and color system from File B
+        const _P_F_I = {"neon":(t,r)=>hsvToRgb(t%1,1,1),"pastel":(t,r)=>hsvToRgb((t*0.5)%1,0.5,1),"fire":(t,r)=>{const h=0.05+0.15*(0.5+0.5*Math.sin(t*Math.PI*2));return hsvToRgb(h%1,1,1);},"cool":(t,r)=>{const h=0.5+0.2*(0.5+0.5*Math.sin(t*Math.PI*2));return hsvToRgb(h%1,0.8,1);},"rainbow":(t,r)=>hsvToRgb(t%1,1,1),"cyberpunk":(t,r)=>{const hb=Math.sin(t*5)>0?0.8:0.5;const h=(hb+Math.sin(t*3)*0.1)%1;const s=0.9+0.1*Math.sin(t*7);const v_val=0.8+0.2*Math.sin(t*10);return hsvToRgb(h,s,v_val);},"toxic":(t,r)=>{const h=(0.25+0.1*Math.sin(t*5))%1;const s=1;const v_val=0.8+0.2*Math.sin(t*3);return hsvToRgb(h,s,v_val);},"ice":(t,r)=>{const h=0.55+0.05*Math.sin(t*2);const s=0.3+0.2*Math.sin(t*3);const v=1;return hsvToRgb(h,s,v);},"bubblegum":(t,r)=>{const h=(0.9+0.05*Math.sin(t*3))%1;const s=0.6+0.1*Math.sin(t*2);const v=1;return hsvToRgb(h,s,v);},"monochrome":(t,r)=>{const vo=0.5+0.5*Math.sin(t*5);const v=Math.round(50+205*vo);return[v,v,v];},"earth":(t,r)=>{const h=0.1+0.1*Math.sin(t*2);const s=0.6+0.2*Math.sin(t*3);const v=0.5+0.3*Math.sin(t*4);return hsvToRgb(h,s,v);},"ocean":(t,r)=>{const h=0.5+0.15*Math.sin(t*2);const s=0.7+0.2*Math.sin(t*3);const v=0.6+0.3*Math.sin(t*4);return hsvToRgb(h,s,v);},"aurora":(t,r)=>{const h1=(0.33+0.1*Math.sin(t*2))%1,h2=(0.75+0.1*Math.sin(t*2.5+1))%1;const c1=hsvToRgb(h1,0.9,0.8+0.2*Math.sin(t*5));const c2=hsvToRgb(h2,0.7,0.7+0.3*Math.sin(t*6));const m=0.5+0.5*Math.sin(t*Math.PI);return[Math.round(c1[0]*m+c2[0]*(1-m)),Math.round(c1[1]*m+c2[1]*(1-m)),Math.round(c1[2]*m+c2[2]*(1-m))];},"nebula":(t,r)=>{const h=(0.7+0.2*Math.sin(t*1.5))%1;const s=0.8+0.2*Math.sin(t*3);const vm=r!==null?r*0.01:0;const v=0.6+0.4*Math.sin(t*5+vm);return hsvToRgb(h,s,v);},"vintage_paper":(t,r)=>{const h=0.1+0.05*Math.sin(t*0.5);const s=0.3+0.2*Math.sin(t*0.8);const v=0.7+0.1*Math.sin(t*1.2);return hsvToRgb(h,s,v);},"cosmic_dust":(t,r)=>{const h=(t*0.1+0.6)%1;const s=0.5+0.3*Math.sin(t*0.5);const vb=0.4+0.3*Math.sin(t*0.7);const v=Math.random()<0.005?1.0:vb;return hsvToRgb(h,s,v);},"forest_depths":(t,r)=>{const h=0.33+0.1*Math.sin(t*0.7);const s=0.6+0.2*Math.sin(t*1.1);const v=0.3+0.3*Math.sin(t*1.5);return hsvToRgb(h,s,v);},"sunset_glow":(t,rV)=>{const hB=0.0;const hS=0.15*Math.sin(t*Math.PI);const h=(hB+hS+t*0.05)%1.0;const s=0.9+0.1*Math.sin(t*2.5);const v=0.7+0.3*Math.sin(t*3+rV*0.01);return hsvToRgb(h,s,v);},"deep_space":(t,rV)=>{const bH=0.66;const hV=0.1*Math.sin(t*0.5);const h=(bH+hV+(rV?rV*0.0001:0))%1.0;const s=0.7+0.3*Math.sin(t*1.5);let v=0.1+0.3*Math.sin(t*2);if(Math.random()<0.015)v=uniform(0.8,1.0);else if(Math.random()<0.05)v=uniform(0.4,0.7);return hsvToRgb(h,Math.max(0.3,s),Math.max(0.05,v));},"metallic_sheen":(t,rV)=>{const tH=(t*0.1)%1;let h,s,v;if(tH<0.33){h=0.5+uniform(-0.05,0.05);s=uniform(0.05,0.2);v=uniform(0.6,0.95);}else if(tH<0.66){h=0.12+uniform(-0.03,0.03);s=uniform(0.4,0.7);v=uniform(0.7,0.9);}else{h=0.05+uniform(-0.02,0.02);s=uniform(0.3,0.6);v=uniform(0.65,0.85);}v+=Math.sin(t*15+(rV||0)*0.1)*0.05;return hsvToRgb(h,Math.max(0,Math.min(1,s)),Math.max(0,Math.min(1,v)));},"radioactive_ooze":(t,rV)=>{const h1=(0.25+0.05*Math.sin(t*2))%1;const h2=(0.16+0.05*Math.sin(t*1.5+1))%1;const c1=hsvToRgb(h1,1,0.7+0.3*Math.sin(t*6));const c2=hsvToRgb(h2,0.9,0.6+0.4*Math.sin(t*7));const m=0.5+0.5*Math.sin(t*Math.PI*1.2+(rV||0)*0.02);return[Math.round(c1[0]*m+c2[0]*(1-m)),Math.round(c1[1]*m+c2[1]*(1-m)),Math.round(c1[2]*m+c2[2]*(1-m))];},"spring_bloom":(t,rV)=>{const ph=(t*0.2)%1;let h;if(ph<0.25)h=uniform(0.85,0.95);else if(ph<0.5)h=uniform(0.75,0.85);else if(ph<0.75)h=uniform(0.1,0.16);else h=uniform(0.25,0.35);const s=uniform(0.4,0.7);const v=uniform(0.85,1.0);return hsvToRgb(h,s,v);},
+        "lava_flow":(t,rV)=>{const h=0.02+0.06*Math.sin(t*Math.PI*0.7);const s=0.9+0.1*Math.sin(t*3);const v=0.6+0.4*Math.max(0,Math.sin(t*2.5+ (rV || 0)*0.005));return hsvToRgb(h,s,v);},
+        "emerald_forest":(t,rV)=>{const h=0.33+0.1*Math.sin(t*0.8);const s=0.6+0.2*Math.sin(t*1.2);const v=0.4+0.3*Math.sin(t*1.5 + (rV || 0)*0.002);return hsvToRgb(h,s,v);},
+        "candy_swirl":(t,rV)=>{const h=(t*0.3 + Math.sin(t*5)*0.1)%1; const s=0.8+0.2*Math.sin(t*2); const v=0.9+0.1*Math.sin(t*3); return hsvToRgb(h,s,v);},
+        "grayscale_pulse":(t,rV)=>{const pulse=0.5+0.5*Math.sin(t*Math.PI*2.0 + (rV||0)*0.01); const val=Math.round(30+200*pulse); return [val,val,val];},
+        "electric_storm":(t,rV)=>{const h_base=0.65; const h_shift=0.15*Math.sin(t*4 + (rV||0)*0.003); const h=(h_base+h_shift)%1; const s=0.9; const v= (Math.random()<0.05)?1.0:(0.6+0.4*Math.sin(t*10)); return hsvToRgb(h,s,v);},
+        "desert_dusk":(t,rV)=>{const h=0.05+0.08*Math.sin(t*0.5) + ( (t*0.05)%0.2 - 0.1); const s=0.7+0.2*Math.sin(t*1.0); const v=0.5+0.3*Math.sin(t*0.8 + (rV||0)*0.001); return hsvToRgb(h%1,s,v);},
+        "crystal_cave":(t,rV)=>{const h=(0.75 + 0.15*Math.sin(t*1.2 + (rV||0)*0.002))%1; const s=0.6+0.3*Math.sin(t*2.5); const v_base=0.5; const v_spike = Math.random()<0.1?0.5:0; const v=v_base+0.3*Math.sin(t*3)+v_spike; return hsvToRgb(h,s,Math.min(1,v));},
+        "ethereal_dream":(t,rV)=>{const h=(t*0.05 + 0.5 + Math.sin(t*0.3)*0.1)%1; const s=0.3+0.15*Math.sin(t*0.7); const v=0.9+0.1*Math.sin(t*0.5); return hsvToRgb(h,s,v);},
+        "acid_trip":(t,rV)=>{const h1=(t*0.8 + Math.sin(t*10)*0.2)%1; const h2=(h1+0.5+Math.sin(t*7)*0.1)%1; const m=0.5+0.5*Math.sin(t*Math.PI*1.5); const c1=hsvToRgb(h1,1,1); const c2=hsvToRgb(h2,1,1); return [Math.round(c1[0]*m+c2[0]*(1-m)),Math.round(c1[1]*m+c2[1]*(1-m)),Math.round(c1[2]*m+c2[2]*(1-m))];},
+        "muted_gold":(t,rV)=>{const h=0.1+0.03*Math.sin(t*0.6); const s=0.4+0.15*Math.sin(t*0.9); const v=0.6+0.1*Math.sin(t*1.1+(rV||0)*0.001); return hsvToRgb(h,s,v);},
+        "default":(t,r)=>[255,255,255]
+        };
+        const PALETTE_NAMES_INTERNAL = Object.keys(_P_F_I);
+        const get_palette_color_internal = (palette_name, t, r_val = null) => {
+            const func = _P_F_I[palette_name] || _P_F_I["default"];
+            return func(t, r_val);
+        };
+        const colorsys_internal = {
+            rgb_to_hsv: function(r_norm, g_norm, b_norm) { // Inputs 0-1
+                let max = Math.max(r_norm, g_norm, b_norm), min = Math.min(r_norm, g_norm, b_norm),
+                    d = max - min, h, s, v = max;
+                if (d === 0) { h = 0; } // Achromatic
+                else {
+                    switch (max) {
+                        case r_norm: h = ((g_norm - b_norm) / d); if(g_norm < b_norm) h += 6; break;
+                        case g_norm: h = (b_norm - r_norm) / d + 2; break;
+                        case b_norm: h = (r_norm - g_norm) / d + 4; break;
+                    }
+                    h /= 6;
+                }
+                s = max === 0 ? 0 : d / max;
+                return [h, s, v]; // Outputs 0-1
+            }
+        };
+
+        // Config generation from File B (more features)
+        const generate_classic_mode_params_local = () => {
+            const params_dict = {
+                num_arms: randint(self.C.NUM_ARMS_MIN_CLASSIC, self.C.NUM_ARMS_MAX_CLASSIC), arm_segment_length: randint(4, 15),
+                spiral_tightness: uniform(10, 150), direction: choice([-1, 1]), rotation_speed: uniform(0.05, 1.5),
+                z_amplitude: uniform(100, 400), z_frequency: uniform(50, 500), z_speed: uniform(0.1, 2.0),
+                z_offset_amplitude: uniform(0, 100), z_offset_speed: uniform(0.1, 3.0), color_shift_speed: uniform(0.01, 0.2),
+                classic_color_mode: choice(['hue_radius', 'hue_time', 'full_spectrum_pulsing']),
+                saturation_base: uniform(0.7, 1.0), saturation_pulse_freq: uniform(0.1, 2.0),
+                value_base: uniform(0.8, 1.0), value_z_factor: uniform(-0.4, 0.1),
+                base_size: uniform(5, 25), size_z_scaling: uniform(-0.3, 0.5),
+                shape_type: choice(['circle', 'square', 'line', 'circle']), line_thickness: uniform(1, 4),
+                fov: uniform(200, 400),
+                camera_rotate_speed_x: uniform(-0.3, 0.3), camera_rotate_speed_y: uniform(-0.3, 0.3), camera_rotate_speed_z: uniform(-0.2, 0.2),
+                fade_alpha: randint(5, 30) / 255.0
+            };
+            if (params_dict.shape_type === 'line') params_dict.line_thickness = uniform(1.5, 6);
+            else params_dict.base_size = uniform(8, 30);
+            return new ClassicConfig(params_dict);
+        };
+        const generate_modern_config_local = () => {
+            const base_shape_types = ['circle', 'square', 'cross', 'line', 'triangle'];
+            const new_shape_types_A = ['ring', 'diamond', 'star', 'hexagon'];
+            const new_shape_types_B = ['dashed_line', 'quad_rings', 'pulsar_dot', 'wavy_segment', 'gear_shape']; // From File B
+            const all_shape_types = [...base_shape_types, ...new_shape_types_A, ...new_shape_types_B, 'circle', 'square'];
+
+            const cfg_dict = {
+                num_arms: randint(self.C.NUM_ARMS_MIN_MODERN, self.C.NUM_ARMS_MAX_MODERN), arm_segment_length: randint(4, 22),
+                spiral_tightness: uniform(15, 250), direction: choice([-1, 1]), rotation_speed: uniform(0.03, 1.2),
+                z_amplitude: uniform(30, 600), z_frequency: uniform(25, 700), z_speed: uniform(0.05, 2.8),
+                global_z_offset_amplitude: uniform(0, 180), global_z_offset_speed: uniform(0.08, 2.5),
+                camera_rotate_speed_x: uniform(-0.3, 0.3), camera_rotate_speed_y: uniform(-0.3, 0.3), camera_rotate_speed_z: uniform(-0.2, 0.2),
+                color_mode: choice(['palette_based', 'dynamic_hsv_radius', 'dynamic_hsv_time', 'dynamic_hsv_full_spectrum', 'depth_hue_shift']),
+                palette_name: choice(PALETTE_NAMES_INTERNAL), color_shift_speed: uniform(0.003, 0.2),
+                saturation_base: uniform(0.5, 1.0), saturation_pulse_freq: uniform(0.03, 1.8), value_base: uniform(0.6, 1.0),
+                value_z_factor: uniform(-0.6, 0.3), shape_type: choice(all_shape_types), base_size: uniform(2, 22),
+                size_z_scaling: uniform(-0.5, 0.7), line_thickness: uniform(0.5, 6), fov: uniform(120, 500),
+                distortion: Math.random() < 0.25 ? uniform(0, 30) : 0, swirl_intensity: Math.random() < 0.25 ? uniform(0.5, 5) : 0,
+                swirl_frequency: uniform(0.01, 0.1), swirl_speed: uniform(0.1, 1.5), glow: Math.random() < 0.6,
+                glow_intensity_factor: uniform(0.5, 2.0), glow_color_alpha: uniform(0.05, 0.25),
+                fade_alpha: randint(4, 35) / 255.0, time_offset_per_layer: uniform(0.05, 1.0),
+                shape_rotation_speed: Math.random() < 0.4 ? uniform(-2, 2) : 0, shape_base_rotation: uniform(0, Math.PI*2)
+            };
+            if (['line', 'dashed_line', 'wavy_segment'].includes(cfg_dict.shape_type)) cfg_dict.glow = Math.random() < 0.1;
+            if (['triangle', 'diamond', 'star', 'hexagon', 'gear_shape'].includes(cfg_dict.shape_type)) cfg_dict.base_size = uniform(5,25);
+            if (cfg_dict.distortion > 15 && cfg_dict.swirl_intensity > 2.5) {
+                if (Math.random() < 0.5) cfg_dict.distortion /= 2; else cfg_dict.swirl_intensity /= 2;
+            }
+            return new ModernConfig(cfg_dict);
+        };
+
+        self.reset_configs = (num_layers_override = null) => {
+            if (num_layers_override === null && Math.random() < 0.20) {
+                console.log("Fuse2App: Switching to Classic Mode.");
+                return [generate_classic_mode_params_local()];
+            }
+            const num_layers = num_layers_override !== null ? num_layers_override : randint(1, 4);
+            // console.log(`Fuse2App: Generating Modern Mode with ${num_layers} layer(s).`);
+            return Array.from({length: num_layers}, () => generate_modern_config_local());
+        };
+
+        // Drawing functions from File B for classic and modern, including new shapes
+        const _draw_classic_shape_local = (p_ctx, params, pos, colorStr, size, p_scale, arm_idx, last_points_map) => {
+            const [px, py] = pos;
+            p_ctx.fillStyle = colorStr; p_ctx.strokeStyle = colorStr;
+            if (params.shape_type === 'circle') { p_ctx.beginPath(); p_ctx.arc(px, py, Math.max(1, size / 2), 0, 2 * Math.PI); p_ctx.fill(); }
+            else if (params.shape_type === 'square') { p_ctx.fillRect(px - size / 2, py - size / 2, size, size); }
+            else if (params.shape_type === 'line') {
+                 const last_point = last_points_map[arm_idx];
+                 if (last_point) { p_ctx.beginPath(); p_ctx.moveTo(last_point[0], last_point[1]); p_ctx.lineTo(px, py); p_ctx.lineWidth = Math.max(1, params.line_thickness * p_scale); p_ctx.stroke(); }
+                 last_points_map[arm_idx] = [px, py];
+            }
+        };
+        const draw_classic_mode_visuals_local = (p_ctx, time_sec, params, classic_last_points) => {
+            const max_render_radius = Math.hypot(self.width, self.height) / 2 / self.C.MAX_RENDER_RADIUS_FACTOR_CLASSIC;
+            const cam_angle_x = time_sec*params.camera_rotate_speed_x, cam_angle_y = time_sec*params.camera_rotate_speed_y, cam_angle_z = time_sec*params.camera_rotate_speed_z;
+            const [cos_rx,sin_rx,cos_ry,sin_ry,cos_rz,sin_rz] = [Math.cos(cam_angle_x),Math.sin(cam_angle_x),Math.cos(cam_angle_y),Math.sin(cam_angle_y),Math.cos(cam_angle_z),Math.sin(cam_angle_z)];
+            const global_z_offset = Math.sin(time_sec * params.z_offset_speed) * params.z_offset_amplitude;
+            for (let r_iter = 0; r_iter < max_render_radius; r_iter += params.arm_segment_length) {
+                const radius_val = parseFloat(r_iter); if (radius_val === 0 && params.shape_type === 'line') continue;
+                const base_angle = (radius_val / params.spiral_tightness) + (time_sec * params.rotation_speed * params.direction);
+                const z_value = Math.sin(radius_val / params.z_frequency + time_sec * params.z_speed) * params.z_amplitude + global_z_offset;
+                for (let arm_index = 0; arm_index < params.num_arms; arm_index++) {
+                    const arm_angle = base_angle + arm_index * (2 * Math.PI / params.num_arms);
+                    const x3d = radius_val*Math.cos(arm_angle), y3d = radius_val*Math.sin(arm_angle);
+                    const [rotated_x,rotated_y,rotated_z] = rotate_3d(x3d,y3d,z_value,cos_rx,sin_rx,cos_ry,sin_ry,cos_rz,sin_rz);
+                    const [projected_pos,perspective_scale] = project_3d_to_2d(rotated_x,rotated_y,rotated_z,params.fov,self.width,self.height);
+                    if (projected_pos === null) { classic_last_points[arm_index] = null; continue; }
+                    let hue;
+                    if (params.classic_color_mode==='hue_radius') hue=(radius_val/max_render_radius + time_sec*params.color_shift_speed)%1;
+                    else if (params.classic_color_mode==='hue_time') hue=(time_sec*params.color_shift_speed)%1;
+                    else hue=(arm_index/params.num_arms + radius_val/(max_render_radius*2) + time_sec*params.color_shift_speed)%1;
+                    let saturation = params.saturation_base + Math.sin(time_sec*params.saturation_pulse_freq)*(1-params.saturation_base)*0.8; saturation = Math.max(0.1,Math.min(1.0,saturation));
+                    const z_effect_on_value = params.z_amplitude > self.C.EPSILON ? rotated_z * params.value_z_factor / params.z_amplitude : 0;
+                    let value = params.value_base - z_effect_on_value; value = Math.max(0.1,Math.min(1.0,value));
+                    const color_rgb = hsvToRgb(hue, saturation, value);
+                    const z_effect_on_size = params.z_amplitude > self.C.EPSILON ? 1.0 - (rotated_z * params.size_z_scaling / params.z_amplitude) : 1.0;
+                    let particle_size = params.base_size * perspective_scale * Math.max(0.1, z_effect_on_size); particle_size = Math.max(1,Math.round(particle_size));
+                    _draw_classic_shape_local(p_ctx, params, projected_pos, colorArrayToString(color_rgb), particle_size, perspective_scale, arm_index, classic_last_points);
+                }
+            }
+        };
+        const _modern_draw_shape_and_glow_local = (pC,cfg,pos,cArr,cS,sz,pS,aI,lPM,cTS)=>{const[px,py]=pos;pC.save();if(cfg.shape_rotation_speed!==0&&['square','cross','triangle','diamond','star','hexagon','gear_shape'].includes(cfg.shape_type)){pC.translate(px,py);pC.rotate(cfg.shape_base_rotation+cTS*cfg.shape_rotation_speed);pC.translate(-px,-py);}if(cfg.glow&&sz>self.C.GLOW_MIN_SIZE){const gR=sz*self.C.GLOW_RADIUS_FACTOR*cfg.glow_intensity_factor;if(gR>0.5){pC.shadowBlur=Math.max(1,gR);pC.shadowColor=`rgba(${cArr[0]},${cArr[1]},${cArr[2]},${cfg.glow_color_alpha})`;}}pC.fillStyle=cS;pC.strokeStyle=cS;const lW=Math.max(1,cfg.line_thickness*pS);if(cfg.shape_type==='circle'){pC.beginPath();pC.arc(px,py,Math.max(0.5,sz/2),0,2*Math.PI);pC.fill();}else if(cfg.shape_type==='square'){pC.fillRect(px-sz/2,py-sz/2,sz,sz);}else if(cfg.shape_type==='cross'){const lT=Math.max(1,lW*0.5+sz*0.1);const hS=sz/2;pC.lineWidth=lT;pC.beginPath();pC.moveTo(px-hS,py);pC.lineTo(px+hS,py);pC.moveTo(px,py-hS);pC.lineTo(px,py+hS);pC.stroke();}else if(cfg.shape_type==='triangle'){const s=parseFloat(sz);const aO=Math.PI/2;pC.beginPath();pC.moveTo(px+s*Math.cos(aO),py+s*Math.sin(aO));pC.lineTo(px+s*Math.cos(aO+2*Math.PI/3),py+s*Math.sin(aO+2*Math.PI/3));pC.lineTo(px+s*Math.cos(aO+4*Math.PI/3),py+s*Math.sin(aO+4*Math.PI/3));pC.closePath();pC.fill();}else if(cfg.shape_type==='line'){const lp=lPM[aI];if(lp){pC.beginPath();pC.moveTo(lp[0],lp[1]);pC.lineTo(px,py);pC.lineWidth=lW;pC.stroke();}lPM[aI]=[px,py];}else if(cfg.shape_type==='ring'){pC.beginPath();pC.arc(px,py,Math.max(1,sz/2),0,2*Math.PI);pC.lineWidth=Math.max(1,lW*0.6);pC.stroke();}else if(cfg.shape_type==='diamond'){const s2=sz/2;pC.beginPath();pC.moveTo(px,py-s2);pC.lineTo(px+s2,py);pC.lineTo(px,py+s2);pC.lineTo(px-s2,py);pC.closePath();pC.fill();}else if(cfg.shape_type==='star'){const sp=5;const oR=sz/2;const iR=sz/4;let rot=Math.PI/2*3;pC.beginPath();pC.moveTo(px,py-oR);for(let i=0;i<sp;i++){pC.lineTo(px+Math.cos(rot)*oR,py+Math.sin(rot)*oR);rot+=Math.PI/sp;pC.lineTo(px+Math.cos(rot)*iR,py+Math.sin(rot)*iR);rot+=Math.PI/sp;}pC.closePath();pC.fill();}else if(cfg.shape_type==='hexagon'){const sR=sz/2;const sds=6;pC.beginPath();for(let i=0;i<sds;i++){pC.lineTo(px+sR*Math.cos(i*2*Math.PI/sds),py+sR*Math.sin(i*2*Math.PI/sds));}pC.closePath();pC.fill();}
+        else if(cfg.shape_type==='dashed_line'){const lp=lPM[aI];if(lp){if((lPM[aI+"_dash_count"] = (lPM[aI+"_dash_count"] || 0) + 1) % 4 < 2){ pC.beginPath(); pC.moveTo(lp[0],lp[1]); pC.lineTo(px,py); pC.lineWidth=lW; pC.stroke();}}lPM[aI]=[px,py];}
+        else if(cfg.shape_type==='quad_rings'){pC.lineWidth=Math.max(1,lW*0.3); for(let i=1; i<=4; i++){ pC.beginPath(); pC.arc(px,py,Math.max(0.5,sz/2 * (i/4)),0,2*Math.PI); pC.stroke();}}
+        else if(cfg.shape_type==='pulsar_dot'){ const pulse_factor = 0.5 + 0.5*Math.sin(cTS*5 + px*0.1 + py*0.1); pC.beginPath();pC.arc(px,py,Math.max(0.5,sz/2 * pulse_factor),0,2*Math.PI);pC.fill();pC.globalAlpha = 1.0 - pulse_factor*0.5;} // Note: globalAlpha change needs reset
+        else if(cfg.shape_type==='wavy_segment'){const lp=lPM[aI];if(lp){pC.beginPath();pC.moveTo(lp[0],lp[1]); const midX=(lp[0]+px)/2; const midY=(lp[1]+py)/2; const ang=Math.atan2(py-lp[1],px-lp[0]); const waveAmp=sz*0.3; const ctrlX1=midX+waveAmp*Math.cos(ang+Math.PI/2); const ctrlY1=midY+waveAmp*Math.sin(ang+Math.PI/2); pC.quadraticCurveTo(ctrlX1, ctrlY1, px, py);pC.lineWidth=lW;pC.stroke();}lPM[aI]=[px,py];}
+        else if(cfg.shape_type==='gear_shape'){const oR=sz/2; const iR=sz*0.35; const teeth=8; pC.beginPath(); for(let i=0; i<teeth; i++){ let ang1=i*2*Math.PI/teeth; let ang2=(i+0.5)*2*Math.PI/teeth; pC.lineTo(px+oR*Math.cos(ang1), py+oR*Math.sin(ang1)); pC.lineTo(px+iR*Math.cos(ang2), py+iR*Math.sin(ang2));}pC.closePath();pC.fill();}
+        if(pC.shadowBlur>0)pC.shadowBlur=0; if(cfg.shape_type==='pulsar_dot') pC.globalAlpha = 1.0; /* Reset globalAlpha */ pC.restore();};
+        const spiral_visualizer_local = (pC,gTS,cfgs,allLPs)=>{if(!cfgs||cfgs.length===0)return;const aCfgCam=cfgs[0];if(aCfgCam.is_classic_mode&&aCfgCam instanceof ClassicConfig){const cPts=allLPs[0]=(allLPs[0]||{});draw_classic_mode_visuals_local(pC,gTS,aCfgCam,cPts);return;}const mR=Math.hypot(self.width,self.height)/2/self.C.MAX_RENDER_RADIUS_FACTOR_MODERN;const[caX,caY,caZ]=[gTS*aCfgCam.camera_rotate_speed_x,gTS*aCfgCam.camera_rotate_speed_y,gTS*aCfgCam.camera_rotate_speed_z];const[csX,snX,csY,snY,csZ,snZ]=[Math.cos(caX),Math.sin(caX),Math.cos(caY),Math.sin(caY),Math.cos(caZ),Math.sin(caZ)];let gZO=0;if(aCfgCam instanceof ModernConfig){gZO=Math.sin(gTS*aCfgCam.global_z_offset_speed)*aCfgCam.global_z_offset_amplitude;}for(let cfgI=0;cfgI<cfgs.length;cfgI++){const curCfg=cfgs[cfgI];if(!(curCfg instanceof ModernConfig))continue;const lTS=gTS+cfgI*curCfg.time_offset_per_layer;const lSPLPs=allLPs[cfgI]=(allLPs[cfgI]||{});for(let rI=0;rI<mR;rI+=curCfg.arm_segment_length){const rV=parseFloat(rI);if(rV===0&&(curCfg.shape_type==='line' || curCfg.shape_type==='dashed_line' || curCfg.shape_type==='wavy_segment'))continue;const bA=(rV/curCfg.spiral_tightness)+(lTS*curCfg.rotation_speed*curCfg.direction);const cZP=Math.sin(rV/curCfg.z_frequency+lTS*curCfg.z_speed)*curCfg.z_amplitude+gZO;for(let aI=0;aI<curCfg.num_arms;aI++){const aA=bA+aI*(2*Math.PI/curCfg.num_arms);let x3O=rV*Math.cos(aA);let y3O=rV*Math.sin(aA);let x3d=x3O,y3d=y3O;if(curCfg.distortion>0){const dS=curCfg.distortion/(1.0+rV*0.005);x3d+=Math.sin(y3O/(50.0+dS*2)+lTS*1.5)*dS;y3d+=Math.sin(x3O/(50.0+dS*2)+lTS*1.5)*dS;}if(curCfg.swirl_intensity>0){const aTC=Math.atan2(y3O,x3O);const dFC=Math.hypot(x3O,y3O);const sEA=Math.sin(dFC*curCfg.swirl_frequency+lTS*curCfg.swirl_speed)*curCfg.swirl_intensity;x3d+=Math.cos(aTC+Math.PI/2)*sEA;y3d+=Math.sin(aTC+Math.PI/2)*sEA;}const[rX,rY,rZ]=rotate_3d(x3d,y3d,cZP,csX,snX,csY,snY,csZ,snZ);const[proj,pS]=project_3d_to_2d(rX,rY,rZ,curCfg.fov,self.width,self.height);if(proj===null){lSPLPs[aI]=null;continue;}const[px,py]=proj;if(!(px>=0&&px<self.width&&py>=0&&py<self.height)){if(['line', 'dashed_line', 'wavy_segment'].includes(curCfg.shape_type))lSPLPs[aI]=null;continue;}let cRA;const cCT=lTS;if(curCfg.color_mode==='palette_based'){const pT=(rV/mR+cCT*curCfg.color_shift_speed)%1;cRA=get_palette_color_internal(curCfg.palette_name,pT,rV);}else if(curCfg.color_mode==='depth_hue_shift'){const bPT=(cCT*curCfg.color_shift_speed*0.1)%1.0;const bRN=get_palette_color_internal(curCfg.palette_name,bPT,rV).map(c=>c/255);let[hB,sB,vB]=colorsys_internal.rgb_to_hsv(...bRN);const zN=(rZ+curCfg.z_amplitude)/(2*curCfg.z_amplitude+self.C.EPSILON);const hZS=(zN-0.5)*0.3;hB=(hB+hZS+1)%1.0;sB=Math.max(0.1,Math.min(1,sB*(curCfg.saturation_base+Math.sin(cCT*curCfg.saturation_pulse_freq)*(1-curCfg.saturation_base)*0.5)));vB=Math.max(0.1,Math.min(1,vB*(curCfg.value_base-rZ*curCfg.value_z_factor/(curCfg.z_amplitude+self.C.EPSILON))));cRA=hsvToRgb(hB,sB,vB);}else{let hV;if(curCfg.color_mode==='dynamic_hsv_radius')hV=(rV/mR+cCT*curCfg.color_shift_speed)%1;else if(curCfg.color_mode==='dynamic_hsv_time')hV=(cCT*curCfg.color_shift_speed)%1;else hV=(aI/curCfg.num_arms+rV/(mR*1.5)+cCT*curCfg.color_shift_speed)%1;let s=curCfg.saturation_base+Math.sin(cCT*curCfg.saturation_pulse_freq+rV*0.005)*(1-curCfg.saturation_base)*0.7;s=Math.max(0.05,Math.min(1.0,s));const zND=(curCfg.z_amplitude+Math.abs(gZO)+self.C.EPSILON+100);const zNFV=zND>self.C.EPSILON?rZ/zND:0;const vZE=zNFV*curCfg.value_z_factor;let v=curCfg.value_base-vZE;v=Math.max(0.05,Math.min(1.0,v));cRA=hsvToRgb(hV,s,v);}const cS=colorArrayToString(cRA);const zAFS=curCfg.z_amplitude>self.C.EPSILON?curCfg.z_amplitude:1.0;const zSM=1.0-(rZ*curCfg.size_z_scaling/zAFS);let cPS=curCfg.base_size*pS*Math.max(0.05,zSM);cPS=Math.max(1,Math.round(cPS));_modern_draw_shape_and_glow_local(pC,curCfg,[px,py],cRA,cS,cPS,pS,aI,lSPLPs,lTS);}}}};
+
+        self.init = function() {
+            try { self.ctx = self.canvas.getContext('2d'); }
+            catch (e) { console.error("Fuse2App: Canvas 2D context creation failed.", e); }
+            if (!self.ctx) {
+                alert('Fuse2App: Canvas 2D is not supported or could not be initialized.');
+                throw new Error('Fuse2App: Canvas 2D not supported or failed to initialize.');
+            }
+            self.resizeCanvas();
+            window.addEventListener('resize', self.resizeCanvas.bind(self), false);
+            self.start_time_sim_ms = performance.now();
+            self.last_parameter_reset_time_ms = self.start_time_sim_ms;
+            // Initial interval set to default; focused randomization will override this.
+            self.parameter_reset_interval_ms = randint(self.defaultMinAutoRandomMs, self.defaultMaxAutoRandomMs);
+            self.current_configs = self.reset_configs();
+            self.setupEventListeners(); // Fuse2 specific R, P keys
+            console.log("Fuse2App: Initialized. Palettes available: " + PALETTE_NAMES_INTERNAL.length);
+        };
+
+        self.resizeCanvas = function() {
+            if (!self.ctx) return;
+            self.width = window.innerWidth;
+            self.height = window.innerHeight;
+            self.canvas.width = self.width;
+            self.canvas.height = self.height;
+        };
+
+        self.forceRandomize = function() {
+            const current_time_now = performance.now();
+            // console.log("Fuse2App: Forcing parameter randomization.");
+            self.current_configs = self.reset_configs();
+            self.all_last_points_for_lines = {};
+            self.last_parameter_reset_time_ms = current_time_now;
+            // Interval reset based on whether it's in focused mode or default auto mode
+            self.parameter_reset_interval_ms = self.isFocusedRandomActive ?
+                self.parameter_reset_interval_ms : // Keep the focused interval if it was set
+                randint(self.defaultMinAutoRandomMs, self.defaultMaxAutoRandomMs);
+        };
+
+        self.setToSurprisePreset = function(presetName = "Neon Party") {
+            console.log(`Fuse2App: Setting to surprise preset: ${presetName}`);
+            let cfgs = [];
+            if (presetName === "Neon Party") {
+                const numLayers = randint(2, 4);
+                for (let i = 0; i < numLayers; i++) {
+                    cfgs.push(new ModernConfig({
+                        num_arms: randint(5, 12), arm_segment_length: uniform(6, 12), spiral_tightness: uniform(30, 100),
+                        direction: choice([-1, 1]), rotation_speed: uniform(0.5, 1.5),
+                        z_amplitude: uniform(100, 300), z_frequency: uniform(100, 400), z_speed: uniform(0.3, 1.2),
+                        global_z_offset_amplitude: uniform(50, 100), global_z_offset_speed: uniform(0.3, 0.8),
+                        camera_rotate_speed_x: uniform(-0.1, 0.1), camera_rotate_speed_y: uniform(-0.1, 0.1), camera_rotate_speed_z: uniform(-0.05, 0.05),
+                        color_mode: 'palette_based', palette_name: choice(['neon', 'cyberpunk', 'acid_trip', 'electric_storm']), color_shift_speed: uniform(0.05, 0.15),
+                        saturation_base: 1.0, saturation_pulse_freq: uniform(0.5, 1.0), value_base: 1.0, value_z_factor: -0.1,
+                        shape_type: choice(['star', 'cross', 'ring', 'gear_shape', 'dashed_line']), base_size: uniform(8, 18), size_z_scaling: uniform(-0.2, 0.2),
+                        line_thickness: uniform(1, 3), fov: uniform(200, 350),
+                        distortion: Math.random() < 0.3 ? uniform(5, 15) : 0,
+                        swirl_intensity: Math.random() < 0.4 ? uniform(1, 3) : 0, swirl_frequency: uniform(0.02, 0.08), swirl_speed: uniform(0.3, 0.8),
+                        glow: true, glow_intensity_factor: uniform(1.2, 2.2), glow_color_alpha: uniform(0.15, 0.3),
+                        fade_alpha: uniform(0.05, 0.12), time_offset_per_layer: uniform(0.1, 0.5),
+                        shape_rotation_speed: uniform(0.5, 2.0) * choice([-1,1]), shape_base_rotation: Math.random() * Math.PI * 2
+                    }));
+                }
+            } else if (presetName === "Bright Energy") {
+                 const numLayers = randint(1, 2);
+                 for (let i = 0; i < numLayers; i++) {
+                    cfgs.push(new ModernConfig({
+                        num_arms: randint(3, 7), arm_segment_length: uniform(8, 15), spiral_tightness: uniform(50, 150),
+                        direction: choice([-1, 1]), rotation_speed: uniform(0.8, 2.0),
+                        z_amplitude: uniform(50, 150), z_frequency: uniform(150, 300), z_speed: uniform(0.5, 1.5),
+                        global_z_offset_amplitude: 0, global_z_offset_speed: 0,
+                        camera_rotate_speed_x: 0, camera_rotate_speed_y: 0, camera_rotate_speed_z: 0,
+                        color_mode: 'palette_based', palette_name: choice(['rainbow', 'candy_swirl', 'neon']), color_shift_speed: uniform(0.1, 0.25),
+                        saturation_base: 0.9, saturation_pulse_freq: uniform(0.8, 1.5), value_base: 0.9, value_z_factor: 0,
+                        shape_type: choice(['ring', 'line', 'pulsar_dot', 'dashed_line']), base_size: uniform(5, 12), size_z_scaling: 0.1,
+                        line_thickness: uniform(1.5, 3.5), fov: uniform(250, 400),
+                        distortion: 0, swirl_intensity: 0, swirl_frequency:0, swirl_speed:0,
+                        glow: Math.random() < 0.5, glow_intensity_factor: uniform(0.8, 1.5), glow_color_alpha: uniform(0.1, 0.2),
+                        fade_alpha: uniform(0.08, 0.15), time_offset_per_layer: uniform(0.2, 0.6),
+                        shape_rotation_speed: 0, shape_base_rotation: 0
+                    }));
+                }
+            }
+            self.current_configs = cfgs;
+            self.all_last_points_for_lines = {};
+            self.last_parameter_reset_time_ms = performance.now(); // Reset timer to observe preset longer
+             // Ensure the next auto-randomize is a bit away to let preset play
+            self.parameter_reset_interval_ms = Math.max(self.parameter_reset_interval_ms, 5000);
+        };
+
+
+        self.beginInternalCyclicRandomization = function(minIntervalMs, maxIntervalMs) {
+            self.isFocusedRandomActive = true;
+            self.parameter_reset_interval_ms = Math.random() * (maxIntervalMs - minIntervalMs) + minIntervalMs;
+            // Slightly offset last_parameter_reset_time_ms to ensure the new interval takes effect correctly
+            self.last_parameter_reset_time_ms = performance.now() - Math.random() * self.parameter_reset_interval_ms * 0.1; // Start a bit into the new interval
+        };
+
+        self.stopInternalCyclicRandomization = function() {
+            self.isFocusedRandomActive = false;
+            // Revert to default randomization interval when not focused
+            self.parameter_reset_interval_ms = randint(self.defaultMinAutoRandomMs, self.defaultMaxAutoRandomMs);
+        };
+
+
+        self.mainLoop = function(current_time_ms_arg) {
+            if (!self.ctx) { if (self.rAFId) cancelAnimationFrame(self.rAFId); self.rAFId = null; return; }
+            const current_time_ms = current_time_ms_arg || performance.now();
+            const elapsed_sim_time_sec = (current_time_ms - self.start_time_sim_ms) / 1000.0;
+
+            if (current_time_ms - self.last_parameter_reset_time_ms >= self.parameter_reset_interval_ms) {
+                // console.log(`Fuse2App: Auto param refresh. Focused: ${self.isFocusedRandomActive}, Interval: ${self.parameter_reset_interval_ms}`);
+                self.forceRandomize(); // forceRandomize will set the next interval appropriately
+            }
+
+            if (self.current_configs && self.current_configs.length > 0) {
+                self.current_fade_alpha = self.current_configs[0].fade_alpha;
+            } else {
+                self.current_fade_alpha = self.C.DEFAULT_FADE_ALPHA;
+            }
+
+            self.dynamic_bg_hue = (self.dynamic_bg_hue + 0.0001) % 1;
+            const bg_color_array = hsvToRgb(self.dynamic_bg_hue, 0.3, 0.05);
+            self.ctx.fillStyle = colorArrayToString(bg_color_array, self.dynamic_bg_alpha);
+            self.ctx.fillRect(0, 0, self.width, self.height);
+
+            self.ctx.fillStyle = `rgba(0, 0, 0, ${self.current_fade_alpha})`;
+            self.ctx.fillRect(0, 0, self.width, self.height);
+
+            spiral_visualizer_local(self.ctx, elapsed_sim_time_sec, self.current_configs, self.all_last_points_for_lines);
+            self.rAFId = requestAnimationFrame(self.mainLoop.bind(self));
+        };
+
+        self.setupEventListeners = function() { // Fuse2 specific keys (R, P)
+            window.addEventListener('keydown', (event) => {
+                if (self.canvas.style.display === 'none') return;
+                const current_time_now = performance.now();
+                const key_lower = event.key.toLowerCase();
+
+                if (key_lower === 'r') {
+                    console.log("Fuse2App: User forced refresh via 'R' key.");
+                    self.forceRandomize();
+                } else if (key_lower === 'p') {
+                    console.log("Fuse2App: Party Mode activated!");
+                    let num_layers_for_party = 1;
+                    if (!(self.current_configs && self.current_configs.length > 0 && self.current_configs[0].is_classic_mode)) {
+                         num_layers_for_party = randint(3, 6);
+                    }
+                    self.current_configs = self.reset_configs(num_layers_for_party);
+                    if (!(self.current_configs && self.current_configs.length > 0 && self.current_configs[0].is_classic_mode)) {
+                        self.current_configs.forEach(cfg => {
+                            if (cfg instanceof ModernConfig) {
+                                cfg.glow = Math.random() < 0.85; cfg.rotation_speed *= uniform(1.1, 1.7);
+                                cfg.fade_alpha = randint(3, 15) / 255.0; cfg.num_arms = randint(Math.max(1, cfg.num_arms - 2), cfg.num_arms + 5);
+                                cfg.shape_rotation_speed = (cfg.shape_rotation_speed === 0 ? choice([-1,1]) * uniform(1,3) : cfg.shape_rotation_speed * uniform(1.2,2));
+                                cfg.swirl_intensity = cfg.swirl_intensity > 0 ? cfg.swirl_intensity * uniform(1.1, 1.5) : (Math.random() < 0.3 ? uniform(1,4) : 0);
+                                cfg.distortion = cfg.distortion > 0 ? cfg.distortion * uniform(1.1, 1.5) : (Math.random() < 0.3 ? uniform(5,25) : 0);
+                                cfg.glow_intensity_factor = uniform(1.0, 2.5); cfg.glow_color_alpha = uniform(0.15, 0.35);
+                            }
+                        });
+                    }
+                    self.all_last_points_for_lines = {};
+                    self.last_parameter_reset_time_ms = current_time_now;
+                }
+            });
+        };
+
+        self.start = function() {
+            if (!self.ctx) { // Lazy initialization
+                try { self.init(); } catch(e) { console.error("Fuse2App: Failed to initialize on start command.", e); return; }
+            }
+            if (self.rAFId) cancelAnimationFrame(self.rAFId);
+            self.rAFId = null;
+            self.rAFId = requestAnimationFrame(self.mainLoop.bind(self));
+            console.log("Fuse2App: Rendering started.");
+        };
+
+        self.stop = function() {
+            if (self.rAFId) {
+                cancelAnimationFrame(self.rAFId);
+                self.rAFId = null;
+            }
+            self.stopInternalCyclicRandomization(); // Stop its internal timer too
+            console.log("Fuse2App: Rendering stopped.");
+        };
+
+        self.setVisibility = function(visible, opacity = 1) {
+            self.canvas.style.display = visible ? 'block' : 'none';
+            self.canvas.style.opacity = opacity;
+        };
+    } // End of Fuse2App
+
+
+    // --- MASTERCONTROL: Orchestrates ShadiesApp and Fuse2App (Blended Structure) ---
+    function MasterControl() {
+        const self = this;
+        self.shadiesApp = null; self.fuse2App = null;
+
+        let currentActiveMode = null; // e.g., 'SHADIES_ONLY', 'FUSE2_ONLY', 'BLEND_BOTH'
+        let systemStateChangeTimerId = null;
+
+        // System-level cycling intervals
+        const MIN_SYSTEM_CYCLE_MS = 15000;
+        const MAX_SYSTEM_CYCLE_MS = 40000;
+        // Internal randomization intervals for focused apps
+        const MIN_INTERNAL_RANDOM_MS = 3000; // Shorter interval for focused app
+        const MAX_INTERNAL_RANDOM_MS = 7000;
+
+        let titleOverlayElement;
+        let titleHideTimeout;
+        let mouseMoveTimeout;
+        let initialTitleDisplayDone = false;
+        let animationStarted = false; // Flag to ensure animations don't start before title is handled
+
+        self.init = function() {
+            titleOverlayElement = document.getElementById('titleOverlay');
+            titleOverlayElement.style.display = 'flex'; // Ensure visible initially
+            titleOverlayElement.style.opacity = '1';
+            titleOverlayElement.classList.add('interactive'); // Allow interaction
+
+            // Automatically hide title after a delay
+            titleHideTimeout = setTimeout(() => {
+                hideTitleOverlay(true); // true indicates it's the initial hide
+            }, 7000); // Increased duration for initial display
+
+            try {
+                self.shadiesApp = new ShadiesApp();
+                self.shadiesApp.init();
+            } catch (e) {
+                console.error("MasterControl: ShadiesApp failed to initialize.", e.message, e.stack);
+                self.shadiesApp = null;
+            }
+            try {
+                self.fuse2App = new Fuse2App();
+                self.fuse2App.init();
+            } catch (e) {
+                console.error("MasterControl: Fuse2App failed to initialize.", e.message, e.stack);
+                self.fuse2App = null;
+            }
+
+            if (!self.shadiesApp && !self.fuse2App) {
+                alert("Fatal Error: Both Shadies and Fuse2 animations failed to initialize. Please check console for errors and ensure your browser supports WebGL and Canvas 2D.");
+                if (titleHideTimeout) clearTimeout(titleHideTimeout); // Clear timeout if it's set
+                titleOverlayElement.style.opacity = '0'; // Hide title if error
+                setTimeout(() => titleOverlayElement.style.display = 'none', 1000);
+                return;
+            }
+
+            // Initially hide canvases, they will be shown by activateMode
+            if (self.shadiesApp) self.shadiesApp.setVisibility(false);
+            if (self.fuse2App) self.fuse2App.setVisibility(false, 0);
+
+            self.setupGlobalListeners();
+            console.log("MasterControl: Initialized. Waiting for title dismissal or timeout to start animations.");
+        };
+
+        function startAnimationsIfNeeded() {
+            if (!animationStarted) {
+                console.log("MasterControl: Attempting to start animations post-title.");
+                animationStarted = true;
+                // Determine initial mode based on availability
+                const initialMode = self.shadiesApp ? 'SHADIES_ONLY' : (self.fuse2App ? 'FUSE2_ONLY' : null);
+                if (initialMode) {
+                    self.activateMode(initialMode, true); // true to start system cycle timer
+                } else {
+                    console.error("MasterControl: No applications available to start.");
+                }
+            }
+        }
+
+        function showTitleOverlay() {
+            if (titleHideTimeout) clearTimeout(titleHideTimeout);
+            titleOverlayElement.style.display = 'flex';
+            titleOverlayElement.classList.add('interactive');
+            requestAnimationFrame(() => { // Ensure display:flex is applied before opacity transition
+                titleOverlayElement.style.opacity = '1';
+            });
+        }
+
+        function hideTitleOverlay(isInitialHide = false) {
+            if (titleHideTimeout) clearTimeout(titleHideTimeout);
+            titleOverlayElement.style.opacity = '0';
+            titleOverlayElement.classList.remove('interactive'); // Remove interaction while hiding
+
+            titleHideTimeout = setTimeout(() => {
+                titleOverlayElement.style.display = 'none';
+                if (isInitialHide && !initialTitleDisplayDone) { // Only trigger start once
+                    initialTitleDisplayDone = true;
+                    console.log("MasterControl: Initial title display sequence finished.");
+                    startAnimationsIfNeeded();
+                }
+            }, 1000); // Matches CSS transition duration
+        }
+
+        self.activateMode = function(modeName, restartSystemCycleTimer = false, specialParams = null) {
+            if (!animationStarted) {
+                 if (initialTitleDisplayDone) { // If title is done but animation didn't kick off (e.g. edge case)
+                    console.warn("MasterControl: activateMode called while animation not started but title is done. Forcing start.");
+                    startAnimationsIfNeeded();
+                 } else {
+                    console.log("MasterControl: activateMode called before initial title sequence completion. Call will be ignored or deferred.");
+                    // Optionally, queue this call or set a flag to execute it after title sequence.
+                    // For now, let's just log and rely on the normal flow.
+                 }
+                // If animations are still not started after the check, abort.
+                if (!animationStarted) return;
+            }
+
+            console.log(`MasterControl: Activating mode: ${modeName}. Restart system cycle: ${restartSystemCycleTimer}`);
+            currentActiveMode = modeName;
+
+            // Stop and hide both first, then activate the chosen one(s)
+            if (self.shadiesApp) { self.shadiesApp.stopInternalCyclicRandomization(); self.shadiesApp.stop(); self.shadiesApp.setVisibility(false); }
+            if (self.fuse2App) { self.fuse2App.stopInternalCyclicRandomization(); self.fuse2App.stop(); self.fuse2App.setVisibility(false, 0); }
+
+            switch (modeName) {
+                case 'SHADIES_ONLY':
+                    if (self.shadiesApp) {
+                        if (specialParams && specialParams.shadiesPreset) self.shadiesApp.setToSurprisePreset(specialParams.shadiesPreset);
+                        else self.shadiesApp.nextRandomEffectAndParams(); // Randomize for new activation
+                        self.shadiesApp.setVisibility(true); self.shadiesApp.start();
+                        self.shadiesApp.beginInternalCyclicRandomization(MIN_INTERNAL_RANDOM_MS, MAX_INTERNAL_RANDOM_MS);
+                    } else if (self.fuse2App) { console.warn("Master: ShadiesApp not available, falling back to Fuse2App for SHADIES_ONLY."); self.activateMode('FUSE2_ONLY', restartSystemCycleTimer, specialParams); return; }
+                    else { console.error("Master: No apps available for SHADIES_ONLY mode.");}
+                    break;
+                case 'FUSE2_ONLY':
+                    if (self.fuse2App) {
+                        if (specialParams && specialParams.fuse2Preset) self.fuse2App.setToSurprisePreset(specialParams.fuse2Preset);
+                        else self.fuse2App.forceRandomize(); // Randomize for new activation
+                        self.fuse2App.setVisibility(true, 1.0); self.fuse2App.start();
+                        self.fuse2App.beginInternalCyclicRandomization(MIN_INTERNAL_RANDOM_MS, MAX_INTERNAL_RANDOM_MS);
+                    } else if (self.shadiesApp) { console.warn("Master: Fuse2App not available, falling back to ShadiesApp for FUSE2_ONLY."); self.activateMode('SHADIES_ONLY', restartSystemCycleTimer, specialParams); return; }
+                     else { console.error("Master: No apps available for FUSE2_ONLY mode.");}
+                    break;
+                case 'BLEND_BOTH':
+                    if (self.shadiesApp && self.fuse2App) {
+                        if (specialParams && specialParams.shadiesPreset) self.shadiesApp.setToSurprisePreset(specialParams.shadiesPreset);
+                        else self.shadiesApp.nextRandomEffectAndParams();
+                        self.shadiesApp.setVisibility(true); self.shadiesApp.start();
+                        self.shadiesApp.beginInternalCyclicRandomization(MIN_INTERNAL_RANDOM_MS, MAX_INTERNAL_RANDOM_MS);
+
+                        if (specialParams && specialParams.fuse2Preset) self.fuse2App.setToSurprisePreset(specialParams.fuse2Preset);
+                        else self.fuse2App.forceRandomize();
+                        const fuse2Opacity = (specialParams && typeof specialParams.fuse2Opacity === 'number') ? specialParams.fuse2Opacity : 0.55;
+                        self.fuse2App.setVisibility(true, fuse2Opacity); self.fuse2App.start();
+                        self.fuse2App.beginInternalCyclicRandomization(MIN_INTERNAL_RANDOM_MS, MAX_INTERNAL_RANDOM_MS);
+                    } else if (self.shadiesApp) { console.warn("Master: Blend mode, Fuse2App NA. Using ShadiesApp only."); self.activateMode('SHADIES_ONLY', restartSystemCycleTimer, specialParams); return;}
+                    else if (self.fuse2App) { console.warn("Master: Blend mode, ShadiesApp NA. Using Fuse2App only."); self.activateMode('FUSE2_ONLY', restartSystemCycleTimer, specialParams); return;}
+                    else { console.error("Master: No apps available for BLEND_BOTH mode.");}
+                    break;
+                default:
+                    console.warn("MasterControl: Unknown mode requested:", modeName);
+                    // Fallback to a default if mode is unknown and apps are available
+                    if(self.shadiesApp) self.activateMode('SHADIES_ONLY', restartSystemCycleTimer);
+                    else if(self.fuse2App) self.activateMode('FUSE2_ONLY', restartSystemCycleTimer);
+            }
+
+            if (restartSystemCycleTimer) {
+                self.scheduleSystemStateChange();
+            } else { // If not restarting, explicitly clear any existing timer (e.g. manual mode change)
+                if(systemStateChangeTimerId) clearTimeout(systemStateChangeTimerId);
+                 console.log("MasterControl: System auto-cycling PAUSED due to manual mode change without cycle restart.");
+            }
+        };
+
+        self.scheduleSystemStateChange = function() {
+            if (systemStateChangeTimerId) clearTimeout(systemStateChangeTimerId);
+            const duration = Math.random() * (MAX_SYSTEM_CYCLE_MS - MIN_SYSTEM_CYCLE_MS) + MIN_SYSTEM_CYCLE_MS;
+            console.log(`MasterControl: Next system state change scheduled in ${(duration / 1000).toFixed(1)}s.`);
+            systemStateChangeTimerId = setTimeout(() => {
+                if (animationStarted) { // Only trigger if animations are generally running
+                    self.triggerRandomModeChange(true); // true to implicitly restart this cycle
+                } else {
+                    console.log("MasterControl: System state change was scheduled, but animations not started. Rescheduling slightly.");
+                    self.scheduleSystemStateChange(); // Reschedule if animations haven't started.
+                }
+            }, duration);
+        };
+
+        self.triggerRandomModeChange = function(restartCycleImplicitly = true) {
+             if (!animationStarted) {
+                console.log("MasterControl: triggerRandomModeChange called, attempting to start animations first.");
+                startAnimationsIfNeeded(); // This will try to start animations if title is done
+                if (!animationStarted) { // If still not started (e.g. title not done)
+                    console.log("MasterControl: Could not start animations for triggerRandomModeChange. Cycle will reschedule.");
+                    if (restartCycleImplicitly) self.scheduleSystemStateChange();
+                    return;
+                }
+             }
+
+            const availableModes = [];
+            if (self.shadiesApp) availableModes.push('SHADIES_ONLY');
+            if (self.fuse2App) availableModes.push('FUSE2_ONLY');
+            if (self.shadiesApp && self.fuse2App) availableModes.push('BLEND_BOTH');
+
+            if (availableModes.length === 0) {
+                console.warn("MasterControl: No modes available for random change.");
+                if (restartCycleImplicitly) self.scheduleSystemStateChange(); // Keep trying
+                return;
+            }
+
+            let nextMode = currentActiveMode;
+            if (availableModes.length > 1) {
+                while (nextMode === currentActiveMode) { // Ensure a different mode is picked
+                    nextMode = availableModes[Math.floor(Math.random() * availableModes.length)];
+                }
+            } else {
+                nextMode = availableModes[0]; // Only one mode possible
+            }
+            self.activateMode(nextMode, restartCycleImplicitly);
+        };
+
+
+        self.setupGlobalListeners = function() {
+            // Handle initial interaction for title dismissal
+            const initialInteractionHandler = (e) => {
+                if (!initialTitleDisplayDone) {
+                    if (e.type === 'touchstart' || e.type === 'mousedown') {
+                        e.preventDefault(); // Prevent text selection or other default behaviors
+                        e.stopPropagation();
+                    }
+                    if (titleHideTimeout) clearTimeout(titleHideTimeout);
+                    hideTitleOverlay(true); // true for initial hide
+                } else if (!animationStarted && initialTitleDisplayDone) {
+                    // If title is done but somehow animations didn't start (e.g. key pressed too early)
+                    startAnimationsIfNeeded();
+                }
+            };
+            titleOverlayElement.addEventListener('touchstart', initialInteractionHandler, { passive: false });
+            titleOverlayElement.addEventListener('mousedown', initialInteractionHandler, { passive: false }); // For desktop clicks on overlay
+            window.addEventListener('keydown', initialInteractionHandler, {once: true}); // Any key press dismisses
+
+
+            window.addEventListener('keydown', (event) => {
+                // Keydown events after initial dismissal are for controls
+                if (!initialTitleDisplayDone || !animationStarted) {
+                     // If a key is pressed while title is still up, but after the 'once' listener
+                     if(!initialTitleDisplayDone) initialInteractionHandler(event);
+                     else if (!animationStarted) startAnimationsIfNeeded();
+                     // Don't process control keys until animation is up
+                     if(!animationStarted) return;
+                }
+
+                let modeToActivate = null;
+                let restartCycleForKeyPress = false; // By default, manual key changes pause auto-cycle
+                let surpriseParams = null;
+
+                switch (event.key.toLowerCase()) {
+                    case '1': modeToActivate = 'SHADIES_ONLY'; break;
+                    case '2': modeToActivate = 'FUSE2_ONLY'; break;
+                    case '3': modeToActivate = 'BLEND_BOTH'; break;
+                    case '4':
+                        modeToActivate = 'SHADIES_ONLY';
+                        surpriseParams = { shadiesPreset: Math.random() < 0.5 ? "Cosmic Bloom" : "Deep Hypnosis" };
+                        break;
+                    case '5':
+                        modeToActivate = 'FUSE2_ONLY';
+                        surpriseParams = { fuse2Preset: Math.random() < 0.5 ? "Neon Party" : "Bright Energy" };
+                        break;
+                    case '6':
+                        modeToActivate = 'BLEND_BOTH';
+                        surpriseParams = {
+                            shadiesPreset: Math.random() < 0.5 ? "Cosmic Bloom" : "Deep Hypnosis",
+                            fuse2Preset: Math.random() < 0.5 ? "Neon Party" : "Bright Energy",
+                            fuse2Opacity: uniform(0.3, 0.7) // Random blend opacity for preset
+                        };
+                        break;
+                    case ' ':
+                        event.preventDefault(); // Prevent page scroll
+                        console.log("MasterControl: Spacebar pressed - Randomizing mode and visuals.");
+                        self.triggerRandomModeChange(true); // Spacebar does restart/continue the auto cycle
+                        return; // Handled directly
+                    case 'n':
+                        console.log("MasterControl: 'N' key pressed - Cycling to next mode.");
+                        const S_EXISTS = !!self.shadiesApp, F_EXISTS = !!self.fuse2App, B_POSSIBLE = S_EXISTS && F_EXISTS;
+                        if (currentActiveMode === 'SHADIES_ONLY')       modeToActivate = F_EXISTS ? 'FUSE2_ONLY' : (B_POSSIBLE ? 'BLEND_BOTH' : (S_EXISTS ? 'SHADIES_ONLY' : null));
+                        else if (currentActiveMode === 'FUSE2_ONLY')    modeToActivate = B_POSSIBLE ? 'BLEND_BOTH' : (S_EXISTS ? 'SHADIES_ONLY' : (F_EXISTS ? 'FUSE2_ONLY' : null));
+                        else if (currentActiveMode === 'BLEND_BOTH')    modeToActivate = S_EXISTS ? 'SHADIES_ONLY' : (F_EXISTS ? 'FUSE2_ONLY' : null);
+                        else /* Initial or unknown state */              modeToActivate = S_EXISTS ? 'SHADIES_ONLY' : (F_EXISTS ? 'FUSE2_ONLY' : null);
+
+                        if (!modeToActivate && S_EXISTS) modeToActivate = 'SHADIES_ONLY'; // Sensible fallback
+                        else if (!modeToActivate && F_EXISTS) modeToActivate = 'FUSE2_ONLY';
+                        restartCycleForKeyPress = true; // 'N' key also continues auto-cycle
+                        break;
+                }
+
+                if (modeToActivate) {
+                    // Check app availability before activating
+                    if ((modeToActivate === 'SHADIES_ONLY' && !self.shadiesApp) ||
+                        (modeToActivate === 'FUSE2_ONLY' && !self.fuse2App) ||
+                        (modeToActivate === 'BLEND_BOTH' && (!self.shadiesApp || !self.fuse2App))) {
+                        console.warn(`MasterControl: Mode ${modeToActivate} selected by key, but required app(s) not available.`);
+                        // Attempt a fallback if the primary choice for the key isn't available
+                        if(self.shadiesApp) self.activateMode('SHADIES_ONLY', restartCycleForKeyPress);
+                        else if(self.fuse2App) self.activateMode('FUSE2_ONLY', restartCycleForKeyPress);
+                        return;
+                    }
+                    self.activateMode(modeToActivate, restartCycleForKeyPress, surpriseParams);
+                }
+            });
+
+            // Touch on screen (not overlay) for randomizing after initial title
+            window.addEventListener('touchstart', (e) => {
+                if (e.target === titleOverlayElement && titleOverlayElement.classList.contains('interactive')) {
+                    // Touch was on the interactive title overlay, handled by its own listener
+                    return;
+                }
+                if (initialTitleDisplayDone && animationStarted) {
+                    e.preventDefault();
+                    console.log("MasterControl: Screen touched post-title, randomizing mode and visuals.");
+                    self.triggerRandomModeChange(true); // Touch also restarts/continues auto-cycle
+                } else if (initialTitleDisplayDone && !animationStarted){
+                     console.log("MasterControl: Screen touched post-title, but animation not started. Attempting to start.");
+                     startAnimationsIfNeeded();
+                }
+            }, { passive: false });
+
+
+            window.addEventListener('mousemove', () => {
+                if (initialTitleDisplayDone && animationStarted) { // Only if initial title is gone and anims running
+                    if (mouseMoveTimeout) clearTimeout(mouseMoveTimeout);
+                    mouseMoveTimeout = setTimeout(() => {
+                        // Check if title is currently hidden (opacity 0 or display none)
+                        const isTitleHidden = titleOverlayElement.style.opacity === '0' || titleOverlayElement.style.display === 'none';
+                        if (isTitleHidden) {
+                           showTitleOverlay();
+                           if(titleHideTimeout) clearTimeout(titleHideTimeout); // Clear any existing hide timer
+                           titleHideTimeout = setTimeout(() => { // Set new timer to hide it again
+                                hideTitleOverlay();
+                           }, 5000); // Show for 5 seconds on mouse move
+                        }
+                    }, 200); // Debounce mouse move
+                }
+            });
+        };
+    } // End of MasterControl
+
+    // --- Application Entry Point ---
+    window.addEventListener('load', () => {
+        const master = new MasterControl();
+        master.init();
+    });
+  </script>
+</body>
+</html>
