@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Match Mania (5x5)</title>
+    <style>
+        :root {
+            --bg-color: #F0F8FF;
+            --grid-bg: #FFFFFF;
+            --card-bg: #FFD700;
+            --card-flipped-bg: #ADD8E6;
+            --card-matched-bg: #90EE90;
+            --card-border: #FFA500;
+            --text-color: #333;
+            --title-color: #FF6347;
+            --subtitle-color: #4682B4;
+            --button-bg: #FF8C00;
+            --button-text: white;
+            --mistake-color: #DC143C;
+            --win-color: #32CD32;
+        }
+
+        body {
+            font-family: 'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        #title-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            height: 100vh;
+            width: 100vw;
+            background: linear-gradient(135deg, #FFC3A0 0%, #FFAFBD 100%);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        #title-screen h1 {
+            font-size: clamp(2.5rem, 8vw, 4.5rem); /* Adjusted for potentially smaller screen space */
+            color: var(--title-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 10px;
+        }
+
+        #title-screen p {
+            font-size: clamp(1rem, 3vw, 1.6rem);
+            color: var(--subtitle-color);
+            margin-bottom: 40px;
+        }
+
+        #start-button {
+            padding: 15px 30px;
+            font-size: clamp(1.2rem, 4vw, 1.8rem);
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        #start-button:hover {
+            transform: scale(1.05);
+            background-color: #FF6347;
+        }
+
+        #game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #game-info {
+            display: flex;
+            justify-content: space-around;
+            width: 70vmin; /* Adjusted for 5x5 */
+            max-width: 450px; /* Adjusted */
+            margin-bottom: 15px; /* Adjusted */
+            font-size: clamp(0.9rem, 2vw, 1.3rem); /* Adjusted */
+        }
+
+        #mistakes-counter {
+            padding: 8px; /* Adjusted */
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #memory-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* CHANGED to 5 columns */
+            /* grid-template-rows: repeat(5, 1fr); We'll let CSS flow the 24 items */
+            gap: 5px;
+            width: 75vmin; /* Adjusted for 5x5 */
+            /* height will be auto based on content and aspect ratio of cards */
+            max-width: 450px; /* Adjusted */
+            background-color: var(--grid-bg);
+            padding: 8px; /* Adjusted */
+            border-radius: 8px; /* Adjusted */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(1.8em, 5vmin, 3em); /* Adjusted emoji size for 5x5 */
+            cursor: pointer;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            transform-style: preserve-3d;
+            aspect-ratio: 1 / 1; /* Make cards square */
+        }
+
+        .card .front, .card .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: inherit;
+        }
+        .card .front {
+            background-color: var(--card-flipped-bg);
+            transform: rotateY(180deg);
+        }
+        .card .back {
+            background-color: var(--card-bg);
+        }
+        .card.flipped .front {
+            transform: rotateY(0deg);
+        }
+        .card.flipped .back {
+            transform: rotateY(-180deg);
+        }
+        .card.matched {
+            background-color: var(--card-matched-bg) !important;
+            border-color: #5cb85c;
+            cursor: default;
+            opacity: 0.7;
+        }
+        .card.matched .front {
+             transform: rotateY(0deg);
+        }
+         .card.matched .back {
+             transform: rotateY(-180deg);
+        }
+
+        /* Style for the "empty" cell if we choose to implement it that way */
+        .empty-cell {
+            background-color: transparent;
+            border: none;
+            cursor: default;
+        }
+
+
+        #game-over-message, #win-message {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 25px; /* Adjusted */
+            background-color: rgba(0,0,0,0.85);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.6em; /* Adjusted */
+            z-index: 200;
+        }
+        #game-over-message button, #win-message button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            font-size: 0.9em;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="title-screen">
+        <h1>Emoji Match Mania</h1>
+        <p>By Greg Seymour & AI (5x5 Edition)</p>
+        <button id="start-button">Start Game</button>
+    </div>
+
+    <div id="game-container">
+        <div id="game-info">
+            <div id="mistakes-counter">Mistakes: 0 / 5</div>
+        </div>
+        <div id="memory-grid"></div>
+    </div>
+
+    <div id="game-over-message">
+        Game Over! Too many mistakes.
+        <button onclick="restartGame()">Try Again</button>
+    </div>
+    <div id="win-message">
+        Congratulations! You matched them all!
+        <button onclick="restartGame()">Play Again</button>
+    </div>
+
+    <script>
+        const grid = document.getElementById('memory-grid');
+        const mistakesCounter = document.getElementById('mistakes-counter');
+        const titleScreen = document.getElementById('title-screen');
+        const gameContainer = document.getElementById('game-container');
+        const startButton = document.getElementById('start-button');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const winMessage = document.getElementById('win-message');
+
+        const numColumns = 5; // We'll arrange 24 cards in a 5-column layout
+        const totalCards = 24; // 12 pairs for a 5x5-ish feel
+        const numPairs = totalCards / 2; // 12 pairs
+        const maxMistakes = 5;
+        const initialRevealTime = 2500; // 2.5 seconds, slightly less for fewer cards
+
+        let emojis = [ // Need 12 unique emojis for 12 pairs
+            '😀', '😂', '🥰', '🤔', '🤩', '🥳', '👽', '👾', '🤖', '🎃', '👻', '💀'
+            // '💩', '🤡', '👹', '👺', '🙈', '🙉', '🙊', '💯', '🔥', '⭐', '✨', '🎉', '🎈', '🎁',
+            // '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+            // '☀️', '🌙', '☁️', '🌈', '🌊', '🌍', '🍎', '🍌', '🍇', '🍓'
+        ];
+
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let mistakes = 0;
+        let gameLocked = false;
+
+        startButton.addEventListener('click', startGame);
+
+        function startGame() {
+            titleScreen.style.display = 'none';
+            gameContainer.style.display = 'flex';
+            gameOverMessage.style.display = 'none';
+            winMessage.style.display = 'none';
+            resetGameVariables();
+            createGrid();
+            revealAndHide();
+        }
+
+        function resetGameVariables() {
+            cards = [];
+            flippedCards = [];
+            matchedPairs = 0;
+            mistakes = 0;
+            gameLocked = false;
+            updateMistakesDisplay();
+            grid.innerHTML = '';
+        }
+
+        function createGrid() {
+            const gameEmojis = generateEmojiPairs();
+            shuffleArray(gameEmojis);
+
+            for (let i = 0; i < totalCards; i++) { // Create 24 cards
+                const card = document.createElement('div');
+                card.classList.add('card');
+                card.dataset.emoji = gameEmojis[i];
+
+                const front = document.createElement('div');
+                front.classList.add('front');
+                front.textContent = gameEmojis[i];
+
+                const back = document.createElement('div');
+                back.classList.add('back');
+                // back.textContent = '?';
+
+
+                card.appendChild(front);
+                card.appendChild(back);
+
+                card.addEventListener('click', () => flipCard(card));
+                grid.appendChild(card);
+                cards.push(card);
+            }
+
+            // If you want a 25th "blank" cell to truly fill a 5x5 visual:
+            // const emptyCell = document.createElement('div');
+            // emptyCell.classList.add('card', 'empty-cell'); // Style 'empty-cell' in CSS
+            // grid.appendChild(emptyCell);
+            // This makes the grid visually 5x5, but the game logic uses 24 cards.
+            // For simplicity, this example just flows 24 cards into the 5-column grid.
+            // The last row will naturally have 4 cards.
+        }
+
+        function generateEmojiPairs() {
+            let pairs = [];
+            for (let i = 0; i < numPairs; i++) { // numPairs is 12
+                pairs.push(emojis[i % emojis.length]);
+                pairs.push(emojis[i % emojis.length]);
+            }
+            return pairs;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function revealAndHide() {
+            gameLocked = true;
+            cards.forEach(card => card.classList.add('flipped'));
+            setTimeout(() => {
+                cards.forEach(card => card.classList.remove('flipped'));
+                gameLocked = false;
+            }, initialRevealTime);
+        }
+
+        function flipCard(card) {
+            if (gameLocked || card.classList.contains('flipped') || card.classList.contains('matched')) {
+                return;
+            }
+
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                gameLocked = true;
+                checkForMatch();
+            }
+        }
+
+        function checkForMatch() {
+            const [card1, card2] = flippedCards;
+            if (card1.dataset.emoji === card2.dataset.emoji) {
+                card1.classList.add('matched');
+                card2.classList.add('matched');
+                matchedPairs++;
+                flippedCards = [];
+                gameLocked = false;
+                if (matchedPairs === numPairs) {
+                    endGame(true);
+                }
+            } else {
+                mistakes++;
+                updateMistakesDisplay();
+                if (mistakes >= maxMistakes) {
+                    setTimeout(() => {
+                       endGame(false);
+                    }, 800);
+
+                } else {
+                    setTimeout(() => {
+                        card1.classList.remove('flipped');
+                        card2.classList.remove('flipped');
+                        flippedCards = [];
+                        gameLocked = false;
+                    }, 1000);
+                }
+            }
+        }
+
+        function updateMistakesDisplay() {
+            mistakesCounter.textContent = `Mistakes: ${mistakes} / ${maxMistakes}`;
+            if (mistakes >= maxMistakes) {
+                 mistakesCounter.style.color = 'var(--mistake-color)';
+                 mistakesCounter.style.fontWeight = 'bold';
+            } else {
+                mistakesCounter.style.color = 'var(--text-color)';
+                mistakesCounter.style.fontWeight = 'normal';
+            }
+        }
+
+        function endGame(isWin) {
+            gameLocked = true;
+            if (isWin) {
+                winMessage.style.display = 'block';
+            } else {
+                cards.forEach(card => {
+                    if (!card.classList.contains('matched')) {
+                        card.classList.add('flipped');
+                    }
+                });
+                gameOverMessage.style.display = 'block';
+            }
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+    </script>
+</body>
+</html>
