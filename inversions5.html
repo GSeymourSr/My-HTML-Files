@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no"/>
+<title>INVERSIONS — 200 Effects (Enhanced)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Roboto+Mono&display=swap');
+  :root{ --accent:#00ffd5; --bg:#000; --panel:rgba(0,0,0,0.68); --muted:#9fb;}
+  html,body{height:100%;margin:0;background:#000;color:#fff;font-family:Segoe UI, Roboto, system-ui, sans-serif;overflow:hidden;}
+  canvas.full{position:fixed;inset:0;width:100vw;height:100vh;display:block;z-index:1;cursor:none;}
+  #overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:250;background:linear-gradient(180deg, rgba(0,0,0,0.96), rgba(0,0,0,0.88));transition:opacity .4s,visibility .4s;}
+  #overlay.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+  .panel{width:92%;max-width:1200px;background:var(--panel);display:grid;grid-template-columns:420px 1fr;gap:22px;padding:20px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.7);}
+  .left{padding:12px}
+  h1{font-family:'Orbitron',sans-serif;font-size:4.2vw;margin:6px 0;background:linear-gradient(90deg,#ff00ff,#00ffff,#ffff00);-webkit-background-clip:text;color:transparent}
+  .mono{font-family:'Roboto Mono',monospace;color:#7cffb2}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  button,input[type=number]{background:#111;border:1px solid #222;color:#fff;padding:8px;border-radius:8px;cursor:pointer}
+  .right{padding:8px;max-height:68vh;overflow:auto;background:rgba(255,255,255,0.02);border-radius:8px}
+  .list-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .effects{display:grid;gap:6px}
+  .row{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)}
+  .left-of-row{display:flex;align-items:center;gap:8px}
+  .label{font-size:13px}
+  .small{font-size:13px;padding:6px 10px}
+  .hint{font-size:12px;color:#ccf;margin-top:10px}
+  #tag{position:fixed;left:12px;bottom:12px;background:rgba(0,0,0,0.6);padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);font-family:'Roboto Mono',monospace;font-size:13px;opacity:0;transform:translateY(6px);transition:all .35s}
+  #tag.show{opacity:1;transform:translateY(0)}
+  @media(max-width:900px){ .panel{grid-template-columns:1fr;padding:12px} h1{font-size:36px}}
+</style>
+</head>
+<body>
+  <canvas id="glcanvas" class="full"></canvas>
+
+  <div id="overlay" role="dialog" aria-label="Inversions Menu">
+    <div class="panel" role="document">
+      <div class="left">
+        <h1>INVERSIONS</h1>
+        <div class="mono">BY GREG SEYMOUR — 200 EFFECTS</div>
+
+        <div class="controls">
+          <button id="selectAll" class="small">Select All</button>
+          <button id="deselectAll" class="small">Deselect All</button>
+          <label style="display:flex;align-items:center;gap:8px;"><input id="randomOrder" type="checkbox"/> Random</label>
+          <label style="display:flex;align-items:center;gap:8px;"><input id="orderedMode" type="checkbox"/> Ordered Mode</label>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+          <label style="display:flex;align-items:center;gap:4px;">Duration (sec)
+            <input id="duration" type="number" min="0.5" step="0.1" value="35" style="width:70px;margin-left:4px"/>
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;">Repeats
+            <input id="effectRepeats" type="number" min="1" step="1" value="1" style="width:60px;margin-left:4px"/>
+          </label>
+          <button id="startBtn" style="background:var(--accent);color:#000;font-weight:700;padding:10px 14px">Start</button>
+        </div>
+
+        <div class="hint">If you do nothing, the visualizer will start automatically after 10 seconds. During playback: click or press SPACE to jump to the next effect. Press ESC to go back to this menu.</div>
+      </div>
+
+      <div class="right">
+        <div class="list-actions">
+          <div>
+            <button id="showSelected" class="small">Show Selected</button>
+            <button id="showAllBtn" class="small">Show All</button>
+          </div>
+          <div>
+            <input id="filter" placeholder="Filter name..." style="background:#000;border:1px solid rgba(255,255,255,0.03);padding:6px;border-radius:6px;color:#fff"/>
+          </div>
+        </div>
+
+        <div id="effectsContainer" class="effects" aria-live="polite" tabindex="0"></div>
+        <div style="margin-top:10px;font-size:12px;color:#cce">Tip: Use Ordered Mode to enable the up/down buttons to reorder selected effects.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tag">EFFECT NAME</div>
+
+  <!-- Vertex shader -->
+  <script id="vs" type="x-shader/x-vertex">
+    attribute vec2 aVertexPosition;
+    void main(){ gl_Position = vec4(aVertexPosition,0.0,1.0); }
+  </script>
+
+  <!-- Fragment shader (grouped) -->
+  <script id="fs" type="x-shader/x-fragment">
+    precision highp float;
+    uniform vec2 uResolution;
+    uniform float uTime;
+    uniform float uIterations;
+    uniform float uColorShift;
+    uniform float uZoom;
+    uniform vec3 uColor1;
+    uniform vec3 uColor2;
+    uniform vec3 uColor3;
+    uniform vec3 uColor4;
+    uniform float uMirrors;
+    uniform float uRotation;
+    uniform float uPulse;
+    uniform float uPulseSpeed;
+    uniform float uEffectMode;
+    uniform float uFilmGrain;
+
+    // Polyfill for sinh / cosh in GLSL ES 1.0 (WebGL1)
+    float sinh(float x) { return (exp(x) - exp(-x)) * 0.5; }
+    float cosh(float x) { return (exp(x) + exp(-x)) * 0.5; }
+
+    // small utilities
+    float rnd(vec2 st){ return fract(sin(dot(st,vec2(12.9898,78.233)))*43758.5453); }
+    vec3 pal(float t){
+      vec3 a=uColor1,b=uColor2,c=uColor3,d=uColor4;
+      return a + b * cos(6.28318 * (c * t + d));
+    }
+
+    // Base pattern builder (kept small)
+    vec3 buildPattern(vec2 uv){
+      vec3 acc = vec3(0.0);
+      vec2 uv0 = uv;
+      for(float i=0.0;i<8.0;i++){
+        if(i >= uIterations) break;
+        uv = fract(uv * 1.6) - 0.5;
+        float d = length(uv) * exp(-length(uv0));
+        vec3 c = pal(length(uv0) + i*uColorShift + uTime*0.25);
+        float s = abs(sin(d*8.0 + uTime));
+        acc += c * (0.02 / max(s, 0.0001));
+      }
+      return acc;
+    }
+
+    // Small effect helpers to reuse logic across groups (keeps per-branch size smaller)
+    vec2 helper_twist(vec2 uv, float k){
+      float r = length(uv);
+      float a = atan(uv.y,uv.x);
+      a += pow(r, 1.2) * k + uTime * 0.35;
+      return vec2(cos(a), sin(a)) * r;
+    }
+    vec2 helper_tiles(vec2 uv, float n){
+      return fract(uv*n) - 0.5;
+    }
+    vec2 helper_wave(vec2 uv, float s){
+      uv.x += sin(uv.y * 10.0 + uTime) * s;
+      uv.y += cos(uv.x * 10.0 + uTime*1.1) * s;
+      return uv;
+    }
+
+    // ----------------------
+    // Group A: effects 0..49 (50 items)
+    // ----------------------
+    vec3 effectGroupA(int id, vec2 uv){
+      if(id == 0){ for(int i=0;i<4;i++) uv = abs(uv) - 0.5;
+      } else if(id == 1){ uv = helper_twist(uv, 2.0);
+      } else if(id == 2){ vec2 g = floor(uv*5.0); vec2 c = g + 0.5 + 0.35*sin(g*2.0 + uTime); uv = (c - uv*5.0) * 0.5;
+      } else if(id == 3){ uv += normalize(uv) * sin(length(uv)*10.0 - uTime*2.0) * 0.1;
+      } else if(id == 4){ uv = helper_wave(uv, 0.11);
+      } else if(id == 5){ float t = mod(floor(uv.x*5.0)+floor(uv.y*5.0),2.0); uv *= mix(0.5,1.5,t);
+      } else if(id == 6){ uv /= (1.0 + 0.8*length(uv));
+      } else if(id == 7){ uv.y = mix(uv.y, uv.x, step(mod(gl_FragCoord.y,3.0),0.0));
+      } else if(id == 8){ uv = vec2(sinh(uv.x*0.75), cosh(uv.y*0.75)-1.0);
+      } else if(id == 9){ uv = helper_tiles(uv, 4.0); uv *= 1.0 - smoothstep(0.4,0.46,length(uv));
+      } else if(id == 10){ float h = sin(uv.x*18.0) + sin(uv.y*18.0); uv += h * 0.045;
+      } else if(id == 11){ float a = atan(uv.y,uv.x); uv *= 1.0 + sin(a*10.0 + uTime)*0.22;
+      } else if(id == 12){ vec2 t = uv; uv.x += 0.095*sin(uv.y*5.0 + uTime); uv.y += 0.095*sin(t.x*6.0 + uTime*1.2);
+      } else if(id == 13){ uv += sin(uv.yx*8.0 + uTime)*0.08;
+      } else if(id == 14){ float r=length(uv); float a=atan(uv.y,uv.x); uv = vec2(r, a*2.0/3.14159); uv = fract(uv*5.0)-0.5;
+      } else if(id == 15){ uv = floor(uv*12.0 + 0.5*sin(uTime))/12.0;
+      } else if(id == 16){ uv *= abs(uv.x - uv.y) * 4.5;
+      } else if(id == 17){ uv.x += sin(gl_FragCoord.y * 0.45 + uTime)*0.18;
+      } else if(id == 18){ vec2 q = vec2(0.866025,0.5); vec2 r = mat2(q.x,q.y,-q.y,q.x)*uv*5.0; uv = fract(r)-0.5;
+      } else if(id == 19){ float r = pow(length(uv), 0.5); float a = atan(uv.y,uv.x); uv = vec2(cos(a),sin(a))*r;
+      } else if(id == 20){ uv = max(abs(uv.x),abs(uv.y))*sign(uv);
+      } else if(id == 21){ float r1 = length(uv-vec2(0.1,0.0)); float r2 = length(uv+vec2(0.1,0.0)); uv += 0.08*(sin(r1*20.0)+sin(r2*20.0));
+      } else if(id == 22){ float r = length(uv); uv += uv/r * sin(r*15.0 - uTime*4.0) * 0.045;
+      } else if(id == 23){ uv.x += uv.y * 0.45 * sin(uTime);
+      } else if(id == 24){ uv.y *= cos(uTime + uv.x*3.0) * 1.4;
+      } else if(id == 25){ uv.x += sin(uv.y*10.0 + uTime)*0.12;
+      } else if(id == 26){ float r=length(uv); float a=atan(uv.y,uv.x); a += sin(r*5.0 - uTime)*0.45; uv = vec2(cos(a),sin(a))*r;
+      } else if(id == 27){ uv = fract(uv*5.0)-0.5; uv /= (1.0 - 0.7 * length(uv));
+      } else if(id == 28){ uv *= 1.0 - smoothstep(0.45, 1.0, length(uv)) * 0.5;
+      } else if(id == 29){ uv = pow(abs(uv), vec2(0.72)) * sign(uv);
+      } else if(id == 30){ uv.x = abs(uv.x); uv -= vec2(0.18,0.0);
+      } else if(id == 31){ uv = log(abs(uv) + 0.01);
+      } else if(id == 32){ float r=length(uv); float a=atan(uv.y,uv.x); r=pow(r,1.45); uv = vec2(r*cos(a), r*sin(a));
+      } else if(id == 33){ uv += 0.08*vec2(sin(uv.y*10.0+uTime), cos(uv.x*10.0+uTime));
+      } else if(id == 34){ float a = atan(uv.y,uv.x); a = mod(a, 3.14159 / 4.0); uv = vec2(cos(a), sin(a)) * length(uv);
+      } else if(id == 35){ uv.x += step(mod(gl_FragCoord.y,2.0),0.0) * 0.02 * sin(uTime);
+      } else if(id == 36){ uv += vec2(uv.y, -uv.x) * 0.2 * sin(length(uv)*5.0 - uTime);
+      } else if(id == 37){ uv += normalize(uv) * 0.1 * sin(uTime);
+      } else if(id == 38){ float a = atan(uv.y,uv.x) * 6.0; uv *= 1.0 + 0.3 * abs(sin(a));
+      } else if(id == 39){ float r=length(uv); r = pow(r,0.8); uv = normalize(uv) * r;
+      } else if(id == 40){ float a=atan(uv.y,uv.x) + length(uv)*3.0; uv = vec2(cos(a), sin(a)) * length(uv);
+      } else if(id == 41){ uv /= (1.0 - 0.72 * abs(uv.x * uv.y));
+      } else if(id == 42){ uv += sin(uv * 5.0 + uTime) * 0.05;
+      } else if(id == 43){ uv = abs(uv); uv = mat2(cos(uTime), -sin(uTime), sin(uTime), cos(uTime)) * uv;
+      } else if(id == 44){ uv.x += sin(uv.y * 5.0 + uTime) * 0.1; uv.y += cos(uv.x * 5.0 + uTime) * 0.1;
+      } else if(id == 45){ uv = vec2(uv.x*uv.x - uv.y*uv.y, 2.0*uv.x*uv.y);
+      } else if(id == 46){ float d = dot(uv,uv); if(d > 0.0001) uv = vec2(uv.x, -uv.y) / d;
+      } else if(id == 47){ for(int i=0;i<4;i++){ uv = abs(uv * 1.4) - vec2(0.5, 0.2); }
+      } else if(id == 48){ vec2 ipos = floor(uv*5.0); vec2 fpos = fract(uv*5.0); if(rnd(ipos) > 0.5) fpos = fpos.yx; uv = fpos - 0.5;
+      } else { uv += sin(uTime + uv.yx * 12.0) * 0.1; uv += cos(uv.xy * 10.0) * 0.05; }
+      return buildPattern(uv);
+    }
+
+    // ----------------------
+    // Group B: effects 50..99
+    // ----------------------
+    vec3 effectGroupB(int idRaw, vec2 uvIn){
+      int id = idRaw + 50; vec2 uv = uvIn;
+      if(id == 50){ float c = mod(floor(uv.x*6.0) + floor(uv.y*6.0), 2.0); uv += (c - 0.5) * 0.2 * vec2(sin(uTime), cos(uTime));
+      } else if(id == 51){ for(int i=0;i<5;i++) uv = (uv - vec2(0.5,-0.5))*0.8 + vec2(0.5,-0.5);
+      } else if(id == 52){ float r=length(uv); float a=atan(uv.y,uv.x); uv.x *= 1.5; a += 1.0/r*0.45 + uTime; uv = vec2(cos(a), sin(a))*r;
+      } else if(id == 53){ uv = pow(abs(uv), vec2(3.0)) * sign(uv);
+      } else if(id == 54){ vec2 shift = sin(floor(uv*8.0) + uTime*2.0)*0.1; uv += shift;
+      } else if(id == 55){ float a=atan(uv.y,uv.x); float r=length(uv); a = mod(a,0.78539); a = abs(a - 0.39269); uv = vec2(cos(a),sin(a))*r;
+      } else if(id == 56){ float wave = sin((uv.x + uv.y)*10.0 - uTime*3.0)*0.1; uv += vec2(wave, -wave);
+      } else if(id == 57){ uv.y = uv.y*uv.y - 0.5; uv.x = uv.x / (1.0 + abs(uv.y*2.0));
+      } else if(id == 58){ vec2 g = floor(uv*20.0)/20.0; vec2 f = fract(uv*20.0); if(abs(f.x - 0.5) > 0.4 || abs(f.y - 0.5) > 0.4) uv = g;
+      } else if(id == 59){ float a = atan(uv.y,uv.x); uv *= 1.0 + 0.3*sin(a*4.0 + uTime);
+      } else if(id == 60){ uv.x /= (1.0 + abs(uv.y)*4.0); uv.y /= (1.0 + abs(uv.x)*4.0);
+      } else if(id == 61){ uv.y += uTime*0.5; uv = fract(uv)-0.5;
+      } else if(id == 62){ if(mod(floor(uTime*0.5),2.0) == 0.0) uv.x = abs(uv.x)-0.2; else uv.y = abs(uv.y)-0.2;
+      } else if(id == 63){ float r=length(uv); float a=atan(uv.y,uv.x); r = floor(r*15.0)/15.0; uv = vec2(cos(a),sin(a))*r;
+      } else if(id == 64){ float g = sin(uv.x*10.0+uTime)+cos(uv.y*10.0+uTime); uv += normalize(uv)*g*0.05;
+      } else if(id == 65){ float l = length(uv); uv = vec2(atan(uv.y,uv.x), l); uv.x += sin(uv.y*10.0 - uTime)*0.2 / max(l, 0.001); uv = l * vec2(cos(uv.x), sin(uv.x));
+      } else if(id == 66){ uv.xy = vec2(uv.x, 1.0/uv.y);
+      } else if(id == 67){ uv = fract(uv*3.0) - 0.5; uv *= mat2(cos(uTime), -sin(uTime), sin(uTime), cos(uTime));
+      } else if(id == 68){ uv += tan(uv.yx * 2.0 + uTime) * 0.1;
+      } else if(id == 69){ uv = uv / dot(uv,uv);
+      } else if(id == 70){ for(int i=0;i<4;i++) uv = abs(uv)/dot(uv,uv) - 0.9;
+      } else if(id == 71){ float r = length(uv); float a = atan(uv.y,uv.x); uv = vec2(1.0/r, a);
+      } else if(id == 72){ uv.x = uv.x * sin(uTime*2.0);
+      } else if(id == 73){ uv = sign(uv) * pow(abs(uv), vec2(sin(uTime)*0.5 + 1.0));
+      } else if(id == 74){ uv = asin(sin(uv*5.0 + uTime))/5.0;
+      } else if(id == 75){ uv = floor(uv*15.0)/15.0 + fract(uv*15.0)*sin(uTime)*0.2;
+      } else if(id == 76){ uv.x += (rnd(floor(gl_FragCoord.xy/10.0)) - 0.5) * 0.2;
+      } else if(id == 77){ vec2 tmp = vec2(length(uv), atan(uv.y,uv.x)); tmp.y = floor(tmp.y * 12.0)/12.0; uv = vec2(cos(tmp.y), sin(tmp.y)) * tmp.x;
+      } else if(id == 78){ uv = fract(uv); uv.x -= uTime*0.3;
+      } else if(id == 79){ uv.x = abs(uv.x) - abs(uv.y);
+      } else if(id == 80){ uv.x += sin(tan(uTime + uv.y));
+      } else if(id == 81){ uv.x = mod(uv.x, 0.2) - 0.1; uv.y = mod(uv.y, 0.2) - 0.1;
+      } else if(id == 82){ uv += sin(length(uv)*20.0 - uTime) * normalize(uv).yx * 0.1;
+      } else if(id == 83){ uv = 0.5 * log(exp(uv) + exp(-uv));
+      } else if(id == 84){ float d = length(uv); uv = mix(uv, uv.yx, smoothstep(0.4,0.5,d));
+      } else if(id == 85){ uv.x += uv.y*uv.y*2.0; uv.y += uv.x*uv.x*2.0;
+      } else if(id == 86){ uv *= 1.0 - smoothstep(0.2,1.0,abs(uv.x)) * 0.5;
+      } else if(id == 87){ float a = atan(uv.y,uv.x); float r = length(uv); a += sin(a*12.0 + uTime)*0.2; uv = vec2(cos(a), sin(a)) * r;
+      } else if(id == 88){ uv.y += sin(gl_FragCoord.x * 0.1 + uTime) * 0.1;
+      } else if(id == 89){ uv = normalize(uv) * pow(length(uv), 1.0 + sin(uTime)*0.3);
+      } else if(id == 90){ uv.x = sqrt(abs(uv.x)) * sign(uv.x); uv.y = sqrt(abs(uv.y)) * sign(uv.y);
+      } else if(id == 91){ uv = mat2(1.0, tan(uTime*0.5), 0.0, 1.0) * uv;
+      } else if(id == 92){ uv = uv / (1.0 - 0.5 * uv.y);
+      } else if(id == 93){ uv.xy = uv.yx * vec2(-1.0,1.0);
+      } else if(id == 94){ for(int i=0;i<3;i++){ uv = abs(uv)-vec2(uTime*0.06,-0.2); uv *= 1.18; }
+      } else if(id == 95){ uv += vec2(0.1, 0.05) * (rnd(floor(gl_FragCoord.xy/vec2(20.0))) - 0.5);
+      } else if(id == 96){ float a = atan(uv.y,uv.x); uv *= 1.0 + 0.2 * smoothstep(0.8,1.0,cos(a*7.0 - uTime*3.0));
+      } else if(id == 97){ uv = -uv;
+      } else if(id == 98){ float d = length(uv); uv = vec2(d, sin(d*10.0 - uTime));
+      } else { vec2 c = vec2(sin(uTime*0.2)*0.2, cos(uTime*0.2)*0.2); uv = vec2(length(uv - c), length(uv + c)); }
+      return buildPattern(uv);
+    }
+
+    // ----------------------
+    // Group C: effects 100..149
+    // ----------------------
+    vec3 effectGroupC(int idRaw, vec2 uvIn){
+      int id = idRaw + 100; vec2 uv = uvIn;
+      if(id == 100){ float a = atan(uv.y,uv.x)*2.0 + 0.4*sin(uTime); float r = length(uv); uv = vec2(cos(a), sin(a)) * pow(r, 0.82);
+      } else if(id == 101){ float r = length(uv); float a = atan(uv.y,uv.x); float k = sin(uTime*0.8 + r*12.0) * 0.45; uv = vec2(cos(a + k), sin(a + k)) * r; uv *= vec2(1.0 + 0.2*sin(r*20.0+uTime), 1.0);
+      } else if(id == 102){ uv *= 1.0 + 0.6*sin(uTime + length(uv)*6.0); uv = mat2(cos(uTime*0.25), -sin(uTime*0.25), sin(uTime*0.25), cos(uTime*0.25)) * uv;
+      } else if(id == 103){ uv = helper_tiles(uv, 6.0); uv += 0.08 * sin(uTime + uv.yx*10.0);
+      } else if(id == 104){ float r = length(uv); uv += normalize(uv) * sin(r*40.0 - uTime*3.0) * 0.045 / (r+0.2);
+      } else if(id == 105){ uv += vec2(sin(uv.y*8.0+uTime), cos(uv.x*8.0-uTime))*0.12; uv *= 1.0 + 0.18*sin(uTime*1.25);
+      } else if(id == 106){ vec2 g = fract(uv*8.0)-0.5; float rr = length(g); g += normalize(g) * sin(rr*30.0 + uTime*1.5) * 0.06; uv = g;
+      } else if(id == 107){ float a=atan(uv.y,uv.x); float r=length(uv); r = fract(r*4.0 + sin(uTime*0.7)) * 0.86; uv = vec2(cos(a), sin(a)) * pow(r, 0.6);
+      } else if(id == 108){ uv += vec2(sin(uTime+uv.x*40.0), cos(uTime+uv.y*40.0))*0.02;
+      } else if(id == 109){ vec2 L = floor(uv*7.0); vec2 s = fract(uv*7.0)-0.5; s += 0.2*vec2(sin(L.x*3.0+uTime), cos(L.y*2.0-uTime)); uv = s;
+      } else if(id == 110){ uv *= 1.0 + 0.3*sin(length(uv)*12.0 - uTime*2.0); uv = mat2(cos(uTime*0.3), -sin(uTime*0.3), sin(uTime*0.3), cos(uTime*0.3)) * uv;
+      } else if(id == 111){ float c = step(0.0, sin(uv.x*10.0+uTime))*0.5 + 0.5; uv *= mix(0.6,1.6,c);
+      } else if(id == 112){ uv.y += 0.3*sin(uv.x*5.0 + uTime*0.8); uv.x += 0.2*cos(uv.y*6.0 - uTime*0.6);
+      } else if(id == 113){ float a = atan(uv.y,uv.x); uv += vec2(sin(a*6.0 + uTime), cos(a*6.0 - uTime)) * 0.08;
+      } else if(id == 114){ uv = abs(uv); uv = vec2(uv.x*uv.x - uv.y*0.6, uv.y*uv.y - uv.x*0.6);
+      } else if(id == 115){ vec2 q = vec2(0.866025,0.5); vec2 r = mat2(q.x,q.y,-q.y,q.x) * uv * 3.5; uv = fract(r)-0.5; uv *= mat2(cos(uTime*0.9), -sin(uTime*0.9), sin(uTime*0.9), cos(uTime*0.9));
+      } else if(id == 116){ uv += 0.06*vec2(sin(uv.y*30.0 + uTime*3.0), cos(uv.x*30.0 - uTime*3.0));
+      } else if(id == 117){ uv.x += 0.1 * sin(uTime + uv.y*8.0); uv.y += 0.05 * cos(uTime*1.2 + uv.x*6.0);
+      } else if(id == 118){ float a = atan(uv.y,uv.x) * 5.0; float r = length(uv); uv = vec2(cos(a), sin(a)) * pow(r, 0.9);
+      } else if(id == 119){ vec2 cell = fract(uv*40.0)-0.5; cell *= 1.0 - smoothstep(0.0,0.4,length(cell)); uv = cell;
+      } else if(id == 120){ float r = length(uv); uv *= 1.0 + 0.3 * sin(r*40.0 - uTime*2.0);
+      } else if(id == 121){ uv = vec2(uv.x*cos(uTime) - uv.y*sin(uTime)*0.6, uv.x*sin(uTime)*0.6 + uv.y*cos(uTime));
+      } else if(id == 122){ uv += vec2(sin(uv.y*10.0+uTime*1.2), cos(uv.x*10.0-uTime*1.1))*0.08;
+      } else if(id == 123){ vec2 f = fract(uv*5.0)-0.5; f += sin(f.yx*20.0+uTime)*0.03; uv = f;
+      } else if(id == 124){ uv = sign(uv)*pow(abs(uv),vec2(1.0 + 0.3*sin(uTime)));
+      } else if(id == 125){ vec2 g = fract(uv*6.0)-0.5; g *= 1.0 - 0.5*smoothstep(0.0,0.6,length(g)); uv = g;
+      } else if(id == 126){ float a = atan(uv.y,uv.x); float r = length(uv); uv = vec2(cos(a + sin(r*10.0+uTime*0.7)*0.4), sin(a + cos(r*10.0-uTime*0.7)*0.4)) * r;
+      } else if(id == 127){ vec2 t = floor(uv*5.0); vec2 s = fract(uv*5.0)-0.5; s += 0.08*vec2(sin(t.x + uTime), cos(t.y - uTime)); uv = s;
+      } else if(id == 128){ float r = length(uv); uv *= 1.0 + 0.15 * sin(r*12.0 - uTime*2.0);
+      } else if(id == 129){ vec2 tile = fract(uv*7.0)-0.5; tile = mat2(cos(uTime*0.6), -sin(uTime*0.6), sin(uTime*0.6), cos(uTime*0.6)) * tile; uv = tile;
+      } else if(id == 130){ uv += 0.06*vec2(sin(uv.x*15.0+uTime*2.0), sin(uv.y*15.0-uTime*1.7));
+      } else if(id == 131){ vec2 m = fract(uv*12.0)-0.5; float rr = length(m); m += normalize(m) * sin(rr*50.0 + uTime*2.5) * 0.03; uv = m;
+      } else if(id == 132){ uv += 0.05*vec2(sin(uTime + uv.y*14.0), cos(uTime - uv.x*14.0));
+      } else if(id == 133){ vec2 f = fract(uv*4.0)-0.5; f *= 1.0 + 0.3*sin(length(f)*20.0 - uTime*1.4); uv = f;
+      } else if(id == 134){ uv += 0.08*vec2(sin(uv.x*8.0+uTime), cos(uv.y*8.0-uTime*1.2));
+      } else if(id == 135){ float a = atan(uv.y,uv.x)*3.0 + sin(uTime*0.9); float r = length(uv); uv = vec2(cos(a), sin(a)) * pow(r, 0.85);
+      } else if(id == 136){ uv = mat2(1.0, 0.3*sin(uTime), 0.0, 1.0) * uv; uv = fract(uv*9.0)-0.5;
+      } else if(id == 137){ uv += 0.05*vec2(sin(uv.y*18.0 + uTime*2.2), cos(uv.x*18.0 - uTime*2.0));
+      } else if(id == 138){ float r = length(uv); uv *= 1.0 + 0.2*sin(r*30.0 - uTime*2.3);
+      } else if(id == 139){ vec2 grid = floor(uv*6.0); vec2 center = grid + 0.5; uv = (center - uv*6.0) * 0.5 + 0.06*sin(grid.x + uTime);
+      } else if(id == 140){ float a = atan(uv.y,uv.x); float r = length(uv); a += sin(r*16.0 - uTime)*0.6; uv = vec2(cos(a), sin(a)) * r;
+      } else if(id == 141){ uv += vec2(sin(uTime + uv.x*20.0), sin(uTime - uv.y*20.0)) * 0.04;
+      } else if(id == 142){ vec2 c = floor(uv*8.0); vec2 s = fract(uv*8.0)-0.5; s *= 1.0 + 0.2*sin(uTime + c.x*0.4); uv = s;
+      } else if(id == 143){ uv += 0.03*vec2(sin(uv.y*22.0 + uTime*2.6), cos(uv.x*22.0 - uTime*2.1));
+      } else if(id == 144){ float a2 = atan(uv.y,uv.x) + 0.4*sin(length(uv)*20.0 - uTime*1.2); float r2 = length(uv); uv = vec2(cos(a2), sin(a2)) * pow(r2, 0.75);
+      } else if(id == 145){ vec2 f2 = fract(uv*10.0)-0.5; f2 += 0.06*vec2(sin(f2.y*30.0 + uTime), cos(f2.x*30.0 - uTime)); uv = f2;
+      } else if(id == 146){ uv = sign(uv) * pow(abs(uv), vec2(1.0 + 0.5*sin(uTime*0.8))); uv += 0.02*vec2(sin(uTime*3.0 + uv.x*40.0), cos(uTime*2.5 - uv.y*40.0));
+      } else if(id == 147){ vec2 mm = fract(uv*14.0)-0.5; mm *= 1.0 + 0.15*sin(length(mm)*60.0 - uTime*2.5); uv = mm;
+      } else if(id == 148){ float a3 = atan(uv.y,uv.x)*2.0 + sin(uTime); float r3 = length(uv); uv = vec2(cos(a3), sin(a3)) * r3; uv = fract(uv*5.0)-0.5;
+      } else { uv += vec2(sin(uv.x*18.0+uTime*1.5), sin(uv.y*18.0-uTime*1.3)) * 0.06; }
+      return buildPattern(uv);
+    }
+    
+    // ----------------------
+    // Group D: effects 150..199 (50 new effects)
+    // ----------------------
+    vec3 effectGroupD(int idRaw, vec2 uvIn){
+      int id = idRaw + 150; vec2 uv = uvIn;
+      if(id == 150){ float d=length(uv); uv=vec2(atan(uv.y,uv.x)/3.14159,1./d); uv.x+=uTime*0.1; uv=fract(uv*6.)-0.5;
+      } else if(id == 151){ for(int i=0;i<5;i++){ uv=abs(uv)-vec2(0.2,0.2); uv*=mat2(cos(0.4),-sin(0.4),sin(0.4),cos(0.4)); }
+      } else if(id == 152){ uv.x+=tan(uv.y*2.+uTime)*0.1; uv.y+=sin(uv.x*2.-uTime)*0.1;
+      } else if(id == 153){ float r=length(uv); uv=normalize(uv)*tan(r*2.-uTime*0.8);
+      } else if(id == 154){ vec2 g=floor(uv*10.); uv=fract(uv*10.)-0.5; uv+=sin(g.x+uTime*2.)*0.2;
+      } else if(id == 155){ uv.x=abs(uv.x-0.5)-0.25; uv.y=abs(uv.y-0.5)-0.25; uv*=2.;
+      } else if(id == 156){ float a=atan(uv.y,uv.x); float r=length(uv); a=floor(a*10.+sin(uTime*2.))/10.; uv=vec2(cos(a),sin(a))*r;
+      } else if(id == 157){ uv.x+=sin(length(uv)*20.+uTime)*0.1;
+      } else if(id == 158){ uv=vec2(length(uv-vec2(sin(uTime)*0.3,0)),length(uv+vec2(sin(uTime)*0.3,0)));
+      } else if(id == 159){ uv*=1.+0.2*sin(uv.x*uv.y*20.+uTime);
+      } else if(id == 160){ uv.x=uv.x*cos(uv.y*5.+uTime); uv.y=uv.y*sin(uv.x*5.-uTime);
+      } else if(id == 161){ vec2 id_v=floor(uv*6.); uv=fract(uv*6.)-0.5; uv.x+=sin(id_v.y+uTime)*0.2;
+      } else if(id == 162){ float r=length(uv); float a=atan(uv.y,uv.x); r=fract(r*5.+uTime*0.2); uv=vec2(cos(a),sin(a))*r;
+      } else if(id == 163){ uv=log(abs(uv)+0.01)*vec2(1.,-1.);
+      } else if(id == 164){ uv.x+=smoothstep(0.,1.,sin(uv.y*10.+uTime))*0.2-0.1;
+      } else if(id == 165){ for(int i=0;i<3;i++)uv=abs(uv*1.8-vec2(0.5,0.));
+      } else if(id == 166){ uv.y+=0.1*sin(gl_FragCoord.x*0.05+uTime*2.); uv.x+=0.1*sin(gl_FragCoord.y*0.05+uTime*2.);
+      } else if(id == 167){ uv=fract(uv*vec2(1,2)*3.+uTime*0.1)-0.5;
+      } else if(id == 168){ float d=dot(uv,vec2(sin(uTime),cos(uTime))); uv+=d*0.3;
+      } else if(id == 169){ uv=vec2(uv.x+uv.y,uv.x-uv.y)*0.7;
+      } else if(id == 170){ float a=atan(uv.y,uv.x); float r=length(uv); a+=sin(r*15.+uTime)*0.4; r+=cos(a*10.+uTime)*0.1; uv=vec2(cos(a),sin(a))*r;
+      } else if(id == 171){ vec2 g=floor(uv*4.); float s=sin(g.x-g.y+uTime); uv=fract(uv*4.)-0.5+s*0.1;
+      } else if(id == 172){ uv.x+=sin(atan(uv.y,uv.x)*10.+uTime)*0.2;
+      } else if(id == 173){ uv=sign(uv)*pow(abs(uv),vec2(1.5,0.5));
+      } else if(id == 174){ uv.x+=0.1*sin(floor(uv.y*20.)+uTime*2.);
+      } else if(id == 175){ for(int i=0;i<4;i++){uv=abs(uv)/dot(uv,uv)-vec2(cos(uTime*0.2)*0.5+0.5,0.8);}
+      } else if(id == 176){ uv.x*=1.+0.3*sin(uTime); uv.y*=1.+0.3*cos(uTime);
+      } else if(id == 177){ uv=vec2(atan(uv.y,uv.x),length(uv)); uv.x=mod(uv.x,0.4)-0.2; uv=uv.y*vec2(cos(uv.x*20.),sin(uv.x*20.));
+      } else if(id == 178){ uv*=mat2(1,0,sin(uTime*2.)*0.5,1);
+      } else if(id == 179){ float d=length(uv); uv=mix(uv,vec2(d,d),sin(uTime)*0.5+0.5);
+      } else if(id == 180){ uv+=sin(uv.yx*10.+vec2(0,uTime*2.))*0.1;
+      } else if(id == 181){ uv=fract(uv*5.)-0.5; float a=atan(uv.y,uv.x)+uTime; uv=vec2(cos(a),sin(a))*length(uv);
+      } else if(id == 182){ float r=length(uv); uv+=uv/r*tan(r*5.-uTime)*0.05;
+      } else if(id == 183){ for(int i=0;i<3;i++)uv=abs(uv-0.5)*1.5;
+      } else if(id == 184){ uv+=normalize(uv.yx*vec2(-1,1))*sin(length(uv)*10.-uTime)*0.1;
+      } else if(id == 185){ float s=sin(uTime);float c=cos(uTime);uv=mat2(c,-s,s,c)*uv;uv=abs(uv)-0.3;
+      } else if(id == 186){ float a=atan(uv.y,uv.x);uv=vec2(a,length(uv));uv.y=fract(uv.y*8.)-0.5;
+      } else if(id == 187){ uv+=0.1*sin(uv*10.+uTime+vec2(0,1.57));
+      } else if(id == 188){ uv=pow(abs(uv),vec2(cos(uTime*0.5)*0.5+1.2))*sign(uv);
+      } else if(id == 189){ float a=atan(uv.y,uv.x);float r=length(uv);a+=1./(r*20.+1.)*sin(uTime*2.)*5.;uv=vec2(cos(a),sin(a))*r;
+      } else if(id == 190){ vec2 id_v2=floor(uv*12.);uv=fract(uv*12.)-0.5;if(rnd(id_v2)>0.5)uv=abs(uv)-0.2;
+      } else if(id == 191){ uv=vec2(sin(uv.x*10.),cos(uv.y*10.))*0.2+uv;
+      } else if(id == 192){ float r=length(uv);uv.x+=sin(r*15.-uTime*2.)*0.1;
+      } else if(id == 193){ uv=vec2(tan(uv.x+uTime),tan(uv.y-uTime))*0.2;
+      } else if(id == 194){ uv=fract(uv*4.)-0.5;uv/=dot(uv,uv)+0.1;
+      } else if(id == 195){ uv=vec2(uv.x,uv.y+sin(uv.x*5.+uTime)*0.2);uv=vec2(uv.x+sin(uv.y*5.-uTime)*0.2,uv.y);
+      } else if(id == 196){ for(int i=0;i<6;i++){float s=sin(uTime*0.3);float c=cos(uTime*0.3);uv=abs(mat2(c,-s,s,c)*uv)-0.3;}
+      } else if(id == 197){ float r=length(uv);float a=atan(uv.y,uv.x);r=sin(r*10.+uTime)*0.1+r;uv=vec2(cos(a),sin(a))*r;
+      } else if(id == 198){ uv+=0.1*sin(gl_FragCoord.y*0.1+uTime);
+      } else { uv=helper_wave(uv,0.1); uv=helper_twist(uv,1.5); }
+      return buildPattern(uv);
+    }
+
+    void main(){
+      vec2 uv = (gl_FragCoord.xy * 2.0 - uResolution.xy) / uResolution.y;
+      float pulse = 1.0 + sin(uTime * uPulseSpeed) * uPulse;
+      uv *= pulse;
+      float cr = cos(uRotation), sr = sin(uRotation);
+      uv = mat2(cr,-sr,sr,cr) * uv;
+      uv *= uZoom;
+
+      // mirrors
+      float angle = atan(uv.y,uv.x);
+      float dist = length(uv);
+      float sector = 6.28318 / max(uMirrors, 1.0);
+      angle = mod(angle, sector);
+      if(mod(floor(atan(uv.y,uv.x)/sector),2.0) == 1.0) angle = sector - angle;
+      uv = vec2(cos(angle), sin(angle)) * dist;
+
+      // select effect (safe dispatch)
+      int mode = int(floor(uEffectMode + 0.5));
+      vec3 color;
+      if(mode < 50){
+        color = effectGroupA(mode, uv);
+      } else if(mode < 100){
+        color = effectGroupB(mode - 50, uv);
+      } else if(mode < 150){
+        color = effectGroupC(mode - 100, uv);
+      } else {
+        color = effectGroupD(mode - 150, uv);
+      }
+
+      // invert + grain
+      color.rgb = 1.0 - color.rgb;
+      color += rnd(gl_FragCoord.xy / uResolution.xy + uTime) * uFilmGrain;
+      gl_FragColor = vec4(color, 1.0);
+    }
+  </script>
+
+<script>
+'use strict';
+
+// small random helpers
+const rand = (a,b) => Math.random()*(b-a)+a;
+const randint = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+class Visualizer {
+  constructor(){
+    this.canvas = document.getElementById('glcanvas');
+    this.gl = null;
+    this.program = null;
+    this.buf = null;
+    this.loc = {};
+    this.params = {};
+    this.currentRotation = 0;
+    this.rotationSpeed = 0.12;
+    this.previousTime = 0;
+    this.totalEffects = 200;
+    this.effects = [];
+    this.playQueue = [];
+    this.playIndex = 0;
+    this.isPlaying = false;
+    this.nextTimeout = null;
+    this.changeInterval = 35;
+    this.maxRepeats = 1;
+    this.repeatCounter = 0;
+  }
+
+  init(){
+    try{
+      this.gl = this.canvas.getContext('webgl',{ preserveDrawingBuffer:true }) || this.canvas.getContext('experimental-webgl',{ preserveDrawingBuffer:true });
+    }catch(e){
+      document.body.innerHTML = '<h1>WebGL unsupported</h1>';
+      throw e;
+    }
+    this.resize();
+    window.addEventListener('resize',()=>this.resize());
+
+    const vs = document.getElementById('vs').textContent;
+    const fs = document.getElementById('fs').textContent;
+    this.program = this.createProgram(vs,fs);
+    this.gl.useProgram(this.program);
+
+    this.cacheUniforms();
+    this.setupQuad();
+
+    this.buildEffectList();
+    this.randomizeParams();
+  }
+
+  createShader(src, type){
+    const s = this.gl.createShader(type);
+    this.gl.shaderSource(s, src);
+    this.gl.compileShader(s);
+    if(!this.gl.getShaderParameter(s, this.gl.COMPILE_STATUS)) {
+      throw new Error('Shader compile error: ' + this.gl.getShaderInfoLog(s));
+    }
+    return s;
+  }
+  createProgram(vsSrc, fsSrc){
+    const program = this.gl.createProgram();
+    this.gl.attachShader(program, this.createShader(vsSrc, this.gl.VERTEX_SHADER));
+    this.gl.attachShader(program, this.createShader(fsSrc, this.gl.FRAGMENT_SHADER));
+    this.gl.linkProgram(program);
+    if(!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+      throw new Error('Program link error: ' + this.gl.getProgramInfoLog(program));
+    }
+    return program;
+  }
+
+  cacheUniforms(){
+    const names = ['uResolution','uTime','uIterations','uColorShift','uZoom','uColor1','uColor2','uColor3','uColor4','uMirrors','uRotation','uPulse','uPulseSpeed','uEffectMode','uFilmGrain'];
+    names.forEach(n => this.loc[n] = this.gl.getUniformLocation(this.program, n));
+    this.loc.position = this.gl.getAttribLocation(this.program,'aVertexPosition');
+  }
+
+  setupQuad(){
+    this.buf = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buf);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), this.gl.STATIC_DRAW);
+  }
+
+  resize(){
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+    if(this.gl) this.gl.viewport(0,0,this.canvas.width,this.canvas.height);
+  }
+
+  buildEffectList(){
+    const base = [
+"Recursive Boxing","Twisted Tunnel","Voronoi Cells","Circular Waves","Grid Glitch","Checkerboard Mask","Pinch / Black Hole","Pixel Sort (fake)","Hyperbolic Warp","Tile & Carve",
+"Crosshatch","Star Burst","Water Caustics","Negative Feedback","Spiral Grid","Crystalline","Sobel-like Edges","Scanline Shift","Hexagonal Tiling","Polar Explosion",
+"Square Tunnel","Moire Pattern","Ripples","Shear","Funhouse Mirror","Wavy","Swirl","Glassy Tiles","Radial Blur (Fake)","Power Warp",
+"Fold","Droste Effect","Fisheye Lens","Grid Wave","Octagonal Sections","Interlacing","Magnetic Field","Zoom Blur","Sharp Petals","Barrel Distortion",
+"Pinwheel","Corner Pull","Wobble","Twisted Mirror","Default Waves","Conformal Power z^2","Conformal Inverse 1/z","Recursive Shift & Scale","Truchet Tiles","Simplex Noise (fake)",
+"Checkerboard Displace","Recursive Corner Pin","Stretched Swirl","Cubic Distortion","Block Glitch","Mandala Fold","Diagonal Wave","Parabolic Lens","Cross-Stitch","Clover Field",
+"Squeeze","Time Tunnel","Alternating Mirror","Polar Pixelation","Twisted Grid","Polar Wave","Vertical Stretch","Rotating Tiles","Tangent Warp","Spherical Inversion",
+"Inversive Fractal","Polar Inversion","Horizontal Squeeze","Pulsing Power","Sine Jaggies","Jittery Grid","Blocky Noise","Angular Quantization","Horizontal Scroll","Diamond Fold",
+"Chaotic Wave","Fine Tiling","Twisted Ripple","Cosh Field","Circular Flip","Quadratic Flow","Vertical Slit","Petal Swirl","Vertical Blinds","Pulsing Fisheye",
+"Square Root Warp","Skew Shear","Perspective Skew","Rotated Flip","Drifting Boxes","RGB Shift (fake)","Rotating Cog","Full Inversion","Line Graph","Dueling Poles"
+    ];
+    const extra = [
+"Radial Kaleido Fold","Spiral Pixel Sort","Expanding Vortex","Mirror Tiles w/Sine","Fractal Ripples","Liquid Metal Melt","Concentric Displace Grid","Infinity Tunnel","Interference Moire","Lattice Bend",
+"Ripple Tunnel","Checker Warp Mosaic","Oceanic Flow","Twisted Ribbon","Folding Tunnel","Rotating Honeycomb","Electric Sheen","Rolling Waves","Kaleido Spikes","Microfracture",
+"Oscillating Radial","Helix Warp","Wave Grid Distort","Mirror Ripple Mesh","Elastic Fold","Pinch Grid","Spiral Lace","Tessellated Flow","Corrugated Barrel","Helical Tiles",
+"Flux Waves","Concentric Mesh","Ripple Grid Warp","Vortex Tiles","Oscillating Lattice","Multi-Kaleido","Sheared Fractal","Tidal Mesh","Radial Warp Mesh","Swirling Lattice",
+"Mirror Tunnel","Linear Displace","Checker Vortex","Cascading Waves","Spiral Cavern","Ripple Lattice","Quantum Fold","Radiant Mesh","Helical Mirror Maze","Prism Wave Field"
+    ];
+    const enhanced = [
+"Polar Scroll","Recursive Kaleido","Tangent Flow","Radial Tan Warp","Grid Sine Shift","Bilateral Fold","Angular Quantize","Length Jitter","Dual Focus Points","Product Warp",
+"Cosine Skew","Cellular Shift","Fractal Polar","Flipped Droste","Sine Step Wave","Scanline Drift","Stretched Tiling","Directional Blur","Affine Shear","Radial Ribbon",
+"Grid Sine Twist","Angle-based Shift","Power Skew","Noisy Blocks","Julia Fractal (Fake)","Bilateral Squeeze","Angular Slice","Skew Grid","Length Mix","Feedback Wave",
+"Rotating Tile","Tangent Ripple","Recursive Box Fold","Vortex Shear","Rotated Mirror Fold","Striped Polar","Cross Sine Wave","Power Curve Warp","Angular Pinwheel","Random Box",
+"Sine Grid","Radial Scanline","Tangent Pinch","Inverse Tile","Flowing Shear","Recursive Star","Radial Sine Burst","Vertical Noise","Twist & Wave Combo"
+    ];
+    this.effects = base.concat(extra).concat(enhanced).map((n,i)=>({id:i,name:n}));
+    populateEffectsUI(this.effects);
+  }
+
+  randomizeParams(){
+    Object.assign(this.params, {
+      iterations: randint(4,12),
+      colorShift: rand(0,2.5),
+      zoom: rand(0.35,1.9),
+      mirrors: randint(3,24),
+      pulse: rand(0,0.25),
+      pulseSpeed: rand(0.5,2.0),
+      filmGrain: Math.random() < 0.4 ? rand(0,0.12) : 0,
+      color1: [Math.random(),Math.random(),Math.random()],
+      color2: [Math.random(),Math.random(),Math.random()],
+      color3: [Math.random(),Math.random(),Math.random()],
+      color4: [Math.random(),Math.random(),Math.random()]
+    });
+    this.rotationSpeed = rand(-0.45,0.45);
+  }
+
+  setEffect(id){
+    this.params.effectMode = id;
+    this.randomizeParams();
+    showTag(`${this.effects[id].name} (${this.repeatCounter+1}/${this.maxRepeats})`);
+  }
+
+  render(t){
+    if(!this.gl) return;
+    const now = t*0.001;
+    const dt = this.previousTime ? now - this.previousTime : 0;
+    this.previousTime = now;
+    this.currentRotation += this.rotationSpeed * dt;
+
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    this.gl.useProgram(this.program);
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.buf);
+    this.gl.vertexAttribPointer(this.loc.position, 2, this.gl.FLOAT, false, 0, 0);
+    this.gl.enableVertexAttribArray(this.loc.position);
+
+    this.gl.uniform2f(this.loc.uResolution, this.canvas.width, this.canvas.height);
+    this.gl.uniform1f(this.loc.uTime, now);
+    this.gl.uniform1f(this.loc.uRotation, this.currentRotation);
+
+    for(const k in this.params){
+      const locName = 'u' + k.charAt(0).toUpperCase() + k.slice(1);
+      const loc = this.loc[locName];
+      if(!loc) continue;
+      const v = this.params[k];
+      if(Array.isArray(v)) this.gl.uniform3fv(loc, v);
+      else this.gl.uniform1f(loc, v);
+    }
+
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame((tt)=>this.render(tt));
+  }
+
+  start(){
+    this.isPlaying = true;
+    if(!this.playQueue || this.playQueue.length === 0) this.buildQueue({useAll:true});
+    this.playIndex = 0;
+    this.repeatCounter = 0;
+    this.setEffect(this.playQueue[this.playIndex]);
+    this.scheduleNext();
+  }
+
+  stop(){
+    this.isPlaying = false;
+    if(this.nextTimeout) { clearTimeout(this.nextTimeout); this.nextTimeout = null; }
+  }
+
+  advance() {
+    this.repeatCounter++;
+    if (this.repeatCounter >= this.maxRepeats) {
+      this.repeatCounter = 0;
+      this.playIndex = (this.playIndex + 1) % this.playQueue.length;
+    }
+    const id = this.playQueue[this.playIndex];
+    this.setEffect(id);
+  }
+
+  scheduleNext(){
+    if(this.nextTimeout) clearTimeout(this.nextTimeout);
+    this.nextTimeout = setTimeout(()=>{
+      this.advance();
+      this.scheduleNext();
+    }, this.changeInterval * 1000);
+  }
+
+  nextNow(){
+    if(this.nextTimeout){ clearTimeout(this.nextTimeout); this.nextTimeout = null; }
+    if(!this.playQueue || this.playQueue.length === 0) this.buildQueue({useAll:true});
+    this.advance();
+    this.scheduleNext();
+  }
+
+  buildQueue(opts = {useAll:false,random:false}){
+    const sel = getSelectedIDsFromUI();
+    let arr = sel.length ? sel.slice() : this.effects.map(e=>e.id);
+    const orderedMode = document.getElementById('orderedMode').checked;
+    const rnd = document.getElementById('randomOrder').checked || opts.random;
+
+    if(orderedMode && sel.length){
+      const rows = Array.from(document.getElementById('effectsContainer').children);
+      arr = [];
+      rows.forEach(r=>{
+        const cb = r.querySelector('input[type="checkbox"]');
+        if(cb && cb.checked) arr.push(Number(r.dataset.id));
+      });
+    }
+
+    if(rnd){
+      for(let i=arr.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [arr[i],arr[j]] = [arr[j],arr[i]];
+      }
+    }
+    this.playQueue = arr;
+    return arr;
+  }
+}
+
+// ---- UI code ----
+const viz = new Visualizer();
+
+function populateEffectsUI(effects){
+  const cont = document.getElementById('effectsContainer');
+  cont.innerHTML = '';
+  effects.forEach(e=>{
+    const row = document.createElement('div'); row.className='row'; row.dataset.id = e.id;
+    const left = document.createElement('div'); left.className='left-of-row';
+    const cb = document.createElement('input'); cb.type='checkbox'; cb.className='chk'; cb.dataset.id = e.id;
+    const lab = document.createElement('div'); lab.className='label'; lab.textContent = String(e.id).padStart(3,'0') + ' — ' + e.name;
+    left.appendChild(cb); left.appendChild(lab);
+    const controls = document.createElement('div');
+    const up = document.createElement('button'); up.textContent='↑'; up.className='small';
+    const down = document.createElement('button'); down.textContent='↓'; down.className='small';
+    const play = document.createElement('button'); play.textContent='Play'; play.className='small';
+    controls.appendChild(up); controls.appendChild(down); controls.appendChild(play);
+    row.appendChild(left); row.appendChild(controls);
+    cont.appendChild(row);
+
+    up.addEventListener('click', ()=>moveRow(row,-1));
+    down.addEventListener('click', ()=>moveRow(row,1));
+    play.addEventListener('click', ()=>{
+      const id = Number(row.dataset.id);
+      viz.buildQueue();
+      viz.playQueue = [id];
+      viz.playIndex = 0;
+      viz.repeatCounter = 0;
+      viz.setEffect(id);
+      viz.scheduleNext();
+      hideOverlay();
+    });
+  });
+
+  updateRowControls();
+}
+
+function moveRow(row,delta){
+  const parent = document.getElementById('effectsContainer');
+  const rows = Array.from(parent.children);
+  const idx = rows.indexOf(row);
+  let newIdx = idx + delta;
+  if(newIdx < 0) newIdx = 0;
+  if(newIdx >= rows.length) newIdx = rows.length-1;
+  if(newIdx === idx) return;
+  parent.removeChild(row);
+  parent.insertBefore(row, parent.children[newIdx + (delta>0?1:0)]);
+}
+
+function getSelectedIDsFromUI(){
+  const rows = Array.from(document.getElementById('effectsContainer').children);
+  const sel = [];
+  rows.forEach(r=>{
+    const cb = r.querySelector('input[type=checkbox]');
+    if(cb && cb.checked) sel.push(Number(r.dataset.id));
+  });
+  return sel;
+}
+
+function updateRowControls(){
+  const enabled = document.getElementById('orderedMode').checked;
+  document.querySelectorAll('#effectsContainer .row button').forEach(b=>{
+    b.style.display = enabled ? '' : 'none';
+  });
+}
+
+function hideOverlay(){ document.getElementById('overlay').classList.add('hidden'); }
+function showOverlay(){ document.getElementById('overlay').classList.remove('hidden'); }
+
+let tagTimer = null;
+function showTag(name){
+  const el = document.getElementById('tag');
+  el.textContent = name;
+  el.classList.add('show');
+  if(tagTimer) clearTimeout(tagTimer);
+  tagTimer = setTimeout(()=>el.classList.remove('show'), 5000);
+}
+
+function startVisualization() {
+  const sel = getSelectedIDsFromUI();
+  const rnd = document.getElementById('randomOrder').checked;
+  viz.buildQueue({ useAll: sel.length === 0, random: rnd });
+  
+  viz.changeInterval = parseFloat(document.getElementById('duration').value) || viz.changeInterval;
+  viz.changeInterval = clamp(viz.changeInterval, 0.5, 300);
+
+  viz.maxRepeats = parseInt(document.getElementById('effectRepeats').value, 10) || 1;
+  viz.maxRepeats = clamp(viz.maxRepeats, 1, 100);
+
+  hideOverlay();
+  if(!viz.isPlaying) { viz.start(); }
+}
+
+function setupAutoStart(){
+  let interacted = false;
+  const overlay = document.getElementById('overlay');
+  ['click','keydown','touchstart','input','change'].forEach(evt=>{
+    overlay.addEventListener(evt, ()=>interacted = true, {passive:true});
+  });
+  let waited = 0;
+  const seconds = 5;
+  const intv = setInterval(()=>{
+    if(overlay.classList.contains('hidden')) { clearInterval(intv); return; }
+    if(interacted) { clearInterval(intv); return; }
+    waited++;
+    if(waited >= seconds){
+      clearInterval(intv);
+      startVisualization();
+    }
+  }, 1000);
+}
+
+window.addEventListener('load', ()=>{
+  viz.init();
+
+  document.getElementById('selectAll').addEventListener('click', ()=> {
+    document.querySelectorAll('#effectsContainer input[type=checkbox]').forEach(cb=>cb.checked = true);
+  });
+  document.getElementById('deselectAll').addEventListener('click', ()=> {
+    document.querySelectorAll('#effectsContainer input[type=checkbox]').forEach(cb=>cb.checked = false);
+  });
+  document.getElementById('showSelected').addEventListener('click', ()=>{
+    const rows = Array.from(document.getElementById('effectsContainer').children);
+    rows.forEach(r=> r.style.display = (r.querySelector('input[type=checkbox]').checked ? '' : 'none'));
+  });
+  document.getElementById('showAllBtn').addEventListener('click', ()=>{
+    const rows = Array.from(document.getElementById('effectsContainer').children);
+    rows.forEach(r=> r.style.display = '');
+  });
+  document.getElementById('filter').addEventListener('input', (e)=>{
+    const v = (e.target.value||'').toLowerCase();
+    document.querySelectorAll('#effectsContainer .row').forEach(r=>{
+      const label = r.querySelector('.label').textContent.toLowerCase();
+      r.style.display = label.includes(v) ? '' : 'none';
+    });
+  });
+
+  document.getElementById('startBtn').addEventListener('click', startVisualization);
+  document.getElementById('orderedMode').addEventListener('change', updateRowControls);
+
+  document.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space'){ e.preventDefault(); if(viz.isPlaying) viz.nextNow(); else document.getElementById('startBtn').click(); }
+    if(e.key === 'Escape'){ if(document.getElementById('overlay').classList.contains('hidden')) { viz.stop(); showOverlay(); } }
+  });
+
+  document.getElementById('glcanvas').addEventListener('click', ()=> { if(viz.isPlaying) viz.nextNow(); });
+
+  requestAnimationFrame((t)=> viz.render(t));
+  setupAutoStart();
+});
+</script>
+</body>
+</html>
