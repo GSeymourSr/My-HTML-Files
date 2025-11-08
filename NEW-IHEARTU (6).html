@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Lobster&family=Dancing+Script:wght@700&family=Orbitron:wght@700&display=swap');
+
+        html, body {
+            margin: 0; padding: 0;
+            height: 100%; width: 100%;
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, #1b2735 0%, #090a0f 100%);
+            cursor: none; /* Hide the default cursor */
+        }
+
+        /* --- *** NEW: Celestial Starfield Background *** --- */
+        #star-container {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+        }
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.7);
+            animation: twinkle 5s infinite alternate ease-in-out;
+        }
+        @keyframes twinkle {
+            from { opacity: 0.3; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* --- *** NEW: Interactive Cursor Glow *** --- */
+        #cursor-glow {
+            position: absolute;
+            width: 50px; height: 50px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 60%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease-out;
+            z-index: 101;
+        }
+        
+        /* Containers for other elements */
+        #particles-container, #fireworks-container, #text-container {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        #particles-container { z-index: 2; }
+        #text-container { z-index: 10; }
+        #fireworks-container { z-index: 100; }
+
+        /* Particle styles remain the same, they were great! */
+        .particle { position: absolute; will-change: transform, opacity; animation-iteration-count: infinite; }
+        .heart { width: 25px; height: 25px; background-color: var(--particle-color); transform: rotate(-45deg); animation-name: floatUp; }
+        .heart::before, .heart::after { content: ''; position: absolute; width: 25px; height: 25px; background-color: inherit; border-radius: 50%; }
+        .heart::before { top: -13px; left: 0; } .heart::after { top: 0; left: 13px; }
+        .rose { width: 30px; height: 30px; animation-name: fallAndTumble; }
+        .rose .petal { position: absolute; width: 20px; height: 25px; background: var(--particle-color); border-radius: 50% 0; box-shadow: 0 0 15px var(--particle-color); }
+        .rose .petal:nth-child(1) { transform: rotate(20deg); top: 0; left: 5px; } .rose .petal:nth-child(2) { transform: rotate(110deg); top: 5px; left: 15px; } .rose .petal:nth-child(3) { transform: rotate(200deg); top: 15px; left: 10px; } .rose .petal:nth-child(4) { transform: rotate(290deg); top: 10px; left: 0; opacity: 0.8; }
+        @keyframes floatUp { 0% { transform: translateY(110vh) rotate(-45deg); opacity: 1; } 100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; } }
+        @keyframes fallAndTumble { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+        .firework-particle { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; will-change: transform, opacity; }
+
+        /* --- *** OVERHAULED: Text Animations for Full-Screen Travel *** --- */
+        .floating-text {
+            position: absolute;
+            white-space: nowrap;
+            color: #fff;
+            animation-iteration-count: infinite;
+            animation-direction: alternate;
+            animation-timing-function: ease-in-out;
+            text-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
+        }
+
+        /* Define multiple, large-scale animation paths */
+        @keyframes floatPath1 { /* Diagonal Drift */
+            0% { transform: translate(0, 0) rotate(-5deg); } 100% { transform: translate(60vw, 80vh) rotate(5deg); }
+        }
+        @keyframes floatPath2 { /* Wide Arc */
+            0% { transform: translate(0, 0) rotate(10deg); } 50% { transform: translate(-40vw, 40vh) rotate(-10deg); } 100% { transform: translate(0, 0) rotate(10deg); }
+        }
+        @keyframes floatPath3 { /* Slow Horizontal Pan */
+            0% { transform: translate(0, 0) rotate(2deg); } 100% { transform: translate(-70vw, 10vh) rotate(-2deg); }
+        }
+        @keyframes floatPath4 { /* Bottom to Top Sweep */
+            0% { transform: translate(0, 0) rotate(0deg); } 100% { transform: translate(20vw, -70vh) rotate(15deg); }
+        }
+
+        /* Center message has a grand, slow zoom effect */
+        #main-message {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 13vw;
+            letter-spacing: 0.1em;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            animation: main-glow 3s infinite alternate ease-in-out, main-zoom 30s infinite alternate ease-in-out;
+        }
+        @keyframes main-glow { from { text-shadow: 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 35px #ff00ff; } to { text-shadow: 0 0 10px #fff, 0 0 25px #00ffff, 0 0 40px #00ffff; } }
+        @keyframes main-zoom { from { transform: translate(-50%, -50%) scale(1); } to { transform: translate(-50%, -50%) scale(1.1); } }
+
+    </style>
+</head>
+<body>
+    <div id="star-container"></div>
+    <div id="cursor-glow"></div>
+    <div id="particles-container"></div>
+    <div id="fireworks-container"></div>
+    
+    <div id="text-container">
+        <div id="main-message">💘</div>
+    </div>
+
+    <script>
+        // --- MASTER CONTROL PANEL ---
+        const STAR_COUNT = 150;
+        const PARTICLE_INTERVAL = 250; // ms
+        const FIREWORK_INTERVAL = 2000; // ms
+        const neonColors = ['#ff00ff', '#00ffff', '#39ff14', '#f7ff00', '#ff0055', '#ff9900'];
+        const fonts = ["'Lobster', cursive", "'Dancing Script', cursive", "'Orbitron', sans-serif"];
+        const messages = [
+            "Erin is finally here!", "Greg's wait is over", "Welcome back, my love", "The world is right again",
+            "I missed you so much", "Let the celebrations begin!", "Erin ❤️ Greg", "Forever starts now",
+            "Home is wherever you are", "My favorite person is back"
+        ];
+        
+        const starContainer = document.getElementById('star-container');
+        const particlesContainer = document.getElementById('particles-container');
+        const fireworksContainer = document.getElementById('fireworks-container');
+        const textContainer = document.getElementById('text-container');
+        const cursorGlow = document.getElementById('cursor-glow');
+
+        // --- DYNAMIC TEXT GENERATION (THE SOLUTION) ---
+        function createFloatingText() {
+            messages.forEach(msg => {
+                const textElement = document.createElement('div');
+                textElement.className = 'floating-text';
+                textElement.innerText = msg;
+
+                // Randomize everything!
+                textElement.style.fontFamily = fonts[Math.floor(Math.random() * fonts.length)];
+                textElement.style.color = neonColors[Math.floor(Math.random() * neonColors.length)];
+                textElement.style.fontSize = `${Math.random() * 4 + 2.5}vw`; // 2.5vw to 6.5vw
+                
+                // Random position across the entire screen
+                textElement.style.top = `${Math.random() * 90}vh`;
+                textElement.style.left = `${Math.random() * 90}vw`;
+
+                // Random full-screen animation path
+                const animationName = `floatPath${Math.floor(Math.random() * 4) + 1}`;
+                const animationDuration = `${Math.random() * 20 + 20}s`; // 20-40 seconds
+                textElement.style.animationName = animationName;
+                textElement.style.animationDuration = animationDuration;
+
+                textContainer.appendChild(textElement);
+            });
+        }
+
+        // --- STARFIELD GENERATION ---
+        function createStars() {
+            for (let i = 0; i < STAR_COUNT; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                const size = Math.random() * 3 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.animationDelay = `${Math.random() * 5}s`;
+                starContainer.appendChild(star);
+            }
+        }
+        
+        // --- PARTICLE & FIREWORK LOGIC (UNCHANGED) ---
+        function createParticle() {
+            const particle = document.createElement('div');
+            const type = Math.random() > 0.5 ? 'heart' : 'rose';
+            particle.className = `particle ${type}`;
+            if (type === 'rose') particle.innerHTML = '<div class="petal"></div>'.repeat(4);
+            particle.style.setProperty('--particle-color', neonColors[Math.floor(Math.random() * neonColors.length)]);
+            particle.style.left = `${Math.random() * 100}vw`;
+            const duration = Math.random() * 10 + 8;
+            particle.style.animationDuration = `${duration}s`;
+            if (Math.random() > 0.5) particle.style.animationName = 'fallAndTumble';
+            particlesContainer.appendChild(particle);
+            setTimeout(() => particle.remove(), duration * 1000);
+        }
+
+        function launchFirework() {
+            const endX = 20 + Math.random() * 60, endY = 10 + Math.random() * 40;
+            const particleCount = 75;
+            const baseColor = neonColors[Math.floor(Math.random() * neonColors.length)];
+            for (let i = 0; i < particleCount; i++) {
+                const p = document.createElement('div');
+                p.className = 'firework-particle';
+                p.style.left = `${endX}vw`; p.style.top = `${endY}vh`; p.style.color = baseColor;
+                fireworksContainer.appendChild(p);
+                const angle = Math.random() * Math.PI * 2, speed = Math.random() * 8 + 2;
+                let vx = Math.cos(angle) * speed, vy = Math.sin(angle) * speed, life = 0, maxLife = 60;
+                function update() {
+                    if (life >= maxLife) { p.remove(); return; }
+                    vy += 0.1; p.style.transform = `translate(${vx * life}px, ${vy * life}px)`;
+                    p.style.opacity = 1 - (life / maxLife);
+                    life++; requestAnimationFrame(update);
+                }
+                requestAnimationFrame(update);
+            }
+        }
+        
+        // --- EVENT LISTENERS ---
+        document.addEventListener('mousemove', e => {
+            cursorGlow.style.left = `${e.clientX}px`;
+            cursorGlow.style.top = `${e.clientY}px`;
+        });
+
+        // --- INITIALIZE EVERYTHING ---
+        window.onload = () => {
+            createStars();
+            createFloatingText();
+            setInterval(createParticle, PARTICLE_INTERVAL);
+            setInterval(launchFirework, FIREWORK_INTERVAL);
+            launchFirework(); // Start with a bang!
+        };
+    </script>
+</body>
+</html>
