@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Home, Erin!</title>
+    <style>
+        /* Import a fun, romantic font */
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+
+        /* Basic Setup */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Pacifico', cursive;
+            cursor: default;
+        }
+
+        /* The flowing gradient background */
+        body {
+            background: linear-gradient(-45deg, #4c0041, #ff5555, #6a006a, #ff79c6, #280033);
+            background-size: 400% 400%;
+            animation: gradientFlow 20s ease infinite;
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* *** NEW: Container for the dreamy background orbs *** */
+        #orb-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%);
+            filter: blur(15px); /* This creates the soft, out-of-focus look */
+            animation: drift 25s ease-in-out infinite alternate;
+        }
+        .orb:nth-child(1) { width: 150px; height: 150px; top: 10%; left: 10%; animation-duration: 30s; }
+        .orb:nth-child(2) { width: 250px; height: 250px; top: 20%; left: 80%; animation-duration: 22s; }
+        .orb:nth-child(3) { width: 100px; height: 100px; top: 70%; left: 50%; animation-duration: 35s; }
+        .orb:nth-child(4) { width: 300px; height: 300px; top: 80%; left: 5%; animation-duration: 20s; }
+        .orb:nth-child(5) { width: 200px; height: 200px; top: 50%; left: 40%; animation-duration: 28s; }
+
+        @keyframes drift {
+            from { transform: translate(-20vw, -20vh) rotate(0deg); }
+            to { transform: translate(20vw, 20vh) rotate(180deg); }
+        }
+
+        /* Floating text styling */
+        .floating-text {
+            position: absolute;
+            color: white;
+            font-size: 5vw;
+            white-space: nowrap;
+            will-change: transform, color, text-shadow;
+            animation: textGlowAndColor 8s ease-in-out infinite alternate;
+            z-index: 10;
+        }
+        .text-1 { animation-name: floatAround1, textGlowAndColor; animation-duration: 25s, 8s; }
+        .text-2 { animation-name: floatAround2, textGlowAndColor; animation-duration: 30s, 8s; }
+        .text-3 { animation-name: floatAround3, textGlowAndColor; animation-duration: 28s, 8s; }
+        .text-4 { animation-name: floatAround4, textGlowAndColor; animation-duration: 22s, 8s; }
+
+        @keyframes textGlowAndColor {
+            0% { text-shadow: 0 0 10px #fff, 0 0 20px #ff79c6, 0 0 30px #ff79c6; }
+            50% { text-shadow: 0 0 10px #f1fa8c, 0 0 20px #ff5555, 0 0 30px #ff5555; }
+            100% { text-shadow: 0 0 10px #8be9fd, 0 0 20px #bd93f9, 0 0 30px #bd93f9; }
+        }
+
+        /* Keyframes for text floating paths */
+        @keyframes floatAround1 { 0% { transform: translate(10vw, 10vh) rotate(-5deg); } 50% { transform: translate(50vw, 70vh) rotate(5deg); } 100% { transform: translate(10vw, 10vh) rotate(-5deg); } }
+        @keyframes floatAround2 { 0% { transform: translate(80vw, 20vh) rotate(8deg); } 50% { transform: translate(10vw, 60vh) rotate(-8deg); } 100% { transform: translate(80vw, 20vh) rotate(8deg); } }
+        @keyframes floatAround3 { 0% { transform: translate(15vw, 80vh) rotate(-3deg); } 50% { transform: translate(70vw, 5vh) rotate(10deg); } 100% { transform: translate(15vw, 80vh) rotate(-3deg); } }
+        @keyframes floatAround4 { 0% { transform: translate(60vw, 90vh) rotate(6deg); } 50% { transform: translate(20vw, 25vh) rotate(-4deg); } 100% { transform: translate(60vw, 90vh) rotate(6deg); } }
+        
+        /* *** NEW: The central, pulsing welcome message *** */
+        #center-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8vw;
+            color: #fff;
+            z-index: 20;
+            text-align: center;
+            animation: pulse 4s ease-in-out infinite, textGlowAndColor 8s ease-in-out infinite alternate;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Heart styling */
+        .heart {
+            position: absolute;
+            bottom: -50px;
+            width: 30px;
+            height: 30px;
+            background-color: var(--heart-color, red);
+            transform: rotate(-45deg);
+            animation: floatAndWobble 10s linear infinite;
+            z-index: 5;
+        }
+        .heart::before, .heart::after { content: ''; position: absolute; width: 30px; height: 30px; background-color: inherit; border-radius: 50%; }
+        .heart::before { top: -15px; left: 0; }
+        .heart::after { top: 0; left: 15px; }
+
+        @keyframes floatAndWobble {
+            0% { transform: translateY(0) translateX(0vw) rotate(-45deg) scale(0.8); opacity: 1; }
+            50% { transform: translateY(-50vh) translateX(5vw) rotate(180deg) scale(1.1); }
+            100% { transform: translateY(-110vh) translateX(-5vw) rotate(315deg) scale(1.2); opacity: 0; }
+        }
+
+        /* *** NEW: Shooting Star Styling *** */
+        .star {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px 2px white;
+            animation: shoot 3s ease-in infinite;
+            z-index: 2;
+        }
+        @keyframes shoot {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(100vw, -100vh) scale(0); opacity: 0; }
+        }
+        
+        /* Sparkle trail for mouse */
+        .sparkle {
+            position: absolute;
+            width: 8px; height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: 0 0 10px white, 0 0 20px #ff79c6;
+            animation: sparkle-fade 0.7s forwards;
+            z-index: 100;
+        }
+        @keyframes sparkle-fade { to { transform: scale(0) translateY(-20px); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="orb-container">
+        <div class="orb"></div><div class="orb"></div><div class="orb"></div><div class="orb"></div><div class="orb"></div>
+    </div>
+
+    <div id="shooting-stars-container"></div>
+    <div id="hearts-container"></div>
+    
+    <div id="text-container">
+        <div class="floating-text text-1">Erin is home!</div>
+        <div class="floating-text text-2">Erin is here!</div>
+        <div class="floating-text text-3">Greg loves everyone</div>
+        <div class="floating-text text-4">Erin loves Greg ❤️</div>
+    </div>
+    
+    <div id="center-message">Welcome Home Erin</div>
+
+    <script>
+        const heartsContainer = document.getElementById('hearts-container');
+        const starsContainer = document.getElementById('shooting-stars-container');
+        const colors = ['#ff79c6', '#ff5555', '#f1fa8c', '#bd93f9', '#ff9800', '#e91e63'];
+
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const randomX = Math.random() * 100;
+            const randomDuration = Math.random() * 8 + 6;
+            const randomDelay = Math.random() * 5;
+            const randomSize = Math.random() * 20 + 15;
+            heart.style.setProperty('--heart-color', randomColor);
+            heart.style.left = `${randomX}vw`;
+            heart.style.animationDuration = `${randomDuration}s`;
+            heart.style.animationDelay = `${randomDelay}s`;
+            heart.style.width = `${randomSize}px`;
+            heart.style.height = `${randomSize}px`;
+            heartsContainer.appendChild(heart);
+            setTimeout(() => heart.remove(), (randomDuration + randomDelay) * 1000);
+        }
+
+        // *** NEW: Function to create shooting stars ***
+        function createShootingStar() {
+            const star = document.createElement('div');
+            star.classList.add('star');
+            const startY = Math.random() * 100;
+            const startX = -10; // Start just off-screen to the left
+            const duration = Math.random() * 2 + 1.5; // Lasts 1.5-3.5 seconds
+            
+            star.style.top = `${startY}vh`;
+            star.style.left = `${startX}vw`;
+            star.style.animationDuration = `${duration}s`;
+            
+            starsContainer.appendChild(star);
+            setTimeout(() => star.remove(), duration * 1000);
+        }
+
+        setInterval(createHeart, 250);
+        setInterval(createShootingStar, 1500); // Create a shooting star every 1.5 seconds
+
+        // Mouse sparkle trail script
+        document.addEventListener('mousemove', function(e) {
+            let sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            document.body.appendChild(sparkle);
+            sparkle.style.left = e.pageX + 'px';
+            sparkle.style.top = e.pageY + 'px';
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            sparkle.style.backgroundColor = randomColor;
+            sparkle.style.boxShadow = `0 0 10px ${randomColor}, 0 0 20px white`;
+            setTimeout(() => sparkle.remove(), 700);
+        });
+    </script>
+
+</body>
+</html>

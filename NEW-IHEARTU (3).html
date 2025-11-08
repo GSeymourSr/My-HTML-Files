@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Home, Erin!</title>
+    <style>
+        /* Import a fun, romantic font */
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+
+        /* Basic Setup */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* Prevents scrollbars */
+            font-family: 'Pacifico', cursive;
+            cursor: default; /* Use a standard cursor */
+        }
+
+        /* The flowing gradient background */
+        body {
+            background: linear-gradient(-45deg, #ff79c6, #ff5555, #bd93f9, #ffb86c, #f1fa8c, #8be9fd);
+            background-size: 400% 400%;
+            animation: gradientFlow 20s ease infinite;
+        }
+
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Container for the floating text */
+        #text-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Styling for the bold, bright floating text */
+        .floating-text {
+            position: absolute;
+            color: white;
+            font-size: 6vw; /* Responsive font size */
+            font-weight: bold;
+            white-space: nowrap; /* Keep sentences on one line */
+            will-change: transform, color, text-shadow; /* Performance hint */
+            /* *** NEW: Added a second animation for the glowing/color changing effect! *** */
+            animation: textGlowAndColor 8s ease-in-out infinite alternate;
+        }
+        
+        /* Apply individual float animations ON TOP of the glow animation */
+        .text-1 { animation-name: floatAround1, textGlowAndColor; animation-duration: 25s, 8s; }
+        .text-2 { animation-name: floatAround2, textGlowAndColor; animation-duration: 30s, 8s; }
+        .text-3 { animation-name: floatAround3, textGlowAndColor; animation-duration: 28s, 8s; }
+        .text-4 { animation-name: floatAround4, textGlowAndColor; animation-duration: 22s, 8s; }
+
+        /* *** NEW: Keyframes for the text glow and color change effect *** */
+        @keyframes textGlowAndColor {
+            0%   { color: #fff; text-shadow: 0 0 10px #fff, 0 0 20px #ff79c6, 0 0 30px #ff79c6; }
+            50%  { color: #f1fa8c; text-shadow: 0 0 10px #f1fa8c, 0 0 20px #ff5555, 0 0 30px #ff5555; }
+            100% { color: #8be9fd; text-shadow: 0 0 10px #8be9fd, 0 0 20px #bd93f9, 0 0 30px #bd93f9; }
+        }
+
+        /* Keyframes for text floating paths (unchanged) */
+        @keyframes floatAround1 {
+            0%   { transform: translate(10vw, 10vh) rotate(-5deg); }
+            50%  { transform: translate(50vw, 70vh) rotate(5deg); }
+            100% { transform: translate(10vw, 10vh) rotate(-5deg); }
+        }
+        @keyframes floatAround2 {
+            0%   { transform: translate(80vw, 20vh) rotate(8deg); }
+            50%  { transform: translate(10vw, 60vh) rotate(-8deg); }
+            100% { transform: translate(80vw, 20vh) rotate(8deg); }
+        }
+        @keyframes floatAround3 {
+            0%   { transform: translate(15vw, 80vh) rotate(-3deg); }
+            50%  { transform: translate(70vw, 5vh) rotate(10deg); }
+            100% { transform: translate(15vw, 80vh) rotate(-3deg); }
+        }
+        @keyframes floatAround4 {
+            0%   { transform: translate(60vw, 90vh) rotate(6deg); }
+            50%  { transform: translate(20vw, 25vh) rotate(-4deg); }
+            100% { transform: translate(60vw, 90vh) rotate(6deg); }
+        }
+
+        /* CSS for creating the hearts */
+        .heart {
+            position: absolute;
+            bottom: -50px;
+            width: 30px;
+            height: 30px;
+            background-color: var(--heart-color, red);
+            transform-origin: center center;
+            opacity: 0.9;
+            animation: floatAndWobble 10s linear infinite; /* *** NEW: Renamed animation for clarity *** */
+            will-change: transform, opacity;
+        }
+        .heart::before, .heart::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: inherit;
+            border-radius: 50%;
+        }
+        .heart::before { top: -15px; left: 0; }
+        .heart::after { top: 0; left: 15px; }
+
+        /* *** UPDATED: Animation now includes a side-to-side wobble for a more dynamic float *** */
+        @keyframes floatAndWobble {
+            0% {
+                transform: translateY(0) translateX(0vw) rotate(-45deg) scale(0.8);
+                opacity: 1;
+            }
+            50% {
+                transform: translateY(-50vh) translateX(5vw) rotate(180deg) scale(1.1);
+            }
+            100% {
+                transform: translateY(-110vh) translateX(-5vw) rotate(315deg) scale(1.2); 
+                opacity: 0;
+            }
+        }
+
+        /* *** NEW: CSS for the mouse cursor sparkle trail *** */
+        .sparkle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            pointer-events: none; /* Make sparkles unclickable */
+            box-shadow: 0 0 10px white, 0 0 20px #ff79c6;
+            animation: sparkle-fade 0.7s forwards;
+            z-index: 100;
+        }
+        
+        @keyframes sparkle-fade {
+            to {
+                transform: scale(0) translateY(-20px);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hearts-container"></div>
+    
+    <div id="text-container">
+        <!-- *** UPDATED: Changed Aaron to Erin *** -->
+        <div class="floating-text text-1">Erin is home!</div>
+        <div class="floating-text text-2">Erin is here!</div>
+        <div class="floating-text text-3">Greg loves everyone</div>
+        <div class="floating-text text-4">Erin loves Greg ❤️</div>
+    </div>
+
+    <script>
+        const heartsContainer = document.getElementById('hearts-container');
+        const heartColors = ['#ff79c6', '#ff5555', '#f1fa8c', '#bd93f9', '#ff9800', '#e91e63'];
+
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+
+            const randomColor = heartColors[Math.floor(Math.random() * heartColors.length)];
+            const randomX = Math.random() * 100;
+            const randomDuration = Math.random() * 8 + 6;
+            const randomDelay = Math.random() * 5;
+            const randomSize = Math.random() * 20 + 15;
+            
+            heart.style.setProperty('--heart-color', randomColor);
+            heart.style.left = `${randomX}vw`;
+            heart.style.animationDuration = `${randomDuration}s`;
+            heart.style.animationDelay = `${randomDelay}s`;
+            heart.style.width = `${randomSize}px`;
+            heart.style.height = `${randomSize}px`;
+
+            heartsContainer.appendChild(heart);
+
+            setTimeout(() => {
+                heart.remove();
+            }, (randomDuration + randomDelay) * 1000);
+        }
+
+        setInterval(createHeart, 250);
+
+        // *** NEW: JavaScript for the mouse sparkle trail effect ***
+        document.addEventListener('mousemove', function(e) {
+            let sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            document.body.appendChild(sparkle);
+
+            // Position the sparkle at the cursor
+            sparkle.style.left = e.pageX + 'px';
+            sparkle.style.top = e.pageY + 'px';
+            
+            // Randomize color from our heart palette for variety
+            const randomColor = heartColors[Math.floor(Math.random() * heartColors.length)];
+            sparkle.style.backgroundColor = randomColor;
+            sparkle.style.boxShadow = `0 0 10px ${randomColor}, 0 0 20px white`;
+
+            // Remove the sparkle after its animation is done
+            setTimeout(() => {
+                sparkle.remove();
+            }, 700); // Must match the animation duration
+        });
+    </script>
+
+</body>
+</html>

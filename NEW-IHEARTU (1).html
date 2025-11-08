@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Home, Erin!!!</title>
+    <style>
+        /* Import new, more expressive fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Lobster&family=Orbitron:wght@700&display=swap');
+
+        /* Basic Setup with a new Dark Neon Theme */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background: #0f0c29; /* fallback for old browsers */
+            background: -webkit-linear-gradient(to right, #24243e, #302b63, #0f0c29);
+            background: linear-gradient(to right, #24243e, #302b63, #0f0c29);
+            cursor: crosshair; /* A more techy cursor */
+        }
+
+        /* Container for all our floating particles */
+        #particles-container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        /* --- STYLING FOR ALL NEW PARTICLES --- */
+        
+        /* Base styles for all floating/falling items */
+        .particle {
+            position: absolute;
+            will-change: transform, opacity;
+            animation-iteration-count: infinite;
+            animation-fill-mode: forwards;
+        }
+
+        /* 1. The Hearts */
+        .heart {
+            width: 25px; height: 25px;
+            background-color: var(--particle-color);
+            transform: rotate(-45deg);
+            animation-name: floatUp;
+        }
+        .heart::before, .heart::after {
+            content: ''; position: absolute; width: 25px; height: 25px;
+            background-color: inherit; border-radius: 50%;
+        }
+        .heart::before { top: -13px; left: 0; }
+        .heart::after { top: 0; left: 13px; }
+
+        /* 2. The Roses (created with pure CSS) */
+        .rose {
+            width: 30px; height: 30px;
+            animation-name: fallAndTumble;
+        }
+        .rose .petal {
+            position: absolute;
+            width: 20px; height: 25px;
+            background: var(--particle-color);
+            border-radius: 50% 0;
+            box-shadow: 0 0 15px var(--particle-color);
+        }
+        .rose .petal:nth-child(1) { transform: rotate(20deg); top: 0; left: 5px; }
+        .rose .petal:nth-child(2) { transform: rotate(110deg); top: 5px; left: 15px; }
+        .rose .petal:nth-child(3) { transform: rotate(200deg); top: 15px; left: 10px; }
+        .rose .petal:nth-child(4) { transform: rotate(290deg); top: 10px; left: 0; opacity: 0.8; }
+
+        /* 3. The Flowers */
+        .flower {
+            width: 30px; height: 30px;
+            animation-name: fallAndTumble;
+        }
+        .flower .petal {
+            position: absolute;
+            width: 12px; height: 12px;
+            background: var(--particle-color);
+            border-radius: 50%;
+            top: 9px; left: 9px;
+            box-shadow: 0 0 10px var(--particle-color);
+        }
+        .flower .petal:nth-child(1) { transform: translate(10px, 0); }
+        .flower .petal:nth-child(2) { transform: translate(-10px, 0); }
+        .flower .petal:nth-child(3) { transform: translate(0, 10px); }
+        .flower .petal:nth-child(4) { transform: translate(0, -10px); }
+        .flower .petal.center {
+             background: #fff;
+             box-shadow: 0 0 15px #fff;
+             transform: translate(0,0);
+        }
+
+        /* --- PARTICLE ANIMATIONS --- */
+
+        @keyframes floatUp {
+            0% { transform: translateY(110vh) rotate(-45deg); opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+        @keyframes fallAndTumble {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* --- STYLING FOR THE TEXT --- */
+
+        /* Main Welcome Message with Neon Flicker */
+        #main-message {
+            position: absolute;
+            top: 45%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Lobster', cursive;
+            font-size: 10vw;
+            color: #fff;
+            text-align: center;
+            animation: neon-flicker 2s infinite alternate;
+        }
+
+        @keyframes neon-flicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% {
+                text-shadow:
+                    0 0 4px #fff,
+                    0 0 11px #fff,
+                    0 0 19px #fff,
+                    0 0 40px #f09,
+                    0 0 80px #f09,
+                    0 0 90px #f09,
+                    0 0 100px #f09,
+                    0 0 150px #f09;
+            }
+            20%, 24%, 55% {        
+                text-shadow: none;
+            }
+        }
+        
+        /* Floating Secondary Messages */
+        .floating-text {
+            position: absolute;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--particle-color);
+            font-size: 3.5vw;
+            text-shadow: 0 0 5px #fff, 0 0 10px currentColor;
+            animation: drift 20s infinite alternate ease-in-out;
+            white-space: nowrap;
+        }
+
+        .text-1 { top: 15%; left: 10%; animation-duration: 25s; }
+        .text-2 { top: 75%; left: 60%; animation-duration: 30s; }
+        .text-3 { top: 80%; left: 10%; animation-duration: 22s; }
+        .text-4 { top: 20%; left: 70%; animation-duration: 28s; }
+        .text-5 { top: 55%; left: 30%; font-family: 'Lobster', cursive; font-size: 5vw; animation-duration: 18s; }
+
+        @keyframes drift {
+            from { transform: translate(0, 0) rotate(-5deg); }
+            to { transform: translate(20px, 40px) rotate(5deg); }
+        }
+
+        /* Mouse Trail Effect */
+        .shard {
+            position: absolute;
+            width: 2px;
+            height: 15px;
+            background: linear-gradient(to bottom, currentColor, transparent);
+            pointer-events: none;
+            animation: fade-out 0.5s forwards;
+            transform-origin: top center;
+        }
+        @keyframes fade-out {
+            to {
+                opacity: 0;
+                transform: scale(0.5) translateY(-50px);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="particles-container"></div>
+    
+    <div id="text-container">
+        <div id="main-message">Welcome Home Erin!</div>
+        
+        <div class="floating-text text-1" style="--particle-color: #00ffff;">It's been too long...</div>
+        <div class="floating-text text-2" style="--particle-color: #ff00ff;">Greg missed you!</div>
+        <div class="floating-text text-3" style="--particle-color: #39ff14;">The wait is over!</div>
+        <div class="floating-text text-4" style="--particle-color: #f7ff00;">So happy you're here</div>
+        <div class="floating-text text-5" style="--particle-color: #ff0055;">Erin ❤️ Greg</div>
+    </div>
+
+    <script>
+        const particlesContainer = document.getElementById('particles-container');
+        const neonColors = ['#ff00ff', '#00ffff', '#39ff14', '#f7ff00', '#ff0055', '#ff9900'];
+        const particleTypes = ['heart', 'rose', 'flower'];
+
+        function createParticle() {
+            const particle = document.createElement('div');
+            const type = particleTypes[Math.floor(Math.random() * particleTypes.length)];
+            particle.classList.add('particle', type);
+
+            // Add inner elements for complex particles
+            if (type === 'rose') {
+                particle.innerHTML = '<div class="petal"></div><div class="petal"></div><div class="petal"></div><div class="petal"></div>';
+            } else if (type === 'flower') {
+                particle.innerHTML = '<div class="petal"></div><div class="petal"></div><div class="petal"></div><div class="petal"></div><div class="petal center"></div>';
+            }
+
+            const randomColor = neonColors[Math.floor(Math.random() * neonColors.length)];
+            const randomX = Math.random() * 100;
+            const randomDuration = Math.random() * 10 + 8; // 8-18 seconds
+            const randomDelay = Math.random() * 5;
+
+            particle.style.setProperty('--particle-color', randomColor);
+            particle.style.left = `${randomX}vw`;
+            particle.style.animationDuration = `${randomDuration}s`;
+            particle.style.animationDelay = `${randomDelay}s`;
+            
+            // Randomize starting position based on animation
+            if (particle.style.animationName === 'fallAndTumble') {
+                 particle.style.top = '-50px';
+            } else {
+                 particle.style.bottom = '-50px';
+            }
+
+            particlesContainer.appendChild(particle);
+
+            setTimeout(() => {
+                particle.remove();
+            }, (randomDuration + randomDelay) * 1000);
+        }
+
+        // Mouse trail script
+        document.addEventListener('mousemove', function(e) {
+            let shard = document.createElement('div');
+            shard.className = 'shard';
+            const randomColor = neonColors[Math.floor(Math.random() * neonColors.length)];
+            shard.style.color = randomColor;
+            
+            document.body.appendChild(shard);
+
+            shard.style.left = e.pageX + 'px';
+            shard.style.top = e.pageY + 'px';
+            shard.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+            setTimeout(() => {
+                shard.remove();
+            }, 500);
+        });
+
+        // Generate particles continuously
+        setInterval(createParticle, 200);
+    </script>
+
+</body>
+</html>
