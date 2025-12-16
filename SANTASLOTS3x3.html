@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greg Seymour AI Santa Slots</title>
+    <style>
+        /* 
+           ========================================
+           CSS: VISUAL STYLING
+           ======================================== 
+        */
+
+        :root {
+            --red: #c0392b;
+            --green: #1e8449;
+            --gold: #f1c40f;
+            --dark: #1a1a1a;
+            --blue: #2980b9;
+            --orange: #e67e22;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #2c3e50, #000000);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow: hidden; 
+        }
+
+        /* --- SPLASH SCREEN --- */
+        #splashScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #000428, #004e92);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* Ensures vertical centering */
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .psychedelic-text {
+            font-size: clamp(2rem, 5vw, 4rem); 
+            font-weight: 900;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+            background-size: 400%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: rainbowFlow 3s linear infinite;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+            margin: 10px 0;
+            line-height: 1.2;
+            z-index: 10001; /* Above floating icons */
+            position: relative;
+        }
+
+        .splash-sub {
+            font-size: 1.5rem;
+            color: var(--gold);
+            margin: 10px 0 30px 0;
+            font-weight: bold;
+            z-index: 10001;
+            position: relative;
+        }
+
+        /* The New Start Text Button */
+        .start-text-btn {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            color: #fff;
+            text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 30px #ffff00;
+            animation: pulseText 1.5s infinite alternate;
+            margin: 20px 0;
+            z-index: 10001;
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        .start-text-btn:hover {
+            transform: scale(1.1);
+            text-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00;
+        }
+
+        .footer-text {
+            font-size: 1.5rem;
+            color: #fff;
+            margin-top: 20px;
+            font-style: italic;
+            z-index: 10001;
+            position: relative;
+        }
+
+        @keyframes rainbowFlow { 0% { background-position: 0%; } 100% { background-position: 400%; } }
+        @keyframes pulseText { from { transform: scale(1); } to { transform: scale(1.05); } }
+
+        /* Snow Animation */
+        .snowflake {
+            position: absolute;
+            top: -20px;
+            color: white;
+            font-size: 1em;
+            font-family: Arial;
+            text-shadow: 0 0 1px #000;
+            user-select: none;
+            z-index: 9998;
+            pointer-events: none;
+            animation-name: fall;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+        @keyframes fall { to { transform: translateY(110vh); } }
+
+        /* Floating Emojis on Title */
+        .floating-icon {
+            position: absolute;
+            font-size: 3rem;
+            opacity: 0.6;
+            z-index: 9998;
+            pointer-events: none;
+            animation: floatAround linear infinite;
+        }
+        @keyframes floatAround {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(10px, 20px) rotate(90deg); }
+            50% { transform: translate(-10px, 40px) rotate(180deg); }
+            75% { transform: translate(-20px, 20px) rotate(270deg); }
+            100% { transform: translate(0, 0) rotate(360deg); }
+        }
+
+        /* --- GAME UI --- */
+        .machine-wrapper {
+            display: none; /* Hidden until start */
+            align-items: flex-end;
+            position: relative;
+            transform: scale(0.9);
+        }
+
+        .slot-machine {
+            background: var(--red);
+            border: 8px solid var(--gold);
+            border-radius: 20px;
+            padding: 20px;
+            width: 500px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 20px, rgba(255,255,255,0.05) 20px, rgba(255,255,255,0.05) 40px);
+        }
+
+        /* --- HEADER STYLES --- */
+        .header {
+            background: #000;
+            border: 2px solid var(--gold);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+            min-height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.5s;
+        }
+
+        .radiant-title {
+            margin: 0; 
+            font-size: 2rem;
+            line-height: 1.2;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8f00ff);
+            background-size: 400%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            transition: transform 0.5s, letter-spacing 0.5s;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
+        }
+
+        .win-message {
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: 0 0 10px #ff0000, 0 0 20px #ffff00;
+            animation: popIn 0.5s ease-out;
+            font-weight: bold;
+        }
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* --- REEL GRID --- */
+        .reel-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            background: #000;
+            padding: 15px;
+            border: 4px solid var(--gold);
+            border-radius: 10px;
+            height: 380px; 
+            position: relative;
+        }
+
+        .slot-cell {
+            background: #fff;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+            border: 2px solid #ccc;
+            overflow: hidden; 
+            position: relative;
+        }
+
+        .slot-cell.spinning {
+            color: transparent !important;
+            background-image: linear-gradient(180deg, 
+                rgba(192, 57, 43, 0.8), 
+                rgba(241, 196, 15, 0.8), 
+                rgba(30, 132, 73, 0.8), 
+                rgba(192, 57, 43, 0.8)
+            );
+            background-size: 100% 200%;
+            animation: spinBlurMotion 0.2s linear infinite;
+            border-color: var(--gold);
+        }
+
+        @keyframes spinBlurMotion { 0% { background-position: 0% 0%; } 100% { background-position: 0% -200%; } }
+
+        .win-highlight {
+            animation: discoFlash 0.5s infinite;
+            z-index: 10;
+            border-width: 4px;
+        }
+
+        @keyframes discoFlash {
+            0% { background-color: #ffcccc; border-color: #ff0000; box-shadow: 0 0 15px #ff0000; }
+            25% { background-color: #ccffcc; border-color: #00ff00; box-shadow: 0 0 15px #00ff00; }
+            50% { background-color: #ccccff; border-color: #0000ff; box-shadow: 0 0 15px #0000ff; }
+            75% { background-color: #ffffcc; border-color: #ffff00; box-shadow: 0 0 15px #ffff00; }
+            100% { background-color: #ffccff; border-color: #ff00ff; box-shadow: 0 0 15px #ff00ff; }
+        }
+
+        /* --- UI CONTROLS --- */
+        .ui-panel { background: var(--green); padding: 15px; border-radius: 10px; border: 2px solid var(--gold); }
+        .display-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .stat-box { background: #000; border: 1px solid #555; padding: 5px 10px; border-radius: 5px; text-align: center; min-width: 80px; display:flex; flex-direction: column; justify-content: center; }
+        .stat-label { font-size: 0.7rem; color: #aaa; display: block; }
+        .stat-value { font-size: 1.2rem; color: var(--gold); font-family: monospace; font-weight: bold; }
+
+        .bet-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--gold);
+            font-size: 1.2rem;
+            font-family: monospace;
+            font-weight: bold;
+            text-align: center;
+            outline: none;
+        }
+        .bet-input:focus { border-bottom: 1px solid var(--gold); }
+
+        .btn-row { display: flex; gap: 5px; justify-content: center; }
+        button { padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; flex: 1; transition: transform 0.1s; }
+        button:active { transform: translateY(3px); }
+        
+        .btn-bet { background: #3498db; color: white; }
+        .btn-max { background: #e74c3c; color: white; } 
+        .btn-pay { background: #8e44ad; color: white; }
+
+        .btn-auto { background: var(--orange); color: white; flex: 0.8; }
+        .btn-auto.active { 
+            background: #d35400; 
+            box-shadow: inset 0 0 10px #000; 
+            animation: autoPulse 1s infinite alternate;
+        }
+        @keyframes autoPulse { from { opacity: 1; } to { opacity: 0.7; } }
+
+        .btn-spin { background: var(--gold); color: black; font-size: 1.1rem; flex: 2; box-shadow: 0 5px 0 #b7950b; }
+        .btn-spin:active { box-shadow: 0 2px 0 #b7950b; transform: translateY(3px); }
+
+        .win-log {
+            height: 60px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 5px;
+            margin-top: 10px;
+            padding: 5px;
+            font-size: 0.9rem;
+            overflow-y: auto;
+            font-family: monospace;
+            color: #fff;
+            border: 1px solid #555;
+            text-align: left;
+        }
+        .log-entry { margin: 2px 0; border-bottom: 1px dashed #444; color: var(--gold); }
+
+        /* LEVER */
+        .lever-container { width: 40px; height: 250px; margin-left: 10px; position: relative; cursor: pointer; }
+        .lever-stick { width: 15px; height: 150px; background: silver; position: absolute; bottom: 40%; left: 50%; transform: translateX(-50%); transform-origin: bottom center; transition: transform 0.5s; }
+        .lever-ball { width: 45px; height: 45px; background: radial-gradient(circle at 30% 30%, #ff0000, #990000); border-radius: 50%; position: absolute; top: -35px; left: -15px; box-shadow: 0 5px 10px rgba(0,0,0,0.5); }
+        .lever-base { width: 100%; height: 80px; background: #333; position: absolute; bottom: 0; border-radius: 0 10px 10px 0; border: 2px solid #000; }
+        .pulled .lever-stick { transform: translateX(-50%) rotate(180deg) scaleY(0.8); }
+
+        /* OVERLAYS */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            display: none; justify-content: center; align-items: center;
+        }
+        .active { display: flex !important; }
+        .modal-box {
+            background: #fff; color: #222; padding: 20px; border-radius: 15px;
+            border: 5px solid var(--red); text-align: center; max-width: 500px;
+            position: relative;
+        }
+        
+        .memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 20px auto; width: fit-content; }
+        .mem-card { width: 60px; height: 60px; background: var(--blue); border-radius: 5px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 2rem; color: transparent; transition: transform 0.3s; transform-style: preserve-3d; }
+        .mem-card.flipped { background: #fff; color: #000; border: 2px solid var(--gold); transform: rotateY(180deg); }
+        .mem-card.matched { visibility: hidden; }
+
+        .cheat-tree { cursor: pointer; transition: transform 0.2s; display: inline-block; }
+        .cheat-tree:active { transform: scale(1.5); }
+
+    </style>
+</head>
+<body>
+
+    <!-- SPLASH SCREEN -->
+    <div id="splashScreen">
+        <h1 class="psychedelic-text">Happy Holidays Everybody!</h1>
+        <div class="psychedelic-text" style="font-size: 1.8rem; margin-top:20px;">Santa Slots</div>
+        <div class="splash-sub">by Greg Seymour AI</div>
+        
+        <!-- NEW START TEXT BUTTON -->
+        <div class="start-text-btn" onclick="enterGame()">START GAME</div>
+
+        <div class="footer-text">Have Fun!</div>
+    </div>
+
+    <!-- PAYTABLE OVERLAY WITH CHEAT -->
+    <div id="paytableOverlay" class="overlay">
+        <div class="modal-box">
+            <h2 style="color:var(--red)">3x3 PAYTABLE</h2>
+            <p><strong>8 Ways to Win:</strong><br>3 Horizontal, 3 Vertical, 2 Diagonal</p>
+            <hr>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; text-align:left; gap:10px;">
+                <div>🎅 Santa: <strong>500x</strong></div>
+                <div>🦌 Deer: <strong>100x</strong></div>
+                <div>⛄ Snowman: <strong>50x</strong></div>
+                <div>🎁 Gift: <strong>25x</strong></div>
+                <div>🔔 Bell: <strong>10x</strong></div>
+                <div>🍪 Cookie: <strong>5x</strong></div>
+            </div>
+            <p style="margin-top:15px; color:var(--blue); font-weight:bold;">
+                <span class="cheat-tree" onclick="activateCheat()">🎄</span> 
+                3 TREES = 2x BET + BONUS GAME 
+                <span class="cheat-tree" onclick="activateCheat()">🎄</span>
+            </p>
+            <button onclick="toggleOverlay('paytableOverlay')" class="btn-bet" style="width:100%">Close</button>
+        </div>
+    </div>
+
+    <div id="bonusOverlay" class="overlay">
+        <div class="modal-box" style="background:var(--dark); color:white; border-color:var(--gold);">
+            <h2>🎄 CHRISTMAS MEMORY 🎄</h2>
+            <p>Score grows with each match!<br>Find ALL for 5000 POINTS!</p>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <span>Tries Left: <span id="bonusTries" style="color:var(--red)">5</span></span>
+                <span>Matches: <span id="bonusMatches" style="color:var(--green)">0</span>/8</span>
+            </div>
+            <div id="memoryGrid" class="memory-grid"></div>
+            <div id="bonusMessage" style="min-height:30px; font-weight:bold; color:var(--gold);"></div>
+            <div id="bonusPending" style="font-size:0.9rem; color:#aaa; margin-top:5px;">Bonus Won: $0</div>
+        </div>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="gameOverOverlay" class="overlay">
+        <div class="modal-box" style="background: #000; color: white; border-color: var(--red);">
+            <h1 style="color: var(--red); font-size: 3rem;">GAME OVER</h1>
+            <p style="font-size: 1.2rem;">Sorry, you're out of funds!</p>
+            <p style="color: var(--gold);">Would you like to play again?</p>
+            <button class="btn-bet" style="font-size: 1.2rem; padding: 10px 30px; margin-top:10px; width:auto;" onclick="resetGame()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <!-- GAME AREA -->
+    <div class="machine-wrapper" id="gameArea">
+        <div class="slot-machine">
+            <!-- Header -->
+            <div class="header">
+                <h1 class="radiant-title" id="headerTitle">Greg Seymour AI<br>Santa Slots</h1>
+            </div>
+
+            <!-- 3x3 GRID -->
+            <div class="reel-grid" id="gridContainer">
+                <div class="slot-cell" id="cell-0">🎅</div>
+                <div class="slot-cell" id="cell-1">🎅</div>
+                <div class="slot-cell" id="cell-2">🎅</div>
+                <div class="slot-cell" id="cell-3">🎅</div>
+                <div class="slot-cell" id="cell-4">🎅</div>
+                <div class="slot-cell" id="cell-5">🎅</div>
+                <div class="slot-cell" id="cell-6">🎅</div>
+                <div class="slot-cell" id="cell-7">🎅</div>
+                <div class="slot-cell" id="cell-8">🎅</div>
+            </div>
+
+            <!-- UI CONTROLS -->
+            <div class="ui-panel">
+                <div class="display-row">
+                    <div class="stat-box">
+                        <span class="stat-label">CREDITS</span>
+                        <span class="stat-value" id="credits">1000</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">TOTAL BET</span>
+                        <input type="number" class="bet-input" id="betInput" value="10" onchange="manualBetChange()">
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">WIN</span>
+                        <span class="stat-value" id="win">0</span>
+                    </div>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn-bet" onclick="changeBet(-10)">-10</button>
+                    <button class="btn-bet" onclick="changeBet(10)">+10</button>
+                    <button class="btn-max" onclick="maxBet()">MAX</button>
+                    <button class="btn-pay" onclick="toggleOverlay('paytableOverlay')">INFO</button>
+                </div>
+                
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="btn-auto" id="btnAuto" onclick="toggleAutoSpin()">AUTO</button>
+                    <button class="btn-spin" onclick="pullLever()">SPIN!</button>
+                </div>
+
+                <div class="win-log" id="winLog">
+                    <div>Welcome to Greg Seymour's Slots!</div>
+                    <div>Good Luck!</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lever-container" id="lever" onclick="pullLever()">
+            <div class="lever-stick"><div class="lever-ball"></div></div>
+            <div class="lever-base"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- SNOW GENERATION FOR SPLASH SCREEN ---
+        function createSnow() {
+            const snowContainer = document.getElementById('splashScreen');
+            for(let i=0; i<100; i++) {
+                const flake = document.createElement('div');
+                flake.className = 'snowflake';
+                flake.innerText = '❄';
+                flake.style.left = Math.random() * 100 + 'vw';
+                flake.style.animationDuration = (Math.random() * 3 + 5) + 's';
+                flake.style.opacity = Math.random();
+                flake.style.fontSize = (Math.random() * 20 + 10) + 'px';
+                flake.style.animationDelay = Math.random() * 5 + 's';
+                snowContainer.appendChild(flake);
+            }
+        }
+        createSnow();
+
+        // --- FLOATING EMOJIS FOR SPLASH SCREEN ---
+        function createFloatingIcons() {
+            const container = document.getElementById('splashScreen');
+            const icons = ['🎅','🦌','⛄','🎁','🔔','🍪','🎄'];
+            
+            for(let i=0; i<15; i++) {
+                const icon = document.createElement('div');
+                icon.className = 'floating-icon';
+                icon.innerText = icons[Math.floor(Math.random() * icons.length)];
+                icon.style.left = Math.random() * 90 + 'vw';
+                icon.style.top = Math.random() * 90 + 'vh';
+                icon.style.animationDuration = (Math.random() * 10 + 10) + 's'; // Slow float
+                icon.style.fontSize = (Math.random() * 2 + 2) + 'rem';
+                container.appendChild(icon);
+            }
+        }
+        createFloatingIcons();
+
+        function enterGame() {
+            document.getElementById('splashScreen').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'flex';
+            startHeaderChaos(); 
+        }
+
+        // --- GAME VARIABLES ---
+        const symbolDeck = [
+            '🍪','🍪','🍪','🍪','🍪','🍪','🍪',
+            '🔔','🔔','🔔','🔔','🔔',
+            '🎁','🎁','🎁','🎁',
+            '⛄','⛄','⛄',
+            '🦌','🦌',
+            '🎅',
+            '🎄'
+        ];
+
+        const payouts = {
+            '🎅': 500, '🦌': 100, '⛄': 50, '🎁': 25, '🔔': 10, '🍪': 5
+        };
+
+        let credits = 1000;
+        let bet = 10;
+        let isSpinning = false;
+        let isAutoSpinning = false;
+        let isShowingWinMessage = false;
+        let cheatActive = false; 
+        
+        const cells = [];
+        for(let i=0; i<9; i++) cells.push(document.getElementById(`cell-${i}`));
+        
+        const elCredits = document.getElementById('credits');
+        const elBetInput = document.getElementById('betInput');
+        const elWin = document.getElementById('win');
+        const elLog = document.getElementById('winLog');
+        const elLever = document.getElementById('lever');
+        const elBtnAuto = document.getElementById('btnAuto');
+        const elHeaderTitle = document.getElementById('headerTitle');
+
+        const defaultTitleHTML = "Greg Seymour AI<br>Santa Slots";
+
+        const winLines = [
+            [0,1,2], [3,4,5], [6,7,8], 
+            [0,3,6], [1,4,7], [2,5,8], 
+            [0,4,8], [2,4,6]  
+        ];
+
+        const lineNames = [
+            "Top Row", "Middle Row", "Bottom Row", 
+            "Left Col", "Center Col", "Right Col", 
+            "Diagonal ↘", "Diagonal ↙"
+        ];
+
+        function updateUI() {
+            elCredits.innerText = credits;
+            elBetInput.value = bet;
+        }
+
+        function startHeaderChaos() {
+            setInterval(() => {
+                if(isShowingWinMessage) return; 
+
+                const title = document.querySelector('.radiant-title');
+                if(!title) return;
+
+                const hue = Math.floor(Math.random() * 360);
+                const scale = 0.95 + Math.random() * 0.1;
+                const rot = (Math.random() * 4) - 2;
+
+                title.style.filter = `hue-rotate(${hue}deg) drop-shadow(0 0 5px rgba(255,255,255,0.5))`;
+                title.style.transform = `scale(${scale}) rotate(${rot}deg)`;
+                
+            }, 2000);
+        }
+
+        function activateCheat() {
+            cheatActive = true;
+            alert("🎄 CHEAT ACTIVATED! 🎄\nNext spin will be a BONUS!");
+        }
+
+        function changeBet(amt) {
+            if(isSpinning || isAutoSpinning) return;
+            let newBet = bet + amt;
+            if(newBet < 10) newBet = 10;
+            bet = newBet;
+            updateUI();
+        }
+
+        function manualBetChange() {
+            if(isSpinning || isAutoSpinning) {
+                elBetInput.value = bet;
+                return;
+            }
+            let val = parseInt(elBetInput.value);
+            if(isNaN(val) || val < 1) val = 10;
+            bet = val;
+            updateUI();
+            log("Bet changed to " + bet);
+        }
+
+        function maxBet() {
+            if(isSpinning || isAutoSpinning) return;
+            if(credits === 0) { return; }
+            bet = credits; 
+            log("⚠️ MAX BET ACTIVATED! ⚠️");
+            updateUI();
+        }
+
+        function log(msg) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerText = msg;
+            elLog.prepend(entry);
+        }
+
+        function toggleOverlay(id) {
+            document.getElementById(id).classList.toggle('active');
+        }
+
+        function showHeaderWin(text, color = "#fff") {
+            isShowingWinMessage = true;
+            elHeaderTitle.innerHTML = `<div class="win-message" style="color:${color}">${text}</div>`;
+            elHeaderTitle.style.transform = "scale(1)"; 
+            elHeaderTitle.style.filter = "none";
+        }
+
+        function resetHeader() {
+            elHeaderTitle.innerHTML = defaultTitleHTML;
+            isShowingWinMessage = false;
+        }
+
+        function toggleAutoSpin() {
+            isAutoSpinning = !isAutoSpinning;
+            if(isAutoSpinning) {
+                elBtnAuto.innerText = "STOP";
+                elBtnAuto.classList.add('active');
+                if(!isSpinning) pullLever();
+            } else {
+                elBtnAuto.innerText = "AUTO";
+                elBtnAuto.classList.remove('active');
+            }
+        }
+
+        function pullLever() {
+            if(credits <= 0) {
+                toggleOverlay('gameOverOverlay');
+                if(isAutoSpinning) toggleAutoSpin();
+                return;
+            }
+
+            if(isSpinning) return;
+
+            if(credits < bet) {
+                log("Not enough credits!");
+                if(isAutoSpinning) toggleAutoSpin();
+                return;
+            }
+
+            credits -= bet;
+            elWin.innerText = "0";
+            updateUI();
+            isSpinning = true;
+            resetHeader(); 
+            
+            cells.forEach(c => c.classList.remove('win-highlight'));
+
+            elLever.classList.add('pulled');
+            setTimeout(() => elLever.classList.remove('pulled'), 500);
+
+            cells.forEach(c => {
+                c.className = 'slot-cell spinning'; 
+                c.innerHTML = ""; 
+            });
+
+            // RESULT
+            let gridResults = [];
+            
+            if(cheatActive) {
+                gridResults = ['🎅','🦌','⛄', '🎄','🎄','🎄', '🔔','🎁','🍪'];
+                cheatActive = false; 
+                log("🎄 CHEAT APPLIED 🎄");
+            } else {
+                for(let i=0; i<9; i++) {
+                    gridResults.push(symbolDeck[Math.floor(Math.random() * symbolDeck.length)]);
+                }
+            }
+
+            const columns = [[0,3,6], [1,4,7], [2,5,8]];
+            let delay = 0;
+            
+            columns.forEach((colIndices, colIndex) => {
+                delay += 400;
+                setTimeout(() => {
+                    colIndices.forEach(cellIndex => {
+                        const cell = cells[cellIndex];
+                        cell.classList.remove('spinning');
+                        cell.innerHTML = `<span>${gridResults[cellIndex]}</span>`;
+                    });
+
+                    if(colIndex === 2) {
+                        calculateWins(gridResults);
+                    }
+                }, delay);
+            });
+        }
+
+        function calculateWins(grid) {
+            let totalWin = 0;
+            let bonusTriggered = false;
+
+            winLines.forEach((indices, index) => {
+                const s1 = grid[indices[0]];
+                const s2 = grid[indices[1]];
+                const s3 = grid[indices[2]];
+
+                if(s1 === s2 && s2 === s3) {
+                    if(s1 === '🎄') {
+                        bonusTriggered = true;
+                        highlightCells(indices);
+                        // BONUS ENTRY REWARD: 2x BET
+                        let entryPrize = bet * 2;
+                        credits += entryPrize;
+                        totalWin += entryPrize;
+                        log(`BONUS ENTRY! +${entryPrize}`);
+                        showHeaderWin("BONUS GAME!", "var(--green)");
+                    } else {
+                        const prize = bet * payouts[s1];
+                        totalWin += prize;
+                        highlightCells(indices);
+                        log(`WIN: ${lineNames[index]} (${s1}) +${prize}`);
+                    }
+                }
+            });
+
+            if(totalWin > 0) {
+                if(!bonusTriggered) {
+                    credits += totalWin; 
+                }
+                elWin.innerText = totalWin;
+                updateUI();
+                
+                let winTitle = totalWin > (bet * 10) ? "MEGA WIN!" : "BIG WIN!";
+                if(!bonusTriggered) {
+                    showHeaderWin(`${winTitle}<br>+${totalWin}`);
+                }
+            } else if (!bonusTriggered) {
+                log("No wins.");
+                if(credits <= 0) {
+                   setTimeout(() => {
+                       toggleOverlay('gameOverOverlay');
+                       if(isAutoSpinning) toggleAutoSpin();
+                   }, 1000);
+                }
+            }
+
+            if(bonusTriggered) {
+                if(isAutoSpinning) toggleAutoSpin(); 
+                setTimeout(startBonusGame, 2000); 
+            } else {
+                isSpinning = false;
+                if(isAutoSpinning && credits > 0) {
+                    setTimeout(pullLever, 2000);
+                } else if(isAutoSpinning) {
+                    toggleAutoSpin(); 
+                }
+            }
+        }
+
+        function highlightCells(indices) {
+            indices.forEach(i => cells[i].classList.add('win-highlight'));
+        }
+
+        function resetGame() {
+            credits = 1000;
+            bet = 10;
+            elWin.innerText = "0";
+            updateUI();
+            toggleOverlay('gameOverOverlay');
+            log("Game Reset! Good luck!");
+        }
+
+        // --- BONUS GAME ---
+        let flipped = [];
+        let matches = 0;
+        let tries = 5; 
+        let bonusAccumulatedWin = 0; 
+
+        function startBonusGame() {
+            toggleOverlay('bonusOverlay');
+            const grid = document.getElementById('memoryGrid');
+            grid.innerHTML = "";
+            matches = 0;
+            tries = 5; 
+            bonusAccumulatedWin = 0;
+            
+            updateBonusUI();
+            
+            const icons = ['🎅','🦌','⛄','🎁','🔔','🍪','🕯️','❄️'];
+            let deck = [...icons, ...icons].sort(() => Math.random() - 0.5);
+
+            deck.forEach(icon => {
+                const card = document.createElement('div');
+                card.className = 'mem-card flipped';
+                card.innerHTML = icon;
+                card.dataset.val = icon;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('bonusMessage').innerText = "Memorize positions...";
+
+            setTimeout(() => {
+                document.querySelectorAll('.mem-card').forEach(c => {
+                    c.classList.remove('flipped');
+                    c.innerHTML = "";
+                    c.onclick = () => cardClick(c);
+                });
+                document.getElementById('bonusMessage').innerText = "Find Pairs!";
+            }, 6000);
+        }
+
+        function cardClick(card) {
+            if(card.classList.contains('flipped') || card.classList.contains('matched') || flipped.length >= 2) return;
+
+            card.classList.add('flipped');
+            card.innerHTML = card.dataset.val;
+            flipped.push(card);
+
+            if(flipped.length === 2) {
+                const [c1, c2] = flipped;
+                if(c1.dataset.val === c2.dataset.val) {
+                    matches++;
+                    
+                    // Progressive Scoring: 100, 200, 300... 800
+                    let matchWin = matches * 100;
+                    bonusAccumulatedWin += matchWin;
+
+                    c1.classList.add('matched');
+                    c2.classList.add('matched');
+                    flipped = [];
+                    
+                    updateBonusUI();
+                    
+                    if(matches === 8) endBonus(true);
+                } else {
+                    tries--;
+                    updateBonusUI();
+                    setTimeout(() => {
+                        c1.classList.remove('flipped'); c1.innerHTML = "";
+                        c2.classList.remove('flipped'); c2.innerHTML = "";
+                        flipped = [];
+                        if(tries === 0) endBonus(false);
+                    }, 1000);
+                }
+            }
+        }
+
+        function updateBonusUI() {
+            document.getElementById('bonusTries').innerText = tries;
+            document.getElementById('bonusMatches').innerText = matches;
+            document.getElementById('bonusPending').innerText = "Bonus Won: $" + bonusAccumulatedWin;
+        }
+
+        function endBonus(perfect) {
+            const msg = document.getElementById('bonusMessage');
+            
+            if(perfect) {
+                // If Perfect, total accumulated is 3600. Add 1400 to reach 5000.
+                bonusAccumulatedWin += 1400; 
+                msg.innerText = "AMAZING JOB! TOTAL 5000!";
+                showHeaderWin("AMAZING JOB!<br>+5000");
+                
+                // Add flash animation to overlay title
+                document.querySelector('#bonusOverlay h2').classList.add('psychedelic-text');
+            } else {
+                msg.innerText = "Game Over!";
+                resetHeader();
+            }
+            
+            credits += bonusAccumulatedWin;
+            elWin.innerText = bonusAccumulatedWin; 
+            log(`BONUS RESULT: +${bonusAccumulatedWin}`);
+            updateUI();
+
+            setTimeout(() => {
+                toggleOverlay('bonusOverlay');
+                isSpinning = false;
+                document.querySelector('#bonusOverlay h2').classList.remove('psychedelic-text');
+            }, 4000);
+        }
+
+    </script>
+</body>
+</html>
