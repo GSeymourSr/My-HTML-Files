@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greg Seymour's AI Tic Tac Toe</title>
+    <style>
+        /* --- FONTS & BASICS --- */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Orbitron', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            
+            /* Radiant Moving Background */
+            background: linear-gradient(300deg, #0d0015, #220033, #001a33, #00331a);
+            background-size: 240% 240%;
+            animation: gradientMove 12s ease infinite;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- UI CONTAINERS --- */
+        #game-container {
+            position: relative;
+            text-align: center;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #ff00de;
+            line-height: 1.2;
+        }
+
+        .status {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            min-height: 30px;
+            color: #e0e0e0;
+            text-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+
+        /* --- MENU BUTTONS --- */
+        .menu-screen {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            background: rgba(0, 0, 0, 0.4);
+            color: #00ffff;
+            border: 2px solid #00ffff;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px #00ffff;
+            text-transform: uppercase;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 25px #00ffff, 0 0 50px #00ffff;
+            transform: scale(1.05);
+        }
+
+        button.secondary {
+            border-color: #ff00de;
+            color: #ff00de;
+            box-shadow: 0 0 10px #ff00de;
+        }
+
+        button.secondary:hover {
+            background: #ff00de;
+            color: #fff;
+            box-shadow: 0 0 25px #ff00de;
+        }
+        
+        button.info-btn {
+            border-color: #ffd700;
+            color: #ffd700;
+            box-shadow: 0 0 10px #ffd700;
+        }
+        
+        button.info-btn:hover {
+            background: #ffd700;
+            color: #000;
+            box-shadow: 0 0 25px #ffd700;
+        }
+
+        /* --- THE GRID --- */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            margin: 0 auto;
+            display: none; /* Hidden on start */
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .cell {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3.5rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #fff;
+        }
+
+        .cell.x {
+            color: #00ffff;
+            text-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+        .cell.o {
+            color: #ff00de;
+            text-shadow: 0 0 15px #ff00de, 0 0 30px #ff00de;
+        }
+
+        /* Animation for placing a mark */
+        .pop {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Winning Line Highlight */
+        .cell.win {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #ffd700;
+            box-shadow: inset 0 0 20px #ffd700;
+        }
+
+        /* Game Controls */
+        .controls {
+            margin-top: 20px;
+            display: none; /* Hidden on start */
+            gap: 10px;
+            justify-content: center;
+        }
+
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: white;
+            opacity: 0.5;
+            z-index: 1;
+            animation: floatUp linear infinite;
+        }
+        
+        @keyframes floatUp {
+            to { transform: translateY(-100vh); opacity: 0; }
+        }
+
+        /* --- INFO MODAL --- */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a0022, #001122);
+            border: 2px solid #ffd700;
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            text-align: left;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+            position: relative;
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal h2 {
+            color: #ffd700;
+            margin-top: 0;
+            text-shadow: 0 0 10px #ffd700;
+            text-transform: uppercase;
+        }
+
+        .modal h3 {
+            color: #00ffff;
+            margin-bottom: 5px;
+        }
+
+        .modal p {
+            line-height: 1.6;
+            color: #ddd;
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+
+        .modal .close-btn {
+            margin-top: 10px;
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            width: auto;
+            padding: 10px 20px;
+            display: block;
+            margin-left: auto;
+        }
+        
+        .modal .close-btn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Floating Background Particles (JS will generate) -->
+    <div id="particles"></div>
+
+    <!-- INFO MODAL -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <h2>About this Soft Game</h2>
+            
+            <h3>The Logic (How to Understand)</h3>
+            <p>Tic-Tac-Toe is known in Game Theory as a <strong>"Solved Game."</strong> This means it is a "soft" game because the outcome is entirely predictable if players do not make mistakes.</p>
+            <p>If two perfect players (like two of Seymour's AIs) play against each other, the math dictates that the game <strong>must</strong> end in a draw. There is no luck involved, only logic.</p>
+
+            <h3>How to Play</h3>
+            <p>1. You are <strong>X</strong> (Neon Blue). The opponent is <strong>O</strong> (Neon Pink).<br>
+            2. Place your mark in an empty square.<br>
+            3. The goal is to get <strong>three in a row</strong> (horizontally, vertically, or diagonally).<br>
+            4. If the grid fills up with no winner, it is a Draw.</p>
+
+            <button class="close-btn" onclick="closeInfo()">Return to Game</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <h1>Greg Seymour's AI Tic Tac Toe</h1>
+        
+        <div id="status-display" class="status"></div>
+
+        <!-- MENU -->
+        <div id="menu" class="menu-screen">
+            <button onclick="startGame('pvp')">Friend vs Friend</button>
+            <button onclick="startGame('pva')">Player vs Computer</button>
+            <button onclick="startGame('ava')" class="secondary">Watch AI vs AI</button>
+            <button onclick="openInfo()" class="info-btn">Info & Directions</button>
+        </div>
+
+        <!-- BOARD -->
+        <div id="board" class="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+
+        <!-- CONTROLS -->
+        <div id="controls" class="controls">
+            <button onclick="restartGame()">Restart</button>
+            <button class="secondary" onclick="showMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        /* --- GAME LOGIC --- */
+        const boardElement = document.getElementById('board');
+        const cells = document.querySelectorAll('.cell');
+        const statusDisplay = document.getElementById('status-display');
+        const menu = document.getElementById('menu');
+        const controls = document.getElementById('controls');
+        const infoModal = document.getElementById('infoModal');
+        
+        let gameState = ["", "", "", "", "", "", "", "", ""];
+        let gameActive = false;
+        let currentPlayer = "X";
+        let gameMode = ""; // 'pvp', 'pva', 'ava'
+        let aiDelay = 800; // ms to wait for AI move
+        
+        // Winning combinations
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        /* --- INITIALIZATION --- */
+        function createParticles() {
+            const particleContainer = document.getElementById('particles');
+            for(let i=0; i<30; i++) {
+                let p = document.createElement('div');
+                p.classList.add('particle');
+                p.style.left = Math.random() * 100 + 'vw';
+                p.style.top = (Math.random() * 100 + 100) + 'vh';
+                p.style.width = Math.random() * 5 + 'px';
+                p.style.height = p.style.width;
+                p.style.animationDuration = (Math.random() * 10 + 5) + 's';
+                p.style.background = Math.random() > 0.5 ? '#00ffff' : '#ff00de';
+                p.style.boxShadow = `0 0 10px ${p.style.background}`;
+                particleContainer.appendChild(p);
+            }
+        }
+        createParticles();
+
+        function showMenu() {
+            gameActive = false;
+            boardElement.style.display = 'none';
+            controls.style.display = 'none';
+            menu.style.display = 'flex';
+            statusDisplay.innerHTML = "Choose Your Mode";
+        }
+
+        /* --- INFO MODAL LOGIC --- */
+        function openInfo() {
+            infoModal.style.display = "flex";
+        }
+
+        function closeInfo() {
+            infoModal.style.display = "none";
+        }
+
+        // Close modal if clicking outside content
+        window.onclick = function(event) {
+            if (event.target == infoModal) {
+                closeInfo();
+            }
+        }
+
+        /* --- GAME START LOGIC --- */
+        function startGame(mode) {
+            gameMode = mode;
+            gameActive = true;
+            currentPlayer = "X";
+            gameState = ["", "", "", "", "", "", "", "", ""];
+            
+            menu.style.display = 'none';
+            boardElement.style.display = 'grid';
+            controls.style.display = 'flex';
+            
+            updateStatus();
+            clearBoard();
+
+            // If watching AI vs AI, trigger the first move loop
+            if (gameMode === 'ava') {
+                setTimeout(aiVsAiLoop, 500);
+            }
+        }
+
+        function clearBoard() {
+            cells.forEach(cell => {
+                cell.innerHTML = "";
+                cell.classList.remove('x', 'o', 'win', 'pop');
+            });
+        }
+
+        function updateStatus() {
+            if (!gameActive) return;
+            statusDisplay.innerHTML = `Player <span style="color: ${currentPlayer === 'X' ? '#00ffff' : '#ff00de'}">${currentPlayer}</span>'s Turn`;
+        }
+
+        /* --- INTERACTION --- */
+        cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+
+        function handleCellClick(e) {
+            const clickedCell = e.target;
+            const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+            // Ignore if cell filled, game over, or if it's AI's turn (in 1P or AI modes)
+            if (gameState[clickedCellIndex] !== "" || !gameActive) return;
+            if (gameMode === 'ava') return; // Humans can't click in Watch mode
+            if (gameMode === 'pva' && currentPlayer === 'O') return; // Humans can't click during AI turn
+
+            handleMove(clickedCell, clickedCellIndex);
+            
+            // Logic for next turn
+            if (gameMode === 'pva' && gameActive) {
+                setTimeout(makeComputerMove, aiDelay);
+            }
+        }
+
+        function handleMove(cell, index) {
+            gameState[index] = currentPlayer;
+            cell.innerHTML = currentPlayer;
+            cell.classList.add(currentPlayer.toLowerCase(), 'pop'); // Add class 'x' or 'o' and animation
+            
+            checkResult();
+        }
+
+        function switchPlayer() {
+            currentPlayer = currentPlayer === "X" ? "O" : "X";
+            updateStatus();
+        }
+
+        function checkResult() {
+            let roundWon = false;
+            let winLine = [];
+
+            for (let i = 0; i <= 7; i++) {
+                const winCondition = winningConditions[i];
+                let a = gameState[winCondition[0]];
+                let b = gameState[winCondition[1]];
+                let c = gameState[winCondition[2]];
+
+                if (a === '' || b === '' || c === '') continue;
+
+                if (a === b && b === c) {
+                    roundWon = true;
+                    winLine = winCondition;
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                statusDisplay.innerHTML = `WINNER: <span style="color: ${currentPlayer === 'X' ? '#00ffff' : '#ff00de'}">${currentPlayer}</span>`;
+                gameActive = false;
+                highlightWin(winLine);
+                return;
+            }
+
+            let roundDraw = !gameState.includes("");
+            if (roundDraw) {
+                statusDisplay.innerHTML = `DRAW! No Winner.`;
+                gameActive = false;
+                return;
+            }
+
+            switchPlayer();
+        }
+
+        function highlightWin(indices) {
+            indices.forEach(index => {
+                document.querySelector(`.cell[data-index='${index}']`).classList.add('win');
+            });
+        }
+
+        function restartGame() {
+            startGame(gameMode);
+        }
+
+        /* --- SEYMOUR'S AI LOGIC (Minimax) --- */
+
+        function makeComputerMove() {
+            if (!gameActive) return;
+            
+            let bestScore = -Infinity;
+            let move;
+            
+            // Randomness for AI vs AI mode to make it interesting
+            let isRandomMove = (gameMode === 'ava' && Math.random() < 0.2); 
+
+            if (isRandomMove) {
+                let available = [];
+                gameState.forEach((cell, index) => { if(cell === "") available.push(index); });
+                move = available[Math.floor(Math.random() * available.length)];
+            } else {
+                // Minimax Algorithm
+                for (let i = 0; i < 9; i++) {
+                    if (gameState[i] === "") {
+                        gameState[i] = currentPlayer; // Try move
+                        let score = minimax(gameState, 0, false);
+                        gameState[i] = ""; // Undo move
+                        if (score > bestScore) {
+                            bestScore = score;
+                            move = i;
+                        }
+                    }
+                }
+            }
+
+            const cell = document.querySelector(`.cell[data-index='${move}']`);
+            handleMove(cell, move);
+        }
+
+        // Recursive Minimax
+        function minimax(board, depth, isMaximizing) {
+            let result = checkWinnerForMinimax();
+            if (result !== null) return result;
+
+            if (isMaximizing) { // Computer's turn (O)
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === "") {
+                        board[i] = "O";
+                        let score = minimax(board, depth + 1, false);
+                        board[i] = "";
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else { // Player's turn (X)
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === "") {
+                        board[i] = "X";
+                        let score = minimax(board, depth + 1, true);
+                        board[i] = "";
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        function checkWinnerForMinimax() {
+            for (let i = 0; i < 8; i++) {
+                const [a, b, c] = winningConditions[i];
+                if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+                    return gameState[a] === "O" ? 10 : -10;
+                }
+            }
+            if (!gameState.includes("")) return 0;
+            return null;
+        }
+
+        /* --- AI VS AI LOOP --- */
+        function aiVsAiLoop() {
+            if (gameMode === 'ava' && gameActive) {
+                let bestScore = -Infinity;
+                let move;
+                let isRandom = Math.random() < 0.2; // 20% randomness for chaos
+
+                if (isRandom) {
+                    let available = [];
+                    gameState.forEach((cell, index) => { if(cell === "") available.push(index); });
+                    move = available[Math.floor(Math.random() * available.length)];
+                } else {
+                    for (let i = 0; i < 9; i++) {
+                        if (gameState[i] === "") {
+                            gameState[i] = currentPlayer;
+                            // Minimax logic for current player context
+                            let score = minimax(gameState, 0, currentPlayer === "X"); 
+                            gameState[i] = "";
+                            
+                            if (currentPlayer === "O") {
+                                if (score > bestScore) { bestScore = score; move = i; }
+                            } else {
+                                if (bestScore === -Infinity) bestScore = Infinity; 
+                                if (score < bestScore) { bestScore = score; move = i; }
+                            }
+                        }
+                    }
+                    if(currentPlayer === "X" && move === undefined) {
+                         let available = [];
+                         gameState.forEach((cell, index) => { if(cell === "") available.push(index); });
+                         move = available[0];
+                    }
+                    if(currentPlayer === "O" && bestScore === -Infinity) {
+                         let available = [];
+                         gameState.forEach((cell, index) => { if(cell === "") available.push(index); });
+                         move = available[Math.floor(Math.random() * available.length)];
+                    }
+                }
+                
+                const cell = document.querySelector(`.cell[data-index='${move}']`);
+                handleMove(cell, move);
+
+                if (gameActive) {
+                    setTimeout(aiVsAiLoop, aiDelay);
+                }
+            }
+        }
+
+        // Initialize
+        showMenu();
+
+    </script>
+</body>
+</html>

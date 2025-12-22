@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tunnels: Android Controller Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Rajdhani:wght@500;700&display=swap');
+        
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background-color: #000; 
+            width: 100%; 
+            height: 100%;
+            touch-action: none; /* Critical for mobile games */
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        canvas { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        
+        /* --- INTRO OVERLAY --- */
+        #intro-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.9);
+            transition: opacity 0.5s ease;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        #intro-layer.hidden { opacity: 0; pointer-events: none; }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            background: linear-gradient(90deg, #00f2ff, #ff00de);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0;
+        }
+        
+        .start-btn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: transparent;
+            color: #00f2ff;
+            border: 2px solid #00f2ff;
+            border-radius: 30px;
+            font-family: 'Orbitron', sans-serif;
+            box-shadow: 0 0 15px #00f2ff;
+        }
+        .start-btn:active { background: #00f2ff; color: #000; }
+
+        /* --- HUD --- */
+        #hud {
+            position: fixed; top: 20px; left: 20px;
+            color: rgba(255,255,255,0.8);
+            z-index: 10;
+            pointer-events: none;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+        .hud-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+        .hud-label { color: #888; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        .hud-val { color: #fff; font-weight: bold; font-family: 'Orbitron', sans-serif; }
+        .hud-status { color: #00f2ff; }
+
+        /* --- GAMEPAD CONTROLS --- */
+        #gamepad {
+            position: fixed; bottom: 20px; width: 100%; 
+            display: flex; justify-content: space-between;
+            padding: 0 20px; box-sizing: border-box;
+            z-index: 50;
+            pointer-events: none; /* Let clicks pass through gaps */
+        }
+
+        .pad-group {
+            display: flex; gap: 15px;
+            pointer-events: auto; /* Enable clicks on buttons */
+        }
+
+        .btn {
+            width: 70px; height: 70px;
+            background: rgba(20, 20, 20, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            color: #fff;
+            font-size: 1.5rem;
+            backdrop-filter: blur(5px);
+            transition: all 0.1s;
+            touch-action: manipulation;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .btn:active {
+            transform: scale(0.9);
+            background: rgba(0, 242, 255, 0.3);
+            border-color: #00f2ff;
+            box-shadow: 0 0 15px #00f2ff;
+        }
+
+        .btn-menu { border-radius: 15px; width: 70px; font-size: 1.2rem; font-family: 'Orbitron'; font-weight: bold; color: #ff00de; border-color: rgba(255,0,222,0.3); }
+        .btn-auto { border-radius: 15px; width: 70px; font-size: 1rem; }
+        .btn-auto.active { border-color: #00ff00; color: #00ff00; background: rgba(0,255,0,0.1); }
+
+        /* --- MENU MODAL --- */
+        #menu-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 85%; max-width: 400px;
+            background: rgba(10, 15, 20, 0.95);
+            border: 1px solid #00f2ff;
+            border-radius: 20px;
+            padding: 25px;
+            z-index: 150;
+            display: none;
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.2);
+        }
+        #menu-modal.visible { display: block; }
+
+        .menu-header { font-family: 'Orbitron'; font-size: 1.5rem; color: #fff; margin-bottom: 20px; text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        
+        .control-group { margin-bottom: 20px; }
+        .control-label { color: #aaa; margin-bottom: 8px; display: block; font-size: 0.9rem; }
+        
+        input[type=range] {
+            width: 100%; -webkit-appearance: none; background: #333; height: 6px; border-radius: 3px; outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 20px; height: 20px; background: #00f2ff; border-radius: 50%; cursor: pointer;
+            box-shadow: 0 0 10px #00f2ff;
+        }
+
+        .close-btn {
+            width: 100%; padding: 12px; background: #333; color: #fff; border: none; border-radius: 8px;
+            font-family: 'Rajdhani'; font-weight: bold; font-size: 1.1rem; margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+
+    <!-- INTRO SCREEN -->
+    <div id="intro-layer">
+        <h1>TUNNELS</h1>
+        <div style="color:#aaa; letter-spacing: 2px; margin-bottom: 30px;">ANDROID EDITION</div>
+        <button class="start-btn" onclick="startGame()">TAP TO START</button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" style="display:none;">
+        <div class="hud-row"><span class="hud-label">ID:</span> <span class="hud-val" id="disp-id">#0</span></div>
+        <div class="hud-row"><span class="hud-label">AUTO:</span> <span class="hud-val" id="disp-auto">ON</span></div>
+    </div>
+
+    <!-- ON SCREEN CONTROLS -->
+    <div id="gamepad" style="display:none;">
+        <div class="pad-group">
+            <div class="btn" id="btn-prev">❮</div>
+            <div class="btn" id="btn-next">❯</div>
+        </div>
+        <div class="pad-group">
+            <div class="btn btn-auto active" id="btn-auto">AUTO</div>
+            <div class="btn btn-menu" id="btn-menu">M</div>
+        </div>
+    </div>
+
+    <!-- MENU MODAL -->
+    <div id="menu-modal">
+        <div class="menu-header">SETTINGS</div>
+        
+        <div class="control-group">
+            <label class="control-label">Speed</label>
+            <input type="range" id="sl-speed" min="0" max="10" step="0.1" value="2">
+        </div>
+        <div class="control-group">
+            <label class="control-label">Twist</label>
+            <input type="range" id="sl-twist" min="-5" max="5" step="0.1" value="0">
+        </div>
+        <div class="control-group">
+            <label class="control-label">Warp Strength</label>
+            <input type="range" id="sl-warp" min="0" max="4" step="0.1" value="1">
+        </div>
+
+        <button class="close-btn" onclick="toggleMenu()">CLOSE MENU</button>
+    </div>
+
+    <!-- VERTEX SHADER -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec2 a;
+        void main(){ gl_Position=vec4(a,0.,1.); }
+    </script>
+
+    <!-- FRAGMENT SHADER -->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision highp float;
+        
+        #define PI 3.14159265359
+        #define TAU 6.28318530718
+        
+        uniform vec2 u_resolution;
+        uniform float u_time;      
+        uniform float u_distance;  
+        
+        uniform int u_paletteID;
+        uniform int u_patternID;
+        uniform int u_colorMode; 
+        
+        uniform float u_twist;
+        uniform float u_rotation_speed; 
+        uniform float u_warp_strength;
+        uniform float u_scale;
+        
+        uniform float u_wander_x_amp;
+        uniform float u_wander_y_amp;
+        uniform float u_wander_x_freq;
+        uniform float u_wander_y_freq;
+        
+        uniform float u_density;     
+        uniform float u_complexity;
+        
+        // --- NOISE & MATH ---
+        mat2 rot(float a) { float c=cos(a),s=sin(a); return mat2(c,-s,s,c); }
+        float hash(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+        float noise(vec2 p){
+            vec2 i=floor(p); vec2 f=fract(p); vec2 u=f*f*(3.0-2.0*f);
+            return mix(mix(hash(i+vec2(0.0,0.0)),hash(i+vec2(1.0,0.0)),u.x),
+                       mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),u.x),u.y);
+        }
+        float fbm(vec2 p){
+            float v=0.0; float a=0.5; mat2 m=rot(0.5);
+            for(int i=0;i<3;i++){ v+=a*noise(p); p=m*p*2.0; a*=0.5; } 
+            return v;
+        }
+        float warp(vec2 p, float strength) {
+            vec2 q = vec2(fbm(p), fbm(p + vec2(5.2, 1.3)));
+            return fbm(p + strength*q);
+        }
+
+        // --- PALETTES ---
+        vec3 hsv2rgb(vec3 c) { vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
+        
+        vec3 palette(float t, int id) {
+            vec3 a,b,c,d;
+            if(id==0) {a=vec3(0.5);b=vec3(0.5);c=vec3(1.0);d=vec3(0.0,0.33,0.67);}
+            else if(id==1) {a=vec3(0.5);b=vec3(0.5);c=vec3(1.0);d=vec3(0.3,0.2,0.2);}
+            else if(id==2) {a=vec3(0.8,0.5,0.4);b=vec3(0.2,0.4,0.2);c=vec3(2.0,1.0,1.0);d=vec3(0.0,0.25,0.25);}
+            else if(id==3) {a=vec3(0.5);b=vec3(0.5);c=vec3(1.0,1.0,0.5);d=vec3(0.8,0.9,0.3);}
+            else if(id==4) {a=vec3(0.5);b=vec3(0.5);c=vec3(1.0,0.7,0.4);d=vec3(0.0,0.15,0.20);}
+            else if(id==5) {a=vec3(0.2,0.1,0.0);b=vec3(0.8,0.4,0.2);c=vec3(1.0,0.9,0.8);d=vec3(0.0,0.25,0.5);} 
+            else if(id==6) {a=vec3(0.0,0.1,0.2);b=vec3(0.1,0.3,0.4);c=vec3(1.0);d=vec3(0.6,0.4,0.2);}
+            else if(id==7) {a=vec3(0.5,0.5,0.5);b=vec3(0.5,0.5,0.5);c=vec3(0.5,1.0,1.0);d=vec3(0.3,0.2,0.2);}
+            else if(id==8) {a=vec3(0.5);b=vec3(0.5);c=vec3(0.2,0.8,0.3);d=vec3(0.1,0.3,0.4);}
+            else if(id==9) {return hsv2rgb(vec3(t, 0.8, 1.0));}
+            else {
+                float fid = float(id); float seed = fract(fid * 0.123);
+                a = vec3(0.5); b = vec3(0.5);
+                c = vec3(0.5 + seed, 0.5 + fract(seed*9.0), 0.5 + fract(seed*4.0));
+                d = vec3(fract(seed*3.0), fract(seed*5.0), fract(seed*7.0));
+            }
+            return a + b * cos(TAU * (c * t + d));
+        }
+
+        // --- PATTERNS ---
+        float getPattern(int id, vec2 uv, float dist, float ang, float time, float freq, float amp) {
+            float v = 0.0;
+            float iFreq = floor(freq); if(iFreq < 1.0) iFreq = 1.0;
+
+            if(id < 10) {
+                if(id==0) v = sin(ang*iFreq + dist*3.0); 
+                else if(id==1) v = step(0.0, sin(ang*iFreq + sin(dist)*amp*5.0));
+                else if(id==2) v = abs(sin(ang*iFreq) + sin(dist*freq)); 
+                else if(id==3) v = fbm(vec2(ang*iFreq*0.5, dist*0.5 + time*0.1)); 
+                else if(id==4) v = sin(dist*freq) + sin(ang*iFreq)*amp; 
+                else if(id==5) v = abs(fract(ang*iFreq/PI) - 0.5) * 2.0 * sin(dist*freq); 
+                else if(id==6) v = step(0.9, fract(ang*iFreq/TAU + sin(dist)*0.2)) * sin(dist*20.0); 
+                else if(id==7) v = mod(floor(ang*iFreq/PI) + floor(dist*freq*0.5), 2.0); 
+                else if(id==8) v = sin(dist*freq) / (abs(sin(ang*iFreq))+0.1); 
+                else v = step(0.5, sin(ang*iFreq + dist*freq + time)); 
+            }
+            else {
+                 float w = warp(uv * (freq*0.2) + vec2(0, time*0.1), u_warp_strength);
+                 if(id==10) v = w;
+                 else if(id==11) v = sin(w * 10.0 + dist);
+                 else if(id==12) v = smoothstep(0.3, 0.7, w);
+                 else if(id==13) v = fbm(vec2(ang*iFreq/TAU, w));
+                 else if(id==14) v = sin(dist*freq + w*amp*5.0);
+                 else if(id==15) v = noise(vec2(dist, ang*iFreq)*0.5 + w);
+                 else if(id==16) v = pow(w, 2.0) * sin(dist);
+                 else if(id==17) v = abs(sin(w*10.0)) * amp;
+                 else if(id==18) v = fbm(uv * freq + w);
+                 else v = w * sin(ang*iFreq);
+            }
+            return v;
+        }
+
+        void main() {
+            vec2 uv = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / u_resolution.y;
+            vec2 uv0 = uv; 
+
+            // Wandering Center
+            vec2 offset = vec2(sin(u_time * u_wander_x_freq), cos(u_time * u_wander_y_freq));
+            offset *= vec2(u_wander_x_amp, u_wander_y_amp);
+            uv -= offset;
+            
+            uv *= u_scale;
+            float r = length(uv);
+            float a = atan(uv.y, uv.x);
+            
+            float dist = 1.0 / (r + 0.001) + u_distance;
+            a += u_twist * dist;
+
+            float rotA = a + u_time * u_rotation_speed;
+
+            // Chromatic Aberration loop
+            vec3 finalCol = vec3(0.0);
+            float abr = 0.005 * u_complexity * r; 
+
+            for(int i=0; i<3; i++) {
+                float distOffset = float(i) * abr; 
+                float effectiveDist = dist + distOffset;
+                
+                float val = getPattern(u_patternID, uv, effectiveDist, rotA, u_time, u_density, u_complexity);
+                
+                float colorIndex = val + u_time * 0.2 + effectiveDist * 0.1;
+                if(u_colorMode == 1) colorIndex = floor(colorIndex * 8.0) / 8.0; 
+                
+                vec3 col = palette(colorIndex, u_paletteID);
+                
+                col *= smoothstep(0.0, 0.35, r); 
+                col += col * val * 0.6 * smoothstep(0.0, 1.0, 1.0/effectiveDist);
+                
+                if(i==0) finalCol.r = col.r;
+                if(i==1) finalCol.g = col.g;
+                if(i==2) finalCol.b = col.b;
+            }
+
+            finalCol *= 1.0 - pow(length(uv0 * 0.5), 3.0);
+            gl_FragColor = vec4(finalCol, 1.0);
+        }
+    </script>
+
+    <script>
+        // --- WEBGL SETUP ---
+        const canvas = document.getElementById('glCanvas');
+        const gl = canvas.getContext('webgl', { antialias: false, powerPreference: "high-performance" });
+        if (!gl) alert("WebGL not supported");
+
+        const prog = createProgram(
+            document.getElementById('vertex-shader').textContent,
+            document.getElementById('fragment-shader').textContent
+        );
+
+        function createShader(type, src) {
+            const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+            if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) return null; return s;
+        }
+        function createProgram(vs, fs) {
+            const p = gl.createProgram(); gl.attachShader(p, createShader(gl.VERTEX_SHADER, vs));
+            gl.attachShader(p, createShader(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p); return p;
+        }
+
+        const locs = {
+            res: gl.getUniformLocation(prog, 'u_resolution'),
+            time: gl.getUniformLocation(prog, 'u_time'),
+            dist: gl.getUniformLocation(prog, 'u_distance'),
+            palID: gl.getUniformLocation(prog, 'u_paletteID'),
+            patID: gl.getUniformLocation(prog, 'u_patternID'),
+            colMode: gl.getUniformLocation(prog, 'u_colorMode'),
+            twist: gl.getUniformLocation(prog, 'u_twist'),
+            rotSpd: gl.getUniformLocation(prog, 'u_rotation_speed'),
+            warpStr: gl.getUniformLocation(prog, 'u_warp_strength'),
+            scale: gl.getUniformLocation(prog, 'u_scale'),
+            wxAmp: gl.getUniformLocation(prog, 'u_wander_x_amp'),
+            wyAmp: gl.getUniformLocation(prog, 'u_wander_y_amp'),
+            wxFreq: gl.getUniformLocation(prog, 'u_wander_x_freq'),
+            wyFreq: gl.getUniformLocation(prog, 'u_wander_y_freq'),
+            dens: gl.getUniformLocation(prog, 'u_density'),
+            comp: gl.getUniformLocation(prog, 'u_complexity')
+        };
+
+        // --- STATE MANAGEMENT ---
+        const MAX_HISTORY = 50;
+        let history = [];
+        let historyIndex = -1;
+        let isRunning = false;
+        let isAuto = true;
+        let autoTimer = null;
+        let accumulatedDist = 0;
+        let lastTime = 0;
+        
+        // Transition vars
+        let transitionStartTime = 0;
+        let transitionActive = false;
+        const TRANSITION_DUR = 2000;
+        
+        let currentP = {};
+        let targetP = {};
+        let prevP = {};
+
+        // UI Refs
+        const els = {
+            id: document.getElementById('disp-id'),
+            auto: document.getElementById('disp-auto'),
+            menu: document.getElementById('menu-modal'),
+            slSpeed: document.getElementById('sl-speed'),
+            slTwist: document.getElementById('sl-twist'),
+            slWarp: document.getElementById('sl-warp'),
+            btnAuto: document.getElementById('btn-auto')
+        };
+
+        function generateParams() {
+            return {
+                paletteID: Math.floor(Math.random() * 20),
+                patternID: Math.floor(Math.random() * 20),
+                colorMode: Math.random() > 0.8 ? 1 : 0,
+                speed: 2.0, // Default base speed
+                twist: (Math.random() - 0.5) * 2.0,
+                rotationSpeed: (Math.random() - 0.5) * 1.5,
+                warpStrength: Math.random() * 2.0,
+                scale: 0.6 + Math.random() * 1.0,
+                wxAmp: Math.random() * 0.3,
+                wyAmp: Math.random() * 0.3,
+                wxFreq: 0.2 + Math.random(),
+                wyFreq: 0.2 + Math.random(),
+                density: Math.floor(2.0 + Math.random() * 10.0),
+                complexity: 0.5 + Math.random() * 1.5
+            };
+        }
+
+        function pushNewTunnel() {
+            const p = generateParams();
+            // Preserve manual overrides if set in menu
+            p.speed = parseFloat(els.slSpeed.value);
+            
+            history.push(p);
+            if (history.length > MAX_HISTORY) history.shift();
+            else historyIndex++;
+            
+            triggerTransition(history[historyIndex]);
+            updateHUD();
+        }
+
+        function navigate(dir) {
+            let newIndex = historyIndex + dir;
+            if (newIndex < 0) return; // Can't go back past 0
+            
+            if (newIndex >= history.length) {
+                // Generate new
+                pushNewTunnel();
+            } else {
+                // Go to existing
+                historyIndex = newIndex;
+                // Sync sliders to this history item (optional, but good UX)
+                syncSliders(history[historyIndex]);
+                triggerTransition(history[historyIndex]);
+                updateHUD();
+            }
+            resetAutoTimer();
+        }
+
+        function syncSliders(p) {
+            els.slSpeed.value = p.speed;
+            els.slTwist.value = p.twist;
+            els.slWarp.value = p.warpStrength;
+        }
+
+        function triggerTransition(target) {
+            prevP = { ...currentP };
+            targetP = { ...target };
+            transitionStartTime = performance.now();
+            transitionActive = true;
+        }
+
+        function updateHUD() {
+            els.id.innerText = `#${historyIndex + 1}`;
+            els.auto.innerText = isAuto ? "ON" : "OFF";
+            els.auto.style.color = isAuto ? "#00ff00" : "#555";
+            
+            if(isAuto) els.btnAuto.classList.add('active');
+            else els.btnAuto.classList.remove('active');
+        }
+
+        function resetAutoTimer() {
+            if (autoTimer) clearInterval(autoTimer);
+            if (isAuto && isRunning) {
+                autoTimer = setInterval(() => {
+                    navigate(1);
+                }, 30000); // 30 seconds
+            }
+        }
+
+        function toggleAuto() {
+            isAuto = !isAuto;
+            updateHUD();
+            resetAutoTimer();
+        }
+
+        function toggleMenu() {
+            const isOpen = els.menu.classList.contains('visible');
+            if (isOpen) {
+                els.menu.classList.remove('visible');
+            } else {
+                // Update sliders to current target values
+                syncSliders(targetP);
+                els.menu.classList.add('visible');
+            }
+        }
+
+        // --- RENDER LOOP ---
+        function lerp(a, b, t) { return a * (1-t) + b * t; }
+
+        function render(now) {
+            if (!lastTime) lastTime = now;
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            // Handle transition lerping
+            let t = 0;
+            if (transitionActive) {
+                const elapsed = now - transitionStartTime;
+                t = Math.min(elapsed / TRANSITION_DUR, 1.0);
+                // Ease out cubic
+                t = 1 - Math.pow(1 - t, 3);
+                
+                if (t >= 1.0) {
+                    transitionActive = false;
+                    currentP = { ...targetP };
+                }
+            }
+            
+            // Helper to get current interpolated value
+            const val = (prop) => transitionActive ? lerp(prevP[prop], targetP[prop], t) : currentP[prop];
+
+            // Update overrides from Sliders (instant feedback)
+            if(els.menu.classList.contains('visible') || !transitionActive) {
+                targetP.speed = parseFloat(els.slSpeed.value);
+                targetP.twist = parseFloat(els.slTwist.value);
+                targetP.warpStrength = parseFloat(els.slWarp.value);
+                if(!transitionActive) currentP = {...targetP}; // Apply immediately if stable
+            }
+
+            accumulatedDist += val('speed') * dt;
+
+            gl.useProgram(prog);
+            gl.uniform2f(locs.res, canvas.width, canvas.height);
+            gl.uniform1f(locs.time, now / 1000);
+            gl.uniform1f(locs.dist, accumulatedDist);
+            
+            gl.uniform1i(locs.palID, transitionActive ? (t<0.5 ? prevP.paletteID : targetP.paletteID) : currentP.paletteID);
+            gl.uniform1i(locs.patID, transitionActive ? (t<0.5 ? prevP.patternID : targetP.patternID) : currentP.patternID);
+            gl.uniform1i(locs.colMode, currentP.colorMode);
+
+            gl.uniform1f(locs.twist, val('twist'));
+            gl.uniform1f(locs.rotSpd, val('rotationSpeed'));
+            gl.uniform1f(locs.warpStr, val('warpStrength'));
+            gl.uniform1f(locs.scale, val('scale'));
+            gl.uniform1f(locs.wxAmp, val('wxAmp'));
+            gl.uniform1f(locs.wyAmp, val('wyAmp'));
+            gl.uniform1f(locs.wxFreq, val('wxFreq'));
+            gl.uniform1f(locs.wyFreq, val('wyFreq'));
+            gl.uniform1f(locs.dens, val('density'));
+            gl.uniform1f(locs.comp, val('complexity'));
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            requestAnimationFrame(render);
+        }
+
+        // --- INPUT HANDLING ---
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        window.addEventListener('resize', resize);
+
+        function startGame() {
+            document.getElementById('intro-layer').classList.add('hidden');
+            document.getElementById('gamepad').style.display = 'flex';
+            document.getElementById('hud').style.display = 'block';
+            
+            // Initial Tunnel
+            const p = generateParams();
+            history.push(p);
+            historyIndex = 0;
+            currentP = { ...p };
+            targetP = { ...p };
+            prevP = { ...p };
+            syncSliders(p);
+
+            // Go fullscreen if allowed
+            try { document.documentElement.requestFullscreen().catch(()=>{}); } catch(e){}
+            
+            isRunning = true;
+            resetAutoTimer();
+            requestAnimationFrame(render);
+        }
+
+        // Button Listeners (Touch & Click)
+        const bindBtn = (id, fn) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); fn(); });
+            el.addEventListener('mousedown', (e) => { e.preventDefault(); fn(); });
+        };
+
+        bindBtn('btn-prev', () => navigate(-1));
+        bindBtn('btn-next', () => navigate(1));
+        bindBtn('btn-auto', toggleAuto);
+        bindBtn('btn-menu', toggleMenu);
+
+        // Keyboard Support
+        window.addEventListener('keydown', (e) => {
+            if(!isRunning) return;
+            if(e.key === 'ArrowLeft') navigate(-1);
+            if(e.key === 'ArrowRight' || e.code === 'Space') navigate(1);
+            if(e.key.toLowerCase() === 'm') toggleMenu();
+        });
+
+        // Initialize Buffer
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
+        const aLoc = gl.getAttribLocation(prog, 'a');
+        gl.enableVertexAttribArray(aLoc);
+        gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0);
+        
+        resize();
+
+    </script>
+</body>
+</html>
