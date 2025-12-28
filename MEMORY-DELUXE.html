@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Greg Seymour AI — Ultimate Memory Challenge</title>
+<style>
+  /* ======================
+     VISUAL VARIABLES & THEMES
+     ====================== */
+  :root{
+    --bg-top: #00283a;
+    --bg-bottom: #003f52;
+    --accent1: #60a5fa;
+    --accent2: #6ee7b7;
+    --gold: #ffd166;
+    --glass: rgba(255,255,255,0.04);
+    --glow: 0 6px 30px rgba(96,165,250,0.16);
+  }
+  html,body{height:100%;margin:0;font-family: "Comic Sans MS", "Trebuchet MS", system-ui;}
+  body{
+    background: linear-gradient(170deg, var(--bg-top), var(--bg-bottom) 60%, var(--bg-top));
+    background-size: 100% 300%;
+    color:#e8fbff; overflow:hidden; display:flex; align-items:center; justify-content:center;
+    animation: underwater-bg 25s ease-in-out infinite;
+  }
+  @keyframes underwater-bg {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 0% 100%; }
+    100% { background-position: 0% 0%; }
+  }
+
+  /* ======================
+     LAYOUT & PANELS
+     ====================== */
+  .wrap{
+    position:relative; 
+    width: min(1400px, 96vw); 
+    height: min(1000px, 96vh); 
+    max-width:1400px; 
+    padding:2vmin; 
+    box-sizing:border-box; 
+    display:grid; 
+    grid-template-columns: 1fr 320px; 
+    gap:18px;
+  }
+  .panel{background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:16px; padding:14px; box-shadow:var(--glow); backdrop-filter: blur(6px);}
+  header.title{grid-column:1/-1; display:flex; gap:12px; align-items:center; justify-content:space-between}
+  .brand{font-size:clamp(20px,3vw,34px); font-weight:900; letter-spacing:1px; display:flex; gap:10px; align-items:center}
+  .brand .logo{font-size:1.1em; filter:drop-shadow(0 6px 18px rgba(0,0,0,0.6));}
+  .brand .titleText{ background: linear-gradient(90deg,#ffd166,#ff7b7b,#9b8cff,#60a5fa,#6ee7b7); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow: 0 2px 20px rgba(0,0,0,0.5); }
+  
+  .game-area{display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:0;} 
+  .game-panel{padding:16px; border-radius:12px; width:100%;}
+  .game-grid{display:grid; gap:min(1.5vmin, 12px); padding:8px; justify-content:center; width:100%; height:100%;}
+  .game-grid.grid-4x4{ grid-template-columns: repeat(4, 1fr); }
+  .game-grid.grid-5x4{ grid-template-columns: repeat(5, 1fr); }
+  .game-grid.grid-6x5{ grid-template-columns: repeat(6, 1fr); }
+
+  /* ======================
+     CARD STYLING
+     ====================== */
+  .card{aspect-ratio: 1 / 1; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; position:relative; perspective:900px;}
+  .card-inner{width:100%;height:100%; border-radius:12px; transform-style:preserve-3d; transition: transform .5s cubic-bezier(.2,.9,.3,1);}
+  .card.flipped .card-inner{ transform: rotateY(180deg); }
+  .face{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; backface-visibility:hidden; border-radius:12px; font-size: clamp(16px, 5vmin, 50px);}
+  .back{ background: linear-gradient(180deg,#07394a,#042b39); color:#cfe; box-shadow: inset 0 -6px 12px rgba(255,255,255,0.02);}
+  .front{ background: linear-gradient(180deg,#fff8f0,#eaf6ff); color:#06384b; transform: rotateY(180deg); border:1px solid rgba(0,0,0,0.05); transition: box-shadow .3s;}
+  .card.matched{ pointer-events:none; }
+  .card.matched .front{ box-shadow: inset 0 0 18px 2px var(--gold), 0 0 12px 1px var(--gold); }
+
+  /* ======================
+     SIDEBAR & STATS
+     ====================== */
+  .sidebar{display:flex; flex-direction:column; gap:12px}
+  .stat-row{display:flex;gap:12px}
+  .stat{flex:1; background:var(--glass); padding:10px 12px; border-radius:10px; text-align:center; font-weight:800}
+  .big{font-size:1.3rem}
+  .smallBtn{padding:8px 12px; border-radius:999px; border:none; cursor:pointer; font-weight:800; background:linear-gradient(90deg,var(--accent2), var(--accent1)); color:#022; box-shadow:0 8px 22px rgba(2,6,23,0.45)}
+  .settings-panel { margin-top:12px; background:var(--glass); padding:10px; border-radius:10px; }
+  .settings-panel .label { font-size:13px; opacity:0.9; margin-bottom:6px; text-align:center; font-weight:bold; }
+  .settings-row { display:flex; gap:8px; justify-content:center; margin-bottom: 8px;}
+  .settingBtn{flex:1; padding:6px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:white; cursor:pointer; font-weight:600;}
+  .settingBtn.active{ background: var(--accent1); color:#012; border-color:transparent;}
+
+  #theme-selector {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.3);
+    color: white;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #theme-selector:focus {
+    outline: 2px solid var(--accent1);
+  }
+
+  /* ======================
+     OVERLAYS & POPUPS
+     ====================== */
+  .win-overlay{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:80; pointer-events:none; opacity:0; transition:opacity .4s ease; background:rgba(0,10,20,0.6); backdrop-filter:blur(5px);}
+  .win-overlay.show{ opacity:1; pointer-events:auto }
+  .win-card{ background:linear-gradient(180deg,#10b981,#059669); color:white; padding:28px 36px; border-radius:16px; box-shadow:0 30px 80px rgba(2,6,23,0.6); text-align:center; transform: translateY(8px)}
+  .win-card h2{ font-size:28px; margin:0 0 8px }
+  .win-card .celebrate{ font-size:20px; font-weight:900; margin-top:8px }
+
+  /* ======================
+     DECORATIVE ELEMENTS
+     ====================== */
+  .swim-fish{ position:fixed; z-index:2; filter:drop-shadow(0 8px 18px rgba(0,0,0,0.6)); pointer-events:none; opacity:0.95 }
+  #fxCanvas{ position:fixed; inset:0; pointer-events:none; z-index:50 }
+  .decor { position: absolute; bottom: 0; opacity: 0.85; pointer-events: none; z-index: 1; }
+  .seaweed-left { left: 0; width: 15vmin; animation: sway 8s ease-in-out infinite alternate; }
+  .seaweed-right { right: 0; width: 15vmin; animation: sway 9s ease-in-out infinite alternate-reverse; }
+  @keyframes sway { 0% { transform: rotate(-3deg); } 100% { transform: rotate(4deg); } }
+  
+  .bubble { position: absolute; bottom: -20px; border-radius: 50%; animation: rise 10s linear infinite, drift 8s ease-in-out infinite alternate; }
+  @keyframes rise { 100% { transform: translateY(-110vh); } }
+  @keyframes drift { 0% { transform: translateX(-15px); } 100% { transform: translateX(15px); } }
+
+  /* ======================
+     MOBILE LANDSCAPE LOCK
+     ====================== */
+  #orientation-lock { display: none; }
+  @media (max-width: 920px) and (orientation: portrait) {
+    #orientation-lock {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--bg-bottom); color: white;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; font-size: 1.2rem;
+    }
+    #orientation-lock::before { content: '🔃'; font-size: 3rem; margin-bottom: 1rem; display: inline-block; animation: spin 2s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .wrap { display: none; }
+  }
+
+  @media (max-width: 920px){ .wrap{ grid-template-columns:1fr; padding:12px; height: auto; } .sidebar{ order:2 } .game-area{ order:1 } }
+</style>
+</head>
+<body>
+  <div style="position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 20% 20%, rgba(255,255,255,0.03), transparent 8%), linear-gradient(180deg, rgba(0,42,60,0.6), rgba(0,20,40,0.55)); mix-blend-mode:overlay"></div>
+  <div class="decor seaweed-left"><svg width="100%" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg"><g opacity="0.9"><path d="M15 150 C30 110, 38 100, 26 68 S43 18, 62 24" stroke="#0fbf8a" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M35 150 C52 110, 62 95, 54 58 S75 8, 94 16" stroke="#0df2b4" stroke-width="6" stroke-linecap="round" fill="none"/></g></svg></div>
+  <div class="decor seaweed-right"><svg width="100%" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg"><g opacity="0.9"><path d="M108 150 C96 110, 78 100, 92 68 S83 18, 62 24" stroke="#0fa878" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M88 150 C72 110, 62 95, 70 58 S55 8, 36 16" stroke="#0dbd94" stroke-width="6" stroke-linecap="round" fill="none"/></g></svg></div>
+  <div id="orientation-lock">Please rotate your device to landscape mode to play.</div>
+
+  <div class="wrap">
+    <header class="title">
+      <div class="brand"><div class="logo">🧠</div><div class="titleText">Greg Seymour AI</div></div>
+      <div class="controls-top"><button id="soundBtn" class="smallBtn">Sound: On</button></div>
+    </header>
+
+    <main class="panel game-area" role="main" aria-label="Memory game">
+      <section class="game-panel panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-weight:900" id="gameModeTitle">Memory Game — Easy</div>
+          <div style="font-size:13px;opacity:0.9">Preview: <span id="previewTime">5s</span></div>
+        </div>
+        <div id="grid" class="game-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <aside class="panel sidebar" aria-label="Game controls and stats">
+      <div class="stat-row">
+        <div class="stat"><div class="small">Moves</div><div id="moves" class="big">0</div></div>
+        <div class="stat"><div class="small">Matches</div><div id="matches" class="big">0 / 8</div></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="small">Time</div><div id="timer" class="big">00:00</div></div>
+        <div class="stat"><div class="small">Combo</div><div id="combo" class="big">0</div></div>
+      </div>
+      <div style="margin-top:6px" class="stat"><div class="small">Score</div><div id="score" class="big">0</div></div>
+      <div class="settings-panel">
+        <div class="label">Difficulty</div>
+        <div class="settings-row" id="difficulty-selector">
+          <button class="settingBtn active" data-difficulty="easy">Easy</button>
+          <button class="settingBtn" data-difficulty="medium">Medium</button>
+          <button class="settingBtn" data-difficulty="hard">Hard</button>
+        </div>
+        <div class="label" style="margin-top:10px;">Theme</div>
+        <select id="theme-selector"></select>
+      </div>
+      <div style="margin-top:12px; font-size:13px; opacity:0.9">High score (this session): <span id="sessionBest">—</span></div>
+    </aside>
+  </div>
+
+  <div id="winOverlay" class="win-overlay" aria-hidden="true">
+    <div class="win-card" role="dialog" aria-modal="true">
+      <h2 id="winTitle">🎉 You Won! 🎉</h2>
+      <div id="winSummary">Moves: 0 • Time: 00:00 • Score: 0</div>
+      <div id="winExtra" class="celebrate" style="margin-top:10px"></div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:12px"><button id="winPlay" class="smallBtn">Play Again</button></div>
+    </div>
+  </div>
+  <canvas id="fxCanvas"></canvas>
+
+<script>
+// ---------- CONFIGURATION & DATA ----------
+const THEMES = {
+  ocean:  ['🐠','🐟','🐡','🦈','🐙','🦑','🐳','🦞','🦀','🐬','🐢','🦐','🐚','🐋','🪼'],
+  jungle: ['🐵','🦁','🐯','🐸','🐍','🦜','🐘','🦓','🦒','🦛','🐊','🐆','🦍','🦧','🦋'],
+  dinosaurs:['🦖','🦕','🥚','🌋','🦴','🦕','🦖','🦕','🦎','🐢','🐊','🐍','🐉','🌴','🌵'],
+  cosmic: ['🪐','☄️','👽','🚀','🛰️','✨','🔭','🛸','👾','💫','🌠','🌌','🌕','👨‍🚀','🌟'],
+  food:   ['🍔','🍕','🍟','🌭','🍩','🍪','🍰','🍦','🍓','🍉','🌽','🥑','🌮','🍣','🍙'],
+  sports: ['⚽','🏀','🏈','⚾','🎾','🏐','🎱','🎳','⛳','🥊','🥋','🏆','🥇','🛹','🚴'],
+  monsters:['👹','👺','👻','👽','👾','🤖','🎃','🤡','😈','👿','💀','🧟','🧛','🧙','🧞'],
+  pirates:['🏴‍☠️','🦜','⚓','🧭','🗺️','💰','💎','💣','🔫','⚔️','🛥️','🛶','💀','📜','🥃'],
+  bugs:   ['🐛','🦋','🐜','🐝','🐞','🦗','🕷️','🦂','🐌','🦟','🪰','🪲','🕸️','🦠','🐌'],
+  flowers:['🌸','💮','🏵️','🌹','🌺','🌻','🌼','🌷','💐','🥀','☘️','🍀','🌵','🌴','🌱'],
+  fantasy:['🦄','🐉','🐲','🧜','🧝','🧚','🧞','V','T','👑','💎','🗝️','📜','🔮','⚔️'],
+  weather:['☀️','🌤️','☁️','🌧️','⛈️','🌩️','🌨️','❄️','💨','🌪️','🌫️','🌈','☔','⚡','💧'],
+  circus: ['🎪','🤹','🤡','🎩','🪄','🎟️','🎠','🎡','🎈','🍿','🐘','🦁','🐒','🥁','🤸'],
+  zoo:    ['🦓','🦒','🐘','🐅','🦍','🐧','🐨','🐼',' flamingo','🦁','🐒','🐊','🐍','🦜','🐢'],
+  party:  ['🎉','🎊','🎈','🎁','🎂','🥳',' confetti','🕺','💃','🥂','🍾','🍰','🧁','🍕','🎶'],
+  tools:  ['🔨','🪛','🔧','🪚','⛏️','🪓','🧱','🪜','🧰','⛓️','🧲','🔩','⚙️','📏','📐'],
+  aircraft:['✈️','🛩️','🚁','🚀','🛰️','🛸','🛫','🛬',' pilot',' parachute','💺','📡','🧭','🗺️','💨'],
+  doctors:['🧑‍⚕️','🩺','⚕️',' ambulance','🏥','💊','💉','🩸','🧬','🔬','🩹','🌡️','❤️','🧠','🥼'],
+  bbq:    ['🥩','🍗','🍖','🌭','🍔','🌽','🌶️','🧅',' Ketchup','🔥','🍴','🍺',' apron','👨‍🍳','☀️'],
+  school: ['📚','🎒','✏️','🖍️','📎','✂️','📏','📐','📓','🏫','🚍','🎓','🔬','🎨','🥎'],
+  racing: ['🏎️','🏁','🏆','🥇','🥈','🥉',' F1',' driver',' helmet','🚦','⛽','🔧','⚙️','💨','🚗'],
+  halloween:['🎃','👻','💀','🧛','🧟','⚰️','🕸️','🕷️','🦇','🐈‍⬛','🍬','🍫','🔪','🩸','🌕'],
+  music:  ['🎸','🎹','🎺','🎻','🥁','🎷','🎤','🎶','🎼','🎵','🎧','📻','💿','🪕','🕺'],
+  vegetables:['🥦','🥕','🌽','🥒','🥬','🥔','🍆','🧅','🧄','🍠','🥜','🌰','🍄','🥑','🍅'],
+  candy:  ['🍬','🍭','🍫','🍩','🍪','🍰','🧁','🍦','🍮','🍯',' Gummy',' lollipop',' bar',' cone',' swirl']
+};
+const DIFFICULTIES = {
+    easy:   { pairs: 8,  gridClass: 'grid-4x4', preview: 5, title: 'Easy' },
+    medium: { pairs: 10, gridClass: 'grid-5x4', preview: 7, title: 'Medium' },
+    hard:   { pairs: 15, gridClass: 'grid-6x5', preview: 10, title: 'Hard' }
+};
+
+let currentDifficulty = 'easy', currentTheme = 'ocean', sessionBest = 0;
+
+// ---------- STATE VARIABLES ----------
+let cards = [], first = null, second = null, canFlip = false;
+let matchedPairs = 0, moves = 0, score = 0, combo = 0;
+let comboTimer = null, timerInterval = null, startTime = null, previewTimeoutId = null; 
+let soundOn = true, fxParticles = [];
+
+// ---------- DOM REFS ----------
+const gridEl = document.getElementById('grid'), movesEl = document.getElementById('moves');
+const matchesEl = document.getElementById('matches'), timerEl = document.getElementById('timer');
+const comboEl = document.getElementById('combo'), scoreEl = document.getElementById('score');
+const sessionBestEl = document.getElementById('sessionBest'), winOverlay = document.getElementById('winOverlay');
+const winSummary = document.getElementById('winSummary'), winExtra = document.getElementById('winExtra');
+const fxCanvas = document.getElementById('fxCanvas'), fxCtx = fxCanvas.getContext('2d');
+const themeSelector = document.getElementById('theme-selector');
+
+// ---------- AUDIO ----------
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playTone(freq, type='sine', dur=0.12, vol=0.06){
+  if(!soundOn || audioCtx.state === 'suspended') return;
+  try{
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.type = type; o.frequency.value = freq; g.gain.value = 0.0001; o.connect(g); g.connect(audioCtx.destination); const now = audioCtx.currentTime; g.gain.exponentialRampToValueAtTime(vol, now+0.02); o.start(now); g.gain.exponentialRampToValueAtTime(0.0001, now+dur); o.stop(now+dur+0.02);
+  }catch(e){}
+}
+const sFlip = ()=> playTone(760,'triangle',0.06,0.04), sMatch = ()=> { playTone(980,'sawtooth',0.14,0.08); setTimeout(()=>playTone(1320,'sine',0.08,0.06),80); }, sWin = ()=> { playTone(1200,'sine',0.18,0.12); setTimeout(()=>playTone(1600,'sine',0.18,0.1),160); };
+
+// ---------- UTILITIES ----------
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function formatTime(sec){ const mm = String(Math.floor(sec/60)).padStart(2,'0'); const ss = String(sec%60).padStart(2,'0'); return mm+':'+ss; }
+function populateThemeSelector() {
+    for (const themeKey in THEMES) {
+        const option = document.createElement('option');
+        option.value = themeKey;
+        option.textContent = themeKey.charAt(0).toUpperCase() + themeKey.slice(1);
+        themeSelector.appendChild(option);
+    }
+}
+
+// ---------- CANVAS & ANIMATIONS ----------
+function resizeFx(){ fxCanvas.width = innerWidth * devicePixelRatio; fxCanvas.height = innerHeight * devicePixelRatio; fxCanvas.style.width = innerWidth+'px'; fxCanvas.style.height = innerHeight+'px'; fxCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+window.addEventListener('resize', resizeFx); resizeFx();
+function spawnParticles(x,y, count=36){ for(let i=0;i<count;i++){ fxParticles.push({ x:x + (Math.random()-0.5)*100, y:y + (Math.random()-0.5)*40, vx:(Math.random()-0.5)*6, vy:(Math.random()*-6)-1.5, size:Math.random()*6+4, life:Math.random()*80+50, hue: Math.random()*60+170, angle:Math.random()*360 }); } if(fxParticles.length) requestAnimationFrame(updateFx); }
+function updateFx(){ fxCtx.clearRect(0,0,innerWidth,innerHeight); for(let i=fxParticles.length-1;i>=0;i--){ const p = fxParticles[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.angle += p.vx*0.6; p.life--; fxCtx.save(); fxCtx.translate(p.x,p.y); fxCtx.rotate(p.angle*Math.PI/180); fxCtx.fillStyle = `hsl(${p.hue} 70% ${Math.random()*30+45}%)`; fxCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6); fxCtx.restore(); if(p.life<=0 || p.y>innerHeight+60) fxParticles.splice(i,1); } if(fxParticles.length) requestAnimationFrame(updateFx); }
+
+// Floating emoji swimmers
+function spawnSwimmer(){
+  const f = document.createElement('div'); f.className='swim-fish';
+  f.textContent = THEMES[currentTheme][Math.floor(Math.random()*THEMES[currentTheme].length)];
+  const dur = 8 + Math.random()*10, scale = 1.0 + Math.random()*1.2;
+  f.style.top = (10 + Math.random()*70) + 'vh';
+  f.style.fontSize = (24 + Math.random() * 40) + 'px';
+  const isLtr = Math.random() > 0.5;
+  let transformStyle = `scale(${scale})`;
+  if (!isLtr) { transformStyle += ' scaleX(-1)'; } 
+  f.style.transform = transformStyle;
+  f.style.left = isLtr ? '-8vw' : '108vw';
+  f.style.transition = `left ${dur}s linear`;
+  document.body.appendChild(f);
+  requestAnimationFrame(()=>{ f.style.left = isLtr ? '108vw' : '-8vw'; });
+  setTimeout(()=> f.remove(), dur*1000 + 500);
+}
+setInterval(spawnSwimmer, 3500);
+function createBubble() { const bubble = document.createElement('div'); const size = 4 + Math.random() * 10 + 'px'; bubble.classList.add('bubble'); bubble.style.width = size; bubble.style.height = size; bubble.style.left = Math.random() * 100 + 'vw'; bubble.style.animationDuration = (8 + Math.random() * 8) + 's, ' + (6 + Math.random() * 6) + 's'; bubble.style.background = `hsla(${180 + Math.random() * 60}, 80%, 70%, 0.6)`; document.body.appendChild(bubble); setTimeout(() => bubble.remove(), 16000); }
+setInterval(createBubble, 300);
+
+// ---------- GAME LOGIC ----------
+function buildBoard(){
+  const difficulty = DIFFICULTIES[currentDifficulty];
+  const themeEmojis = shuffle([...THEMES[currentTheme]]).slice(0, difficulty.pairs);
+  cards = shuffle([...themeEmojis, ...themeEmojis]);
+  gridEl.innerHTML = '';
+  gridEl.className = 'game-grid ' + difficulty.gridClass;
+  cards.forEach((emoji)=>{ const c = document.createElement('div'); c.className='card'; c.dataset.emoji = emoji; c.innerHTML = `<div class="card-inner"><div class="face back">?</div><div class="face front">${emoji}</div></div>`; gridEl.appendChild(c); });
+}
+
+function startNewGame(){
+  if (previewTimeoutId) clearTimeout(previewTimeoutId);
+  
+  const difficulty = DIFFICULTIES[currentDifficulty];
+  first = null; second = null; canFlip = false; matchedPairs=0; moves=0; score=0; combo=0;
+  movesEl.textContent = 0; matchesEl.textContent = `0 / ${difficulty.pairs}`; comboEl.textContent='0'; scoreEl.textContent='0'; timerEl.textContent='00:00';
+  winOverlay.classList.remove('show');
+  document.getElementById('gameModeTitle').textContent = `Memory Game — ${difficulty.title}`;
+  buildBoard();
+  document.querySelectorAll('.card').forEach(c => c.classList.add('flipped'));
+  document.getElementById('previewTime').textContent = difficulty.preview + 's';
+
+  previewTimeoutId = setTimeout(()=>{
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped'));
+    canFlip = true; startTimer();
+  }, difficulty.preview * 1000);
+}
+
+function onCardClick(e){
+  if(!canFlip) return; const el = e.target.closest('.card'); if(!el || el.classList.contains('flipped') || el.classList.contains('matched')) return;
+  if(audioCtx.state === 'suspended') audioCtx.resume(); el.classList.add('flipped'); sFlip();
+  if(!first){ first = el; if(comboTimer) clearTimeout(comboTimer); comboTimer = setTimeout(()=>{ combo = 0; comboEl.textContent = combo; }, 3000);
+  } else if(first !== el){
+    second = el; canFlip = false; moves++; movesEl.textContent = moves;
+    if(first.dataset.emoji === second.dataset.emoji){
+      setTimeout(()=>{
+        first.classList.add('matched'); second.classList.add('matched'); matchedPairs++; matchesEl.textContent = `${matchedPairs} / ${DIFFICULTIES[currentDifficulty].pairs}`; combo++; comboEl.textContent = combo; score += 150 + (combo * 30); scoreEl.textContent = score; sMatch(); const rect = second.getBoundingClientRect(); spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2); first = null; second = null; canFlip = true;
+        if(matchedPairs === DIFFICULTIES[currentDifficulty].pairs) finishGame();
+      }, 350);
+    } else {
+      combo = 0; comboEl.textContent = combo;
+      setTimeout(()=>{ first.classList.remove('flipped'); second.classList.remove('flipped'); first = null; second = null; canFlip = true; }, 900);
+    }
+  }
+}
+
+function startTimer(){ startTime = Date.now(); clearInterval(timerInterval); timerInterval = setInterval(()=>{ const sec = Math.floor((Date.now()-startTime)/1000); timerEl.textContent = formatTime(sec); }, 500); }
+function stopTimer(){ clearInterval(timerInterval); }
+function finishGame(){
+  stopTimer(); sWin(); const time = timerEl.textContent; winSummary.textContent = `Moves: ${moves} • Time: ${time} • Score: ${score}`; let congrat = '';
+  if(score > sessionBest){ sessionBest = score; sessionBestEl.textContent = sessionBest; congrat = 'New session high score! 🥳'; }
+  winExtra.textContent = congrat; winOverlay.classList.add('show'); spawnParticles(innerWidth/2, innerHeight/3, 120);
+}
+
+// ---------- EVENT WIRING ----------
+gridEl.addEventListener('click', onCardClick);
+document.getElementById('winPlay').addEventListener('click', ()=> startNewGame());
+document.getElementById('difficulty-selector').addEventListener('click', (e)=>{
+  if(e.target.matches('.settingBtn')){ currentDifficulty = e.target.dataset.difficulty; document.querySelectorAll('#difficulty-selector .settingBtn').forEach(b => b.classList.remove('active')); e.target.classList.add('active'); startNewGame(); }
+});
+themeSelector.addEventListener('change', (e) => {
+    currentTheme = e.target.value;
+    startNewGame();
+});
+document.getElementById('soundBtn').addEventListener('click', ()=>{ soundOn = !soundOn; document.getElementById('soundBtn').textContent = 'Sound: ' + (soundOn ? 'On' : 'Off'); if(soundOn && audioCtx.state === 'suspended') audioCtx.resume(); });
+
+// ---------- INITIAL BOOT ----------
+populateThemeSelector();
+startNewGame();
+</script>
+</body>
+</html>
