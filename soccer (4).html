@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Greg Seymour AI Soccer Extravaganza</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Roboto:wght@400;900&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #050505;
+            font-family: 'Roboto', sans-serif;
+            touch-action: none; 
+            user-select: none;
+        }
+
+        #game-container { position: relative; width: 100vw; height: 100vh; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* SPLASH SCREEN */
+        #splash-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #2b1055 0%, #000000 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+            text-align: center;
+            cursor: pointer;
+            transition: opacity 0.5s;
+        }
+        .splash-title {
+            font-family: 'Bungee', cursive; font-size: 6vw; line-height: 1.1; color: #FFD700;
+            text-shadow: 4px 4px 0px #FF0044, 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: bounceIn 1s; margin-bottom: 30px;
+        }
+        .splash-sub { color: white; font-family: 'Bungee', cursive; font-size: 20px; animation: pulse 1s infinite; }
+        
+        /* LOBBY UI - NOW TRANSPARENT & ALLOWS CLICKS THROUGH TO CANVAS */
+        #lobby-ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center;
+            z-index: 50; padding-top: 10px;
+            pointer-events: none; /* Allows clicks to pass through to canvas flags */
+            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.8) 15%, rgba(0,0,0,0) 100%);
+        }
+        
+        /* Buttons need pointer events back on */
+        .interactive-layer { pointer-events: auto; text-align: center; }
+
+        .lobby-header { 
+            color: #fff; font-family: 'Bungee', cursive; font-size: 30px; 
+            margin-bottom: 10px; text-shadow: 0 4px 0 #000;
+        }
+        .controls-info { color: #ccc; font-size: 14px; margin-bottom: 15px; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 15px; }
+        .mode-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .btn {
+            background: #222; border: 2px solid #444; color: #fff;
+            padding: 10px 20px; font-family: 'Bungee', cursive; font-size: 16px;
+            cursor: pointer; border-radius: 8px; transition: 0.2s;
+        }
+        .btn:hover { background: #333; }
+        .btn.active { 
+            background: #FF0044; border-color: #fff; 
+            box-shadow: 0 0 15px #FF0044; transform: scale(1.1);
+        }
+        #pick-instruction {
+            font-family: 'Bungee', cursive; font-size: 24px; color: #FFD700;
+            text-shadow: 2px 2px 0 #000; margin-top: 5px;
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: none;
+        }
+        .score-box {
+            position: absolute; top: 20px; width: 100%; display: flex; justify-content: center; gap: 80px;
+            font-family: 'Bungee', cursive; font-size: 50px; text-shadow: 3px 3px 0 #000;
+        }
+        .timer-box {
+            position: absolute; top: 90px; width: 100%; text-align: center;
+            font-family: monospace; font-size: 24px; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000;
+        }
+        #announcement {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            font-family: 'Bungee', cursive; font-size: 60px; color: #fff;
+            text-shadow: 0 0 30px #FFD700, 5px 5px 0 #000; pointer-events: none; z-index: 60;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center; width: 100%;
+        }
+
+        @keyframes bounceIn { from{transform:scale(0.5);opacity:0;} to{transform:scale(1);opacity:1;} }
+        @keyframes pulse { 0%{opacity:0.5;} 50%{opacity:1;} 100%{opacity:0.5;} }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- SPLASH -->
+    <div id="splash-screen" onclick="enterLobby()">
+        <div class="splash-title">GREG SEYMOUR<br>AI SOCCER<br>EXTRAVAGANZA</div>
+        <div class="splash-sub">TAP TO START</div>
+    </div>
+
+    <!-- LOBBY -->
+    <div id="lobby-ui">
+        <div class="interactive-layer">
+            <div class="lobby-header">SELECT MODE</div>
+            <div class="mode-row">
+                <button class="btn active" id="btn-1p" onclick="setMode('1P')">1 Player</button>
+                <button class="btn" id="btn-2p" onclick="setMode('2P')">2 Player</button>
+                <button class="btn" id="btn-ai" onclick="setMode('AI')">AI Demo</button>
+            </div>
+            <div class="controls-info" id="ctrl-info">P1 (Arrows) vs CPU</div>
+            <div id="pick-instruction">SELECT TEAM 1</div>
+        </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="score-box">
+            <div id="score-p1" style="color:#4db8ff">0</div>
+            <div id="score-p2" style="color:#ff4d4d">0</div>
+        </div>
+        <div class="timer-box" id="game-timer">3:00</div>
+        <div id="announcement">GOAL!</div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // --- Config ---
+    const FLAG_W = 60, FLAG_H = 40;
+    const GAP = 15;
+    const PADDLE_W = 90, PADDLE_H = 60;
+    const BALL_R = 12;
+    const GOAL_LIMIT = 10;
+    const TIME_LIMIT = 180;
+
+    // --- State ---
+    let width, height;
+    let gameState = 'SPLASH'; 
+    let gameMode = '1P';
+    let assets = {};
+    let particles = [];
+    let p1 = { score:0 }, p2 = { score:0 };
+    let ball = { x:0, y:0, vx:0, vy:0, spin:0 };
+    let selection = { p1: null, p2: null };
+    let timer = TIME_LIMIT;
+    let lastTime = 0;
+    
+    // Audio
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = new AudioContext();
+
+    function playSound(type) {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        if(type === 'hit') {
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        } else if (type === 'goal') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.0);
+            osc.start(); osc.stop(audioCtx.currentTime + 1.0);
+        }
+    }
+
+    // --- Flag Generator (50 Nations) ---
+    const C = { R:'#CE1126', W:'#FFFFFF', B:'#002868', K:'#101010', G:'#FFD700', Gr:'#009739', Or:'#FF9933', LB:'#6CACE4' };
+    const FLAGS = [
+        "USA", "Egypt", "Japan", "United Kingdom", "Canada", "Brazil", "Germany", "France", "Italy", "India", 
+        "South Korea", "China", "Australia", "Mexico", "Spain", "Russia", "Ukraine", "Argentina", "South Africa", 
+        "Turkey", "Greece", "Sweden", "Norway", "Denmark", "Finland", "Poland", "Indonesia", "Vietnam", "Thailand", 
+        "Philippines", "Saudi Arabia", "Israel", "Pakistan", "Bangladesh", "Nigeria", "Kenya", "Morocco", "Ghana", 
+        "Jamaica", "Cuba", "Chile", "Colombia", "Peru", "Venezuela", "Portugal", "Belgium", "Netherlands", "Austria", 
+        "Hungary", "Ireland"
+    ];
+
+    function createFlag(name) {
+        const c = document.createElement('canvas');
+        c.width = FLAG_W; c.height = FLAG_H;
+        const x = c.getContext('2d');
+        const bg = (cl) => { x.fillStyle=cl; x.fillRect(0,0,FLAG_W,FLAG_H); };
+        const hS = (cl) => { let h=FLAG_H/cl.length; cl.forEach((c,i)=>{x.fillStyle=c;x.fillRect(0,i*h,FLAG_W,h)}); };
+        const vS = (cl) => { let w=FLAG_W/cl.length; cl.forEach((c,i)=>{x.fillStyle=c;x.fillRect(i*w,0,w,FLAG_H)}); };
+        const circ = (cx,cy,r,cl) => { x.fillStyle=cl; x.beginPath(); x.arc(cx,cy,r,0,Math.PI*2); x.fill(); };
+
+        bg(C.W);
+        if(name==="USA") { hS([C.R,C.W,C.R,C.W,C.R,C.W,C.R,C.W,C.R,C.W,C.R,C.W,C.R]); x.fillStyle=C.B; x.fillRect(0,0,FLAG_W*0.45,FLAG_H*0.54); for(let i=0;i<9;i++) circ(4+(i%3)*8, 4+Math.floor(i/3)*6, 1.5, C.W); }
+        else if(name==="Japan" || name==="Bangladesh") { bg(name==="Japan"?C.W:'#006a4e'); circ(FLAG_W/2,FLAG_H/2,12,C.R); }
+        else if(name==="Brazil") { bg(C.Gr); x.fillStyle=C.G; x.beginPath(); x.moveTo(FLAG_W/2,4); x.lineTo(FLAG_W-4,FLAG_H/2); x.lineTo(FLAG_W/2,FLAG_H-4); x.lineTo(4,FLAG_H/2); x.fill(); circ(FLAG_W/2,FLAG_H/2,8,C.B); }
+        else if(name==="United Kingdom") { bg(C.B); x.strokeStyle=C.W; x.lineWidth=6; x.beginPath(); x.moveTo(0,0); x.lineTo(FLAG_W,FLAG_H); x.moveTo(FLAG_W,0); x.lineTo(0,FLAG_H); x.stroke(); x.fillStyle=C.W; x.fillRect(FLAG_W/2-4,0,8,FLAG_H); x.fillRect(0,FLAG_H/2-4,FLAG_W,8); x.fillStyle=C.R; x.fillRect(FLAG_W/2-2,0,4,FLAG_H); x.fillRect(0,FLAG_H/2-2,FLAG_W,4); }
+        else if(name==="Canada") { vS([C.R,C.W,C.R]); circ(FLAG_W/2,FLAG_H/2,8,C.R); }
+        else if(name==="South Korea") { bg(C.W); x.fillStyle=C.R; x.beginPath(); x.arc(FLAG_W/2,FLAG_H/2,10,Math.PI,0); x.fill(); x.fillStyle=C.B; x.beginPath(); x.arc(FLAG_W/2,FLAG_H/2,10,0,Math.PI); x.fill(); }
+        else if(["France","Italy","Belgium","Ireland","Nigeria","Peru","Mexico"].includes(name)) {
+            let p=[C.B,C.W,C.R];
+            if(name==="Italy"||name==="Mexico") p=[C.Gr,C.W,C.R];
+            if(name==="Belgium") p=[C.K,C.G,C.R];
+            if(name==="Ireland") p=[C.Gr,C.W,C.Or];
+            if(name==="Nigeria") p=[C.Gr,C.W,C.Gr];
+            if(name==="Peru") p=[C.R,C.W,C.R];
+            vS(p); if(name==="Mexico") circ(FLAG_W/2,FLAG_H/2,4,"#691C32");
+        }
+        else if(["Germany","Russia","Netherlands","Austria","Hungary","Ukraine","Poland","Indonesia","India","Argentina","Thailand","Egypt"].includes(name)) {
+            let p=[C.K,C.R,C.G];
+            if(name==="Russia") p=[C.W,C.B,C.R];
+            if(name==="Netherlands") p=[C.R,C.W,C.B];
+            if(name==="Austria") p=[C.R,C.W,C.R];
+            if(name==="Hungary") p=[C.R,C.W,C.Gr];
+            if(name==="Ukraine") p=['#0057B8',C.G];
+            if(name==="Poland") p=[C.W,C.R];
+            if(name==="Indonesia") p=[C.R,C.W];
+            if(name==="India") { p=[C.Or,C.W,C.Gr]; hS(p); circ(FLAG_W/2,FLAG_H/2,5,C.B); return c; }
+            if(name==="Argentina") { p=[C.LB,C.W,C.LB]; hS(p); circ(FLAG_W/2,FLAG_H/2,4,C.G); return c; }
+            if(name==="Egypt") { p=[C.R,C.W,C.K]; hS(p); x.fillStyle=C.G; x.fillRect(FLAG_W/2-4,FLAG_H/2-4,8,8); return c; }
+            if(name==="Thailand") p=[C.R,C.W,'#2D2A4A','#2D2A4A',C.W,C.R];
+            hS(p);
+        }
+        else if(["Denmark","Sweden","Finland","Norway","Greece"].includes(name)) {
+            let b=C.R, f=C.W;
+            if(name==="Sweden"){b='#006AA7';f=C.G}
+            if(name==="Finland"){b=C.W;f='#003580'}
+            if(name==="Norway"){b=C.R;f=C.B}
+            if(name==="Greece"){ bg('#0D5EAF'); hS(['#0D5EAF',C.W,'#0D5EAF',C.W,'#0D5EAF']); x.fillRect(0,0,FLAG_W*0.35,FLAG_H*0.4); x.fillStyle=C.W; x.fillRect(15,0,5,FLAG_H*0.4); x.fillRect(0,7,FLAG_W*0.35,5); return c; }
+            bg(b); x.fillStyle=f; x.fillRect(FLAG_W*0.3,0,6,FLAG_H); x.fillRect(0,FLAG_H*0.4,FLAG_W,6);
+        }
+        else {
+            const h = name.length % 3;
+            if(h===0) hS([C.G,C.B,C.R]); else if(h===1) vS([C.G,C.W,C.R]); else hS([C.R,C.W]);
+            x.shadowColor="black"; x.shadowBlur=3; x.fillStyle="#fff"; x.font="12px Arial"; x.textAlign="center"; x.fillText(name.substring(0,3).toUpperCase(), FLAG_W/2, FLAG_H/2+4); x.shadowBlur=0;
+        }
+        x.strokeStyle="rgba(0,0,0,0.3)"; x.lineWidth=1; x.strokeRect(0,0,FLAG_W,FLAG_H);
+        return c;
+    }
+    
+    FLAGS.forEach(f => assets[f] = createFlag(f));
+    
+    const ballCanvas = document.createElement('canvas');
+    ballCanvas.width=BALL_R*2; ballCanvas.height=BALL_R*2;
+    const bx = ballCanvas.getContext('2d');
+    bx.beginPath(); bx.arc(BALL_R,BALL_R,BALL_R,0,Math.PI*2); bx.fillStyle="#fff"; bx.fill(); bx.strokeStyle="#000"; bx.stroke();
+    for(let i=0;i<5;i++){ bx.beginPath(); bx.arc(BALL_R+Math.cos(i*1.25)*6, BALL_R+Math.sin(i*1.25)*6, 3, 0, Math.PI*2); bx.fillStyle="#222"; bx.fill(); }
+    assets['ball'] = ballCanvas;
+
+    // --- Inputs ---
+    function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+    
+    const keys = {};
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+    
+    // IMPORTANT: Event listener on window to catch clicks everywhere
+    window.addEventListener('mousedown', e => { if(gameState === 'LOBBY') handleLobbyClick(e.clientX, e.clientY); });
+    window.addEventListener('touchstart', e => { 
+        if(gameState === 'LOBBY') handleLobbyClick(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive:false});
+
+    // --- Logic ---
+    function enterLobby() {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        document.getElementById('splash-screen').style.opacity = 0;
+        setTimeout(() => {
+            document.getElementById('splash-screen').style.display = 'none';
+            document.getElementById('lobby-ui').style.display = 'flex';
+            gameState = 'LOBBY';
+            selection.p1 = null; selection.p2 = null;
+        }, 500);
+    }
+
+    function setMode(m) {
+        gameMode = m;
+        selection.p1 = null; selection.p2 = null;
+        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-'+m.toLowerCase()).classList.add('active');
+        
+        const info = document.getElementById('ctrl-info');
+        const pick = document.getElementById('pick-instruction');
+        
+        if(m==='1P') info.innerText = "P1 (Arrows) vs CPU";
+        if(m==='2P') info.innerText = "P1 (Arrows) vs P2 (W/S)";
+        if(m==='AI') info.innerText = "Demo: CPU vs CPU";
+        pick.innerText = "SELECT TEAM 1";
+    }
+
+    function handleLobbyClick(mx, my) {
+        // Calculate Grid
+        const cols = Math.floor((width - 20) / (FLAG_W + GAP));
+        const totalW = cols * (FLAG_W + GAP) - GAP;
+        const startX = (width - totalW) / 2;
+        const startY = 220; // Needs to match drawLobby
+
+        FLAGS.forEach((f, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = startX + col * (FLAG_W + GAP);
+            const y = startY + row * (FLAG_H + GAP);
+            
+            if(mx >= x && mx <= x + FLAG_W && my >= y && my <= y + FLAG_H) {
+                // Clicked Flag
+                playSound('hit');
+                if(selection.p1 === null) {
+                    selection.p1 = i;
+                    // If AI mode, we need 2 teams
+                    if(gameMode === '1P') {
+                        // 1P Mode: Immediate start against random CPU
+                        selection.p2 = -1; // Placeholder
+                        startGame();
+                    } else {
+                        document.getElementById('pick-instruction').innerText = "SELECT TEAM 2";
+                    }
+                } else if (selection.p2 === null && selection.p1 !== i) {
+                    selection.p2 = i;
+                    startGame();
+                }
+            }
+        });
+    }
+
+    function startGame() {
+        let i1 = selection.p1;
+        let i2 = selection.p2;
+
+        // Auto-pick opponent for 1P or random fill for AI if buggy
+        if(i2 === -1 || i2 === null) {
+            do { i2 = Math.floor(Math.random()*FLAGS.length); } while(i2 === i1);
+        }
+
+        p1 = { name: FLAGS[i1], img: assets[FLAGS[i1]], x: 50, y: height/2, score: 0 };
+        p2 = { name: FLAGS[i2], img: assets[FLAGS[i2]], x: width-50-PADDLE_W, y: height/2, score: 0 };
+        
+        timer = TIME_LIMIT;
+        resetBall();
+        
+        document.getElementById('lobby-ui').style.display = 'none';
+        document.getElementById('hud').style.display = 'block';
+        document.getElementById('score-p1').innerText = "0";
+        document.getElementById('score-p2').innerText = "0";
+
+        gameState = 'PLAYING';
+        announce(`${p1.name} VS ${p2.name}`);
+        playSound('goal');
+    }
+
+    function resetBall() {
+        ball.x = width/2; ball.y = height/2;
+        ball.vx = (Math.random()>0.5?1:-1) * (8 + Math.random()*2);
+        ball.vy = (Math.random()-0.5) * 8;
+        ball.spin = 0;
+    }
+
+    function update(dt) {
+        if(gameState !== 'PLAYING') return;
+
+        timer -= dt/1000;
+        if(timer <= 0) endGame();
+        let m = Math.floor(timer/60);
+        let s = Math.floor(timer%60);
+        document.getElementById('game-timer').innerText = `${m}:${s<10?'0':''}${s}`;
+
+        const speed = 10;
+        // P1 Controls
+        if(gameMode !== 'AI') {
+            if(keys['ArrowUp']) p1.y -= speed;
+            if(keys['ArrowDown']) p1.y += speed;
+        } else aiMove(p1);
+
+        // P2 Controls
+        if(gameMode === '2P') {
+            if(keys['KeyW']) p2.y -= speed;
+            if(keys['KeyS']) p2.y += speed;
+        } else aiMove(p2);
+
+        p1.y = Math.max(0, Math.min(height-PADDLE_H, p1.y));
+        p2.y = Math.max(0, Math.min(height-PADDLE_H, p2.y));
+
+        ball.x += ball.vx; ball.y += ball.vy; ball.spin += ball.vx*0.05;
+        if(ball.y < BALL_R || ball.y > height-BALL_R) ball.vy *= -1;
+
+        // Collision
+        checkHit(p1, 1);
+        checkHit(p2, -1);
+
+        if(ball.x < -30) score(p2);
+        if(ball.x > width+30) score(p1);
+    }
+
+    function aiMove(p) {
+        const center = p.y + PADDLE_H/2;
+        if(Math.abs(ball.x - p.x) < width * 0.6) {
+            if(center < ball.y - 15) p.y += 7;
+            if(center > ball.y + 15) p.y -= 7;
+        }
+    }
+
+    function checkHit(p, dir) {
+        if(ball.x+BALL_R > p.x && ball.x-BALL_R < p.x+PADDLE_W && ball.y+BALL_R > p.y && ball.y-BALL_R < p.y+PADDLE_H) {
+            if((dir===1 && ball.vx<0) || (dir===-1 && ball.vx>0)) {
+                ball.vx *= -1.1; 
+                ball.vy = ((ball.y - (p.y+PADDLE_H/2)) / (PADDLE_H/2)) * 10;
+                playSound('hit');
+                for(let i=0;i<8;i++) particles.push({x:ball.x, y:ball.y, vx:(Math.random()-0.5)*10, vy:(Math.random()-0.5)*10, life:1, c:'#fff'});
+            }
+        }
+    }
+
+    function score(who) {
+        who.score++;
+        document.getElementById('score-p1').innerText = p1.score;
+        document.getElementById('score-p2').innerText = p2.score;
+        if(who.score >= GOAL_LIMIT) endGame();
+        else {
+            gameState = 'GOAL';
+            announce("GOOOAL!!");
+            playSound('goal');
+            for(let i=0;i<50;i++) particles.push({x:width/2, y:height/2, vx:(Math.random()-0.5)*15, vy:(Math.random()-0.5)*15, life:2, c:'#FFD700'});
+            setTimeout(() => { if(gameState==='GOAL') { resetBall(); gameState='PLAYING'; }}, 2000);
+        }
+    }
+
+    function announce(msg) {
+        const el = document.getElementById('announcement');
+        el.innerText = msg;
+        el.style.transform = "translate(-50%, -50%) scale(1.5)";
+        setTimeout(() => el.style.transform = "translate(-50%, -50%) scale(0)", 1500);
+    }
+
+    function endGame() {
+        gameState = 'OVER';
+        const w = p1.score>p2.score ? p1.name : (p2.score>p1.score ? p2.name : "DRAW");
+        announce(`${w} WINS!`);
+        playSound('goal');
+        setTimeout(() => {
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('lobby-ui').style.display = 'flex';
+            gameState = 'LOBBY';
+            setMode(gameMode);
+        }, 4000);
+    }
+
+    function draw() {
+        // Clear / BG
+        ctx.fillStyle = "#111"; ctx.fillRect(0,0,width,height);
+        
+        if(gameState === 'LOBBY') {
+            const cols = Math.floor((width - 20) / (FLAG_W + GAP));
+            const totalW = cols * (FLAG_W + GAP) - GAP;
+            const startX = (width - totalW) / 2;
+            const startY = 220;
+
+            FLAGS.forEach((f, i) => {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = startX + col * (FLAG_W + GAP);
+                const y = startY + row * (FLAG_H + GAP);
+                
+                // Draw Selection Glow
+                if(i === selection.p1) {
+                    ctx.shadowColor = "#4db8ff"; ctx.shadowBlur = 20; ctx.strokeStyle = "#4db8ff"; ctx.lineWidth = 4; ctx.strokeRect(x-4, y-4, FLAG_W+8, FLAG_H+8);
+                } else if (i === selection.p2) {
+                    ctx.shadowColor = "#ff4d4d"; ctx.shadowBlur = 20; ctx.strokeStyle = "#ff4d4d"; ctx.lineWidth = 4; ctx.strokeRect(x-4, y-4, FLAG_W+8, FLAG_H+8);
+                }
+                ctx.shadowBlur = 0;
+                ctx.drawImage(assets[f], x, y);
+            });
+            return;
+        }
+
+        if(gameState !== 'SPLASH') {
+            // Pitch
+            ctx.fillStyle = "#2e8b57"; ctx.fillRect(0,0,width,height);
+            ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth=4;
+            ctx.beginPath(); ctx.moveTo(width/2,0); ctx.lineTo(width/2,height); ctx.stroke();
+            ctx.beginPath(); ctx.arc(width/2,height/2,80,0,Math.PI*2); ctx.stroke();
+            ctx.strokeRect(0,height/2-100,60,200); ctx.strokeRect(width-60,height/2-100,60,200);
+
+            // Players
+            const drawP = (p) => {
+                ctx.save(); ctx.translate(p.x, p.y);
+                ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=10;
+                ctx.drawImage(p.img, 0,0, PADDLE_W, PADDLE_H);
+                ctx.fillStyle="#fff"; ctx.font="12px Arial"; ctx.fillText(p.name, 0, -5);
+                ctx.restore();
+            };
+            drawP(p1); drawP(p2);
+
+            // Ball
+            ctx.save(); ctx.translate(ball.x, ball.y); ctx.rotate(ball.spin);
+            ctx.drawImage(assets['ball'], -BALL_R, -BALL_R, BALL_R*2, BALL_R*2);
+            ctx.restore();
+
+            // Particles
+            particles.forEach((p,i) => {
+                p.x+=p.vx; p.y+=p.vy; p.life-=0.03;
+                ctx.fillStyle=p.c; ctx.globalAlpha=p.life; ctx.fillRect(p.x,p.y,5,5);
+                if(p.life<=0) particles.splice(i,1);
+            });
+            ctx.globalAlpha=1;
+        }
+    }
+
+    function loop() {
+        const now = Date.now();
+        const dt = now - lastTime;
+        lastTime = now;
+        update(dt);
+        draw();
+        requestAnimationFrame(loop);
+    }
+    lastTime = Date.now();
+    loop();
+</script>
+</body>
+</html>

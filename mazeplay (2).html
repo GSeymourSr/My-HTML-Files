@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Greg Seymour's AI Maze Fun</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee+Spice&family=Press+Start+2P&family=Monoton&family=Orbitron:wght@900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color-1: #1a1a1a;
+      --bg-color-2: #2a2a3a;
+      --wall-color: #fafafa;
+      --text-color: #eeeeee;
+      /* For dynamic demo messages */
+      --message-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      --message-color: white;
+      --message-shadow: none;
+    }
+    html, body {
+      margin: 0; padding: 0; height: 100%; width: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle, var(--bg-color-2) 0%, var(--bg-color-1) 100%);
+      animation: bg-pan 20s linear infinite;
+      color: var(--text-color);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .screen {
+      width: 100%; height: 100%; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; transition: opacity 0.5s ease-in-out;
+    }
+    /* --- NEW DYNAMIC TITLE SCREEN --- */
+    #start-screen { text-align: center; gap: 20px; }
+    #title-text {
+      font-size: 8vmin;
+      font-weight: bold;
+      line-height: 1.2;
+      transition: all 0.5s ease;
+    }
+    #title-text .subtitle { font-size: 0.4em; font-weight: normal; }
+    .title-style-1 { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #0fa, 0 0 30px #0fa; }
+    .title-style-2 { text-shadow: 3px 3px 0px #ff0055, 6px 6px 0px #aa00ff; }
+    .title-style-3 {
+        background: linear-gradient(90deg, #ff0, #f0f, #0ff, #ff0);
+        background-size: 400%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: gradient-flow 10s linear infinite;
+    }
+    .menu-buttons button {
+      font-size: 2.5vmin; padding: 15px 30px; margin: 10px; cursor: pointer;
+      border: 2px solid var(--wall-color); background: transparent; color: var(--wall-color);
+      border-radius: 8px; transition: all 0.3s ease;
+    }
+    .menu-buttons button:hover { background-color: #fff; color: #000; box-shadow: 0 0 20px #fff; }
+
+    /* --- Game Screen & SVG --- */
+    #game-screen { display: none; position: relative; }
+    svg {
+      width: 95vw; height: calc(95vw / 16 * 9);
+      max-height: 95vh; max-width: calc(95vh / 9 * 16);
+      border: 2px solid var(--wall-color); border-radius: 10px;
+    }
+    .wall { stroke: var(--wall-color); stroke-linecap: round; }
+    .bot-head { transition: all 0.05s linear, opacity 0.5s; transform-origin: center; animation: pulse-bot 1.5s infinite; }
+    .bot-head.stuck { opacity: 0.3; animation: none; }
+    .solution-path { fill: none; stroke-linecap: round; animation: draw-path 2s ease-out forwards; }
+    .goal-box { stroke: white; stroke-width: 2px; filter: url(#glow); }
+
+    /* --- Overlays --- */
+    .overlay {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column;
+      justify-content: center; align-items: center; opacity: 0;
+      pointer-events: none; transition: opacity 0.5s ease, transform 0.5s ease;
+      transform: scale(1.1);
+      z-index: 100; /* Ensure overlays are above SVG */
+    }
+    .overlay.visible { opacity: 1; pointer-events: auto; transform: scale(1); }
+    .overlay h2 { font-size: 6vmin; margin-bottom: 30px; text-shadow: 0 0 10px #fff; }
+    #betting-choices, #win-details { display: flex; gap: 20px; text-align: center; }
+    .bet-choice { cursor: pointer; padding: 10px; border-radius: 10px; transition: transform 0.2s ease; }
+    .bet-choice:hover { transform: scale(1.1); }
+    .bet-choice .swatch { width: 8vmin; height: 8vmin; border-radius: 50%; margin: 0 auto 10px; border: 3px solid white; }
+    .bet-choice .name { font-size: 2vmin; }
+    #win-message #winner-swatch { width: 15vmin; height: 15vmin; margin: 0 auto 20px; }
+    #win-message p { font-size: 3vmin; }
+    #countdown-overlay h2 { font-size: 20vmin; animation: countdown-anim 1s ease-in-out forwards; }
+
+    /* --- NEW DEMO MODE STYLES --- */
+    #demo-message-overlay {
+        position: absolute;
+        top: 10%; /* Adjust as needed */
+        left: 50%;
+        transform: translateX(-50%); /* Initial transform */
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 20px 40px;
+        border-radius: 15px;
+        text-align: center;
+        font-size: 3vmin;
+        color: var(--message-color); /* Dynamic color */
+        font-family: var(--message-font); /* Dynamic font */
+        text-shadow: var(--message-shadow); /* Dynamic shadow */
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease, transform 0.5s ease, color 0.5s ease, text-shadow 0.5s ease;
+        min-width: 400px; /* To prevent too much squishing */
+        will-change: opacity, transform, color, text-shadow; /* For performance */
+    }
+    #demo-message-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-50%) scale(1);
+    }
+    /* Specific demo message animations */
+    #demo-message-overlay.anim-pulse {
+        animation: pulse-message 2s infinite alternate;
+    }
+    @keyframes pulse-message {
+        0%, 100% { transform: translateX(-50%) scale(1); }
+        50% { transform: translateX(-50%) scale(1.05); }
+    }
+    #demo-message-overlay.anim-glow {
+        animation: glow-message 2s infinite alternate;
+    }
+    @keyframes glow-message {
+        0%, 100% { text-shadow: 0 0 10px var(--message-color); }
+        50% { text-shadow: 0 0 20px var(--message-color), 0 0 30px var(--message-color); }
+    }
+    #demo-message-overlay.anim-slide {
+        animation: slide-message 4s ease-out forwards; /* Longer for intro/outro */
+    }
+    @keyframes slide-message {
+        0% { transform: translateX(-150%) scale(0.8); opacity: 0; }
+        10% { transform: translateX(-50%) scale(1); opacity: 1; }
+        90% { transform: translateX(-50%) scale(1); opacity: 1; }
+        100% { transform: translateX(50%) scale(0.8); opacity: 0; }
+    }
+    #demo-score-display {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background-color: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border-radius: 10px;
+        color: white;
+        font-size: 1.8vmin;
+        z-index: 1001;
+        display: none; /* Hidden by default */
+        border: 1px solid #7FDBFF; /* Accent border */
+        box-shadow: 0 0 15px rgba(127, 219, 255, 0.5);
+    }
+    #demo-score-display h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 2vmin;
+        color: gold;
+        text-align: center;
+        text-shadow: 0 0 5px gold;
+    }
+    #demo-score-display ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    #demo-score-display li {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    #demo-score-display .swatch {
+        width: 1.5vmin;
+        height: 1.5vmin;
+        border-radius: 50%;
+        margin-right: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    /* --- Animations --- */
+    @keyframes bg-pan { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+    @keyframes pulse-bot { 50% { transform: scale(0.85); } }
+    @keyframes solver-pulse { from { r: 0; opacity: 0.8; } to { r: 10; opacity: 0; } }
+    .solver-trail { animation: solver-pulse 0.7s ease-out forwards; }
+    @keyframes countdown-anim { from { opacity: 0; transform: scale(2); } to { opacity: 1; transform: scale(1); } }
+    @keyframes draw-path { to { stroke-dashoffset: 0; } }
+    @keyframes gradient-flow { to { background-position: 400%; } }
+  </style>
+</head>
+<body>
+  <audio id="move-sound" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-design/ui_loading_whoosh_02_094.mp3" preload="auto"></audio>
+  <audio id="win-sound" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-design/multimedia_game_sound_harp_logo_ascend_001.mp3" preload="auto"></audio>
+  <audio id="bet-sound" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-design/multimedia_game_sound_positive_action_001.mp3" preload="auto"></audio>
+  <audio id="countdown-sound" src="https://www.zapsplat.com/wp-content/uploads/2015/sound-design/ui_loading_whoosh_02_094.mp3" preload="auto"></audio>
+
+  <div id="start-screen" class="screen">
+    <div id="title-text">Greg Seymour's<br><span class="subtitle">AI MAZE FUN</span></div>
+    <div class="menu-buttons">
+      <button onclick="setupGame(2)">2 Racers</button>
+      <button onclick="setupGame(4)">4 Racers</button>
+      <button onclick="setupGame(8)">8 Racers</button>
+    </div>
+  </div>
+
+  <div id="game-screen" class="screen">
+    <svg id="maze">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3.5" result="coloredBlur"></feGaussianBlur>
+          <feMerge>
+            <feMergeNode in="coloredBlur"></feMergeNode>
+            <feMergeNode in="SourceGraphic"></feMergeNode>
+          </feMerge>
+        </filter>
+      </defs>
+      <g id="walls-container"></g>
+      <g id="solution-paths-container"></g>
+      <g id="trails-container"></g>
+      <g id="bot-heads-container"></g>
+      <g id="markers-container"></g>
+      <g id="particle-container"></g>
+    </svg>
+    <div id="betting-screen" class="overlay">
+      <h2>Place Your Bet!</h2>
+      <div id="betting-choices"></div>
+    </div>
+    <div id="countdown-overlay" class="overlay" style="background:none;"><h2></h2></div>
+    <div id="win-message" class="overlay">
+      <h2 id="win-title"></h2>
+      <div id="win-details"><div id="winner-swatch" class="swatch"></div></div>
+      <p id="race-time"></p>
+      <p id="bet-result"></p>
+      <button onclick="showStartScreen()" style="margin-top: 30px;">Race Again</button>
+    </div>
+
+    <!-- NEW DEMO MODE ELEMENTS -->
+    <div id="demo-message-overlay"></div>
+    <div id="demo-score-display">
+        <h3>Demo Scores</h3>
+        <ul id="score-list"></ul>
+    </div>
+  </div>
+
+<script>
+    const startScreen = document.getElementById('start-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const svg = document.getElementById("maze");
+    const bettingScreen = document.getElementById('betting-screen');
+    const bettingChoices = document.getElementById('betting-choices');
+    const winMessage = document.getElementById('win-message');
+    const countdownOverlay = document.getElementById('countdown-overlay');
+    const demoMessageOverlay = document.getElementById('demo-message-overlay');
+    const demoScoreDisplay = document.getElementById('demo-score-display');
+    const scoreList = document.getElementById('score-list');
+
+    const [wallsContainer, solPathsContainer, trailsContainer, botHeadsContainer, markersContainer, particleContainer] = 
+        ['walls-container', 'solution-paths-container', 'trails-container', 'bot-heads-container', 'markers-container', 'particle-container'].map(id => document.getElementById(id));
+    
+    const sounds = ['move-sound', 'win-sound', 'bet-sound', 'countdown-sound'].reduce((acc, id) => {
+        acc[id.split('-')[0]] = document.getElementById(id); return acc;
+    }, {});
+    
+    let cols, rows, cellSize, targetCell;
+    let grid = [], bots = [], userBetOnId = null, raceInterval = null, raceStartTime = 0;
+
+    // --- DEMO MODE VARIABLES ---
+    let demoTimer = null;
+    let isInDemoMode = false;
+    let botScores = {};
+    let demoMessageInterval = null;
+
+    const BOT_CONFIG = {
+        colors: ["#00FFFF", "#FF00FF", "#00FF00", "#FFFF00", "#FF4500", "#1E90FF", "#FF1493", "#FFFFFF"],
+        names: ["Cyan Comet", "Magenta Meteor", "Lime Lightning", "Yellow Yank", "Orange Odyssey", "Dodger Dragon", "Pink Phantom", "White Wizard"]
+    };
+    const THEMES = [
+        { name: "Neon", bg1: "#1a1a1a", bg2: "#2a2a3a", wall: "#fafafa" },
+        { name: "Forest", bg1: "#2d3a24", bg2: "#4d5a44", wall: "#e0e6c4" },
+        { name: "Ocean", bg1: "#001f3f", bg2: "#003f5f", wall: "#7FDBFF" },
+        { name: "Electric", bg1: "#000000", bg2: "#180024", wall: "#cc00ff" }
+    ];
+    const demoMessages = [
+        "Watch the AI battle it out!",
+        "Press any key or move your mouse to play!",
+        "Who will conquer the maze this time?",
+        "Greg Seymour's AI Maze Fun - Bet on your favorite bot!",
+        "Experience the thrill of AI vs. AI!",
+        "This is a demo. Join the race!",
+        "Think you can do better? Give it a try!",
+        "Another maze, another challenge!",
+        "Unleash the bots!",
+        "Can you predict the winner?"
+    ];
+    const demoMessageStyles = [
+        { font: "'Bungee Spice', cursive", color: '#FFD700', shadow: '0 0 10px #FFD700', animClass: 'anim-pulse' },
+        { font: "'Press Start 2P', cursive", color: '#00FF00', shadow: '0 0 8px #00FF00', animClass: 'anim-glow' },
+        { font: "'Monoton', cursive", color: '#FF00FF', shadow: '0 0 12px #FF00FF', animClass: 'anim-pulse' },
+        { font: "'Orbitron', sans-serif", color: '#1E90FF', shadow: '0 0 15px #1E90FF', animClass: 'anim-glow' }
+    ];
+
+    function setupGame(numBots, fromDemo = false) {
+        isInDemoMode = fromDemo;
+        if (!fromDemo) { // If user initiated, clear demo state
+            clearTimeout(demoTimer);
+            clearInterval(demoMessageInterval);
+            demoMessageOverlay.classList.remove('visible');
+            demoScoreDisplay.style.display = 'none';
+        } else {
+            demoScoreDisplay.style.display = 'block';
+        }
+
+        startScreen.style.opacity = 0;
+        setTimeout(() => {
+            startScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            gameScreen.style.opacity = 1;
+            startGame(numBots);
+        }, 500);
+    }
+
+    function startGame(numBots) {
+        [wallsContainer, solPathsContainer, trailsContainer, botHeadsContainer, markersContainer, particleContainer].forEach(c => c.innerHTML = '');
+        bots = []; clearInterval(raceInterval);
+        winMessage.classList.remove('visible');
+        
+        const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+        document.documentElement.style.setProperty('--bg-color-1', theme.bg1);
+        document.documentElement.style.setProperty('--bg-color-2', theme.bg2);
+        document.documentElement.style.setProperty('--wall-color', theme.wall);
+        
+        const aspectRatio = 16 / 9; cols = 32; rows = Math.floor(cols / aspectRatio);
+        targetCell = { x: Math.floor(cols / 2), y: Math.floor(rows / 2) };
+        cellSize = svg.clientWidth / cols;
+        generateMaze(); drawMaze();
+        initializeBots(numBots); drawMarkers();
+        
+        if (isInDemoMode) {
+            startCountdown(); // Start race directly
+        } else {
+            showBettingScreen(); // Show betting screen for user
+        }
+    }
+
+    function showStartScreen() {
+        gameScreen.style.opacity = 0;
+        setTimeout(() => {
+            gameScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+            startScreen.style.opacity = 1;
+            isInDemoMode = false; // Ensure demo mode is off if user returns here
+            resetDemoTimer(); // Re-activate demo timer
+            clearInterval(demoMessageInterval);
+            demoMessageOverlay.classList.remove('visible');
+            demoScoreDisplay.style.display = 'none';
+        }, 500);
+    }
+
+    function initializeBots(numBots) {
+        let startPositions = [
+            { x: 0, y: 0 }, { x: cols - 1, y: rows - 1 }, { x: cols - 1, y: 0 }, { x: 0, y: rows - 1 },
+            { x: Math.floor(cols / 2), y: 0 }, { x: Math.floor(cols / 2), y: rows - 1 },
+            { x: 0, y: Math.floor(rows / 2) }, { x: cols - 1, y: Math.floor(rows / 2) }
+        ];
+        // Ensure bot scores are initialized for this game's bots
+        BOT_CONFIG.names.forEach(name => {
+            if (!(name in botScores)) {
+                botScores[name] = 0;
+            }
+        });
+        updateDemoScores(); // Update display if scores are reset/updated
+
+        for (let i = 0; i < numBots; i++) {
+            const startPos = startPositions[i];
+            const bot = {
+                id: i, name: BOT_CONFIG.names[i], color: BOT_CONFIG.colors[i],
+                x: startPos.x, y: startPos.y, startX: startPos.x, startY: startPos.y,
+                stack: [], isActive: true,
+                element: createSVGElement('circle', {
+                    cx: startPos.x * cellSize + cellSize / 2, cy: startPos.y * cellSize + cellSize / 2,
+                    r: cellSize * 0.4, fill: BOT_CONFIG.colors[i], class: 'bot-head',
+                    stroke: 'white', 'stroke-width': Math.max(1, cellSize/20)
+                })
+            };
+            bots.push(bot);
+            // Ensure bot's start cell is marked as explored by this bot
+            grid[index(startPos.x, startPos.y)].exploredBy = i; 
+            botHeadsContainer.appendChild(bot.element);
+        }
+    }
+    class Cell { constructor(x, y) { this.x = x; this.y = y; this.walls = { t: true, r: true, b: true, l: true }; this.visited = false; this.exploredBy = null; } }
+    function index(x, y) { return (x < 0 || y < 0 || x >= cols || y >= rows) ? -1 : x + y * cols; }
+    
+    function generateMaze() {
+        grid = Array.from({ length: cols * rows }, (_, i) => new Cell(i % cols, Math.floor(i / cols)));
+        let stack = []; let current = grid[0]; current.visited = true;
+        do {
+            const neighbors = [
+                grid[index(current.x, current.y - 1)], // Top
+                grid[index(current.x + 1, current.y)], // Right
+                grid[index(current.x, current.y + 1)], // Bottom
+                grid[index(current.x - 1, current.y)]  // Left
+            ].filter(n => n && !n.visited);
+
+            if (neighbors.length > 0) {
+                const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                stack.push(current);
+                const dx = current.x - next.x, dy = current.y - next.y;
+                if (dx === 1) { current.walls.l = false; next.walls.r = false; } else if (dx === -1) { current.walls.r = false; next.walls.l = false; }
+                if (dy === 1) { current.walls.t = false; next.walls.b = false; } else if (dy === -1) { current.walls.b = false; next.walls.t = false; }
+                current = next; current.visited = true;
+            } else if (stack.length > 0) { current = stack.pop(); }
+        } while (stack.length > 0);
+    }
+    
+    function drawMaze() {
+        const fragment = document.createDocumentFragment();
+        grid.forEach(cell => {
+            const x = cell.x * cellSize, y = cell.y * cellSize;
+            if (cell.walls.t) fragment.appendChild(createSVGElement('line', { x1: x, y1: y, x2: x + cellSize, y2: y, class: 'wall' }));
+            if (cell.walls.r) fragment.appendChild(createSVGElement('line', { x1: x + cellSize, y1: y, x2: x + cellSize, y2: y + cellSize, class: 'wall' }));
+            if (cell.walls.b) fragment.appendChild(createSVGElement('line', { x1: x, y1: y + cellSize, x2: x + cellSize, y2: y + cellSize, class: 'wall' }));
+            if (cell.walls.l) fragment.appendChild(createSVGElement('line', { x1: x, y1: y, x2: x, y2: y + cellSize, class: 'wall' }));
+        });
+        wallsContainer.appendChild(fragment);
+        document.querySelectorAll('.wall').forEach(w => w.style.strokeWidth = Math.max(1, cellSize / 8));
+    }
+    function drawMarkers() {
+        const goal = createSVGElement('rect', {
+            x: targetCell.x * cellSize, y: targetCell.y * cellSize,
+            width: cellSize, height: cellSize,
+            fill: 'gold', class: 'goal-box'
+        });
+        markersContainer.appendChild(goal);
+    }
+    
+    function showBettingScreen() {
+        bettingChoices.innerHTML = '';
+        bots.forEach(bot => {
+            const choice = document.createElement('div');
+            choice.className = 'bet-choice'; choice.dataset.id = bot.id;
+            choice.innerHTML = `<div class="swatch" style="background-color:${bot.color};"></div><div class="name">${bot.name}</div>`;
+            bettingChoices.appendChild(choice);
+        });
+        bettingScreen.classList.add('visible');
+    }
+    bettingChoices.addEventListener('click', (e) => {
+        const choice = e.target.closest('.bet-choice');
+        if (choice) { 
+            userBetOnId = parseInt(choice.dataset.id); 
+            playSound('bet');
+            bettingScreen.classList.remove('visible'); 
+            startCountdown(); 
+        }
+    });
+    function startCountdown() {
+        let count = 3;
+        const h2 = countdownOverlay.querySelector('h2');
+        countdownOverlay.classList.add('visible');
+        const timer = setInterval(() => {
+            h2.textContent = count;
+            h2.style.animation = 'none'; void h2.offsetWidth; h2.style.animation = 'countdown-anim 1s ease-in-out forwards';
+            playSound('countdown');
+            count--;
+            if (count < 0) {
+                clearInterval(timer);
+                h2.textContent = "GO!";
+                setTimeout(() => { countdownOverlay.classList.remove('visible'); startRace(); }, 1000);
+            }
+        }, 1000);
+    }
+    function startRace() { 
+        raceStartTime = Date.now(); 
+        raceInterval = setInterval(raceTick, 50); 
+        if (isInDemoMode) {
+            startDemoMessageLoop();
+        }
+    }
+    
+    function raceTick() {
+        let winner = null;
+        let allStuck = true; // Check if all bots are stuck
+        bots.forEach(bot => {
+            if (!bot.isActive) return;
+
+            allStuck = false; // At least one bot is active
+
+            // Drop a trail marker
+            const trail = createSVGElement('circle', { cx: bot.x * cellSize + cellSize / 2, cy: bot.y * cellSize + cellSize / 2, r: cellSize * 0.2, fill: bot.color, class: 'solver-trail' });
+            trailsContainer.appendChild(trail);
+            
+            const currentCell = grid[index(bot.x, bot.y)];
+            
+            // Check for goal first
+            if (bot.x === targetCell.x && bot.y === targetCell.y) { 
+                winner = bot; 
+                return; // Stop processing for this bot, it won!
+            }
+
+            const neighbors = [
+                { dir: 't', cell: grid[index(bot.x, bot.y - 1)] }, 
+                { dir: 'r', cell: grid[index(bot.x + 1, bot.y)] },
+                { dir: 'b', cell: grid[index(bot.x, bot.y + 1)] }, 
+                { dir: 'l', cell: grid[index(bot.x - 1, bot.y)] }
+            ].filter(n => n.cell && !currentCell.walls[n.dir] && n.cell.exploredBy !== bot.id); // Can't go back to own last explored
+
+            if (neighbors.length > 0) {
+                const weightedNeighbors = [];
+                const currentDist = Math.hypot(bot.x - targetCell.x, bot.y - targetCell.y); // Heuristic
+                neighbors.forEach(n => {
+                    const nextDist = Math.hypot(n.cell.x - targetCell.x, n.cell.y - targetCell.y);
+                    const weight = (nextDist < currentDist) ? 4 : 1; // Prioritize closer to target
+                    for (let i = 0; i < weight; i++) { weightedNeighbors.push(n.cell); }
+                });
+                const next = weightedNeighbors[Math.floor(Math.random() * weightedNeighbors.length)];
+
+                bot.stack.push(currentCell); 
+                bot.x = next.x; 
+                bot.y = next.y; 
+                next.exploredBy = bot.id; // Mark cell as explored by this bot
+            } else if (bot.stack.length > 0) {
+                const backtrackCell = bot.stack.pop(); 
+                bot.x = backtrackCell.x; 
+                bot.y = backtrackCell.y;
+            } else {
+                // Bot is trapped at start or current position with no unexplored paths and no stack to backtrack.
+                bot.isActive = false;
+                bot.element.classList.add('stuck');
+            }
+            
+            // Update bot's visual position
+            bot.element.setAttribute('cx', bot.x * cellSize + cellSize / 2);
+            bot.element.setAttribute('cy', bot.y * cellSize + cellSize / 2);
+        });
+
+        if (winner) { 
+            handleWin(winner); 
+        } else if (allStuck && bots.length > 0) {
+            // All bots are stuck, but no winner. This can happen in rare edge cases with maze generation/bot logic.
+            // For now, let's just pick the first bot as a "default winner" or reset.
+            // A more robust solution might involve re-generating the maze or improving bot AI.
+            // For simplicity, let's just make the first active bot (if any) the winner for now, or just restart the demo.
+            clearInterval(raceInterval);
+            if (isInDemoMode) {
+                setTimeout(startDemoGame, 3000); // Start a new demo game
+            } else {
+                 // For a human player, this is an issue. Let's make it clear.
+                alert("All bots are stuck! No winner found this round. Try again!");
+                showStartScreen();
+            }
+        }
+    }
+    
+    function handleWin(winner) {
+        clearInterval(raceInterval); 
+        bots.forEach(b => b.isActive = false); 
+        playSound('win');
+        const raceTime = ((Date.now() - raceStartTime) / 1000).toFixed(2);
+        createParticleExplosion(targetCell.x * cellSize + cellSize / 2, targetCell.y * cellSize + cellSize / 2, winner.color);
+        
+        // Update demo scores
+        if (isInDemoMode) {
+            botScores[winner.name]++;
+            updateDemoScores();
+        }
+
+        document.getElementById('win-title').textContent = `${winner.name} Wins!`;
+        document.getElementById('winner-swatch').style.backgroundColor = winner.color;
+        document.getElementById('race-time').textContent = `Race Time: ${raceTime}s`;
+        const betResult = document.getElementById('bet-result');
+        if (userBetOnId !== null && !isInDemoMode) { // Only show bet result if user actually bet
+            betResult.textContent = (winner.id === userBetOnId) ? "You guessed correctly!" : `You bet on ${BOT_CONFIG.names[userBetOnId]}. Better luck next time!`;
+            betResult.style.color = (winner.id === userBetOnId) ? 'lime' : 'red';
+        } else {
+            betResult.textContent = ""; // Clear bet result for demo or if no bet
+        }
+        
+        setTimeout(() => {
+            // Draw all bots' solution paths (even non-winners)
+            bots.forEach(bot => { 
+                const path = findShortestPath(grid[index(bot.startX, bot.startY)], grid[index(targetCell.x, targetCell.y)]); 
+                drawSolutionPath(path, bot.color); 
+            });
+
+            if (isInDemoMode) {
+                // In demo mode, simply start a new game after a short pause
+                setTimeout(startDemoGame, 5000);
+            } else {
+                // For user-initiated game, show win message and "Race Again" button
+                winMessage.classList.add('visible');
+            }
+        }, 1500);
+    }
+    
+    function findShortestPath(startNode, endNode) { 
+        let queue = [startNode]; 
+        let parentMap = new Map([[startNode, null]]);
+        let visited = new Set([startNode]); // Use a Set for faster lookup
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (current === endNode) break; // Found the end node
+
+            const { x, y, walls } = current;
+            const neighbors = [
+                { wall: walls.t, node: grid[index(x, y - 1)] }, 
+                { wall: walls.r, node: grid[index(x + 1, y)] },
+                { wall: walls.b, node: grid[index(x, y + 1)] }, 
+                { wall: walls.l, node: grid[index(x - 1, y)] }
+            ];
+
+            for (const neighbor of neighbors) {
+                if (neighbor.node && !neighbor.wall && !visited.has(neighbor.node)) {
+                    visited.add(neighbor.node);
+                    parentMap.set(neighbor.node, current); 
+                    queue.push(neighbor.node);
+                }
+            }
+        }
+
+        // Reconstruct path
+        let path = []; 
+        let current = endNode;
+        while (current) { 
+            path.unshift(current); 
+            current = parentMap.get(current); 
+            if (current === startNode && path[0] !== startNode) path.unshift(current); // Ensure start is included if it was missed
+            if (current === undefined) break; // Path not found or start node reached
+        }
+        return path;
+    }
+
+    function drawSolutionPath(path, color) {
+        if (path.length < 2) return;
+        let d = `M ${path[0].x * cellSize + cellSize/2} ${path[0].y * cellSize + cellSize/2}`;
+        path.slice(1).forEach(cell => { d += ` L ${cell.x * cellSize + cellSize/2} ${cell.y * cellSize + cellSize/2}`; });
+        const pathEl = createSVGElement('path', { d: d, class: 'solution-path', stroke: color, 'stroke-width': cellSize * 0.3 });
+        const length = pathEl.getTotalLength();
+        pathEl.style.strokeDasharray = length;
+        pathEl.style.strokeDashoffset = length;
+        solPathsContainer.appendChild(pathEl);
+    }
+    function createParticleExplosion(x, y, color) { 
+        for (let i = 0; i < 40; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 5 + 2;
+            const particle = createSVGElement('circle', { cx: x, cy: y, r: Math.random() * 3 + 1, fill: color, opacity: 1 });
+            particleContainer.appendChild(particle);
+            let life = 0; const maxLife = 60;
+            function animate() {
+                if (life++ > maxLife) { particle.remove(); return; }
+                particle.setAttribute('cx', parseFloat(particle.getAttribute('cx')) + Math.cos(angle) * velocity);
+                particle.setAttribute('cy', parseFloat(particle.getAttribute('cy')) + Math.sin(angle) * velocity);
+                particle.style.opacity = 1 - life / maxLife;
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+    }
+
+    // --- NEW DYNAMIC TITLE LOGIC ---
+    function randomizeTitle() {
+        const titleEl = document.getElementById('title-text');
+        const fonts = ["'Bungee Spice', cursive", "'Press Start 2P', cursive", "'Monoton', cursive", "'Orbitron', sans-serif"];
+        const styles = ['title-style-1', 'title-style-2', 'title-style-3'];
+        
+        titleEl.style.fontFamily = fonts[Math.floor(Math.random() * fonts.length)];
+        titleEl.className = styles[Math.floor(Math.random() * styles.length)];
+    }
+
+    // --- NEW DEMO MODE FUNCTIONS ---
+    function resetDemoTimer() {
+        if (!startScreen.style.display || startScreen.style.display === 'flex') { // Only reset if start screen is visible
+            clearTimeout(demoTimer);
+            demoTimer = setTimeout(startDemoGame, 5000);
+        }
+        // If user interacts while in demo mode, exit demo
+        if (isInDemoMode && gameScreen.style.display === 'flex') {
+            showStartScreen(); // Return to start screen
+        }
+    }
+
+    function startDemoGame() {
+        isInDemoMode = true;
+        clearTimeout(demoTimer); // The demo is starting, no need for the inactivity timer anymore
+        const numBotsOptions = [2, 4, 8];
+        const randomNumBots = numBotsOptions[Math.floor(Math.random() * numBotsOptions.length)];
+        setupGame(randomNumBots, true); // Pass true to indicate demo mode
+    }
+
+    function startDemoMessageLoop() {
+        clearInterval(demoMessageInterval); // Clear any existing interval
+        displayRandomDemoMessage(); // Display initial message
+        demoMessageInterval = setInterval(displayRandomDemoMessage, 8000); // New message every 8 seconds
+    }
+
+    function displayRandomDemoMessage() {
+        if (!isInDemoMode) {
+            clearInterval(demoMessageInterval);
+            demoMessageOverlay.classList.remove('visible');
+            return;
+        }
+
+        const message = demoMessages[Math.floor(Math.random() * demoMessages.length)];
+        const style = demoMessageStyles[Math.floor(Math.random() * demoMessageStyles.length)];
+        
+        demoMessageOverlay.textContent = message;
+        demoMessageOverlay.className = ''; // Reset classes
+        demoMessageOverlay.classList.add(style.animClass);
+        
+        // Apply dynamic styles via CSS variables
+        document.documentElement.style.setProperty('--message-font', style.font);
+        document.documentElement.style.setProperty('--message-color', style.color);
+        document.documentElement.style.setProperty('--message-shadow', style.shadow);
+
+        demoMessageOverlay.classList.add('visible');
+
+        // Hide message after a duration, unless it's a sliding animation which handles its own opacity
+        if (!style.animClass.includes('slide')) {
+             setTimeout(() => {
+                demoMessageOverlay.classList.remove('visible');
+             }, 4000); // Message visible for 4 seconds
+        }
+    }
+
+    function updateDemoScores() {
+        scoreList.innerHTML = '';
+        const sortedScores = Object.entries(botScores).sort(([, a], [, b]) => b - a); // Sort descending by score
+
+        sortedScores.forEach(([name, score], index) => {
+            const botConfig = BOT_CONFIG.names.indexOf(name);
+            if (botConfig !== -1) {
+                const color = BOT_CONFIG.colors[botConfig];
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `<div class="swatch" style="background-color:${color};"></div> ${name}: ${score}`;
+                scoreList.appendChild(listItem);
+            }
+        });
+    }
+
+    function createSVGElement(tag, attrs) { const el = document.createElementNS("http://www.w3.org/2000/svg", tag); for (let k in attrs) el.setAttribute(k, attrs[k]); return el; }
+    function playSound(name) { sounds[name].currentTime = 0; sounds[name].play().catch(e => {}); }
+
+    // Initialize the dynamic title and demo timer on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        randomizeTitle();
+        // Initialize scores for all bots
+        BOT_CONFIG.names.forEach(name => botScores[name] = 0);
+        updateDemoScores(); // Initial display of scores (all zero)
+
+        // Event listeners for user interaction to reset demo timer
+        document.addEventListener('mousemove', resetDemoTimer);
+        document.addEventListener('keydown', resetDemoTimer);
+        document.addEventListener('click', (e) => {
+            // Only reset timer if click is not on a game start button (which would handle it itself)
+            if (!e.target.closest('.menu-buttons button')) {
+                resetDemoTimer();
+            }
+        });
+        resetDemoTimer(); // Start the demo inactivity timer
+    });
+</script>
+</body>
+</html>

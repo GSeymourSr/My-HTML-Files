@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whimsical Emoji Soccer Pong</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka+One&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Fredoka One', cursive;
+            color: white;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(255, 0, 255, 0.3);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 5px solid #4d089a;
+        }
+
+        canvas {
+            display: block;
+            background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.7);
+            transition: opacity 0.3s;
+        }
+
+        .menu-content {
+            text-align: center;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        h1 {
+            font-family: 'Bungee', cursive;
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #f06, #48ff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 50px;
+            background: #ff0055;
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 0, 85, 0.4);
+        }
+
+        .btn:hover {
+            transform: scale(1.1);
+            background: #ff2e7e;
+        }
+
+        .btn-ai { background: #00dbde; box-shadow: 0 4px 15px rgba(0, 219, 222, 0.4); }
+        .btn-ai:hover { background: #00fcff; }
+
+        .controls-hint {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        #score-board {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            font-size: 3rem;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="score-board">
+            <span id="score1">0</span>
+            <span id="score2">0</span>
+        </div>
+
+        <canvas id="pongCanvas" width="800" height="500"></canvas>
+
+        <div id="ui-overlay">
+            <div class="menu-content" id="menu-start">
+                <h1>SOCCER PONG</h1>
+                <button class="btn" onclick="startGame('pvp')">2 PLAYER (WASD vs Arrows)</button><br>
+                <button class="btn btn-ai" onclick="startGame('ai')">WATCH AI BATTLE</button>
+                <div class="controls-hint">
+                    P1: W/S Keys | P2: Up/Down Arrows<br>
+                    First to 5 goals wins! ⚽
+                </div>
+            </div>
+            <div class="menu-content hidden" id="menu-winner">
+                <h1 id="winner-text">PLAYER 1 WINS!</h1>
+                <button class="btn" onclick="resetToMenu()">PLAY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('pongCanvas');
+        const ctx = canvas.getContext('2d');
+        const score1El = document.getElementById('score1');
+        const score2El = document.getElementById('score2');
+        const overlay = document.getElementById('ui-overlay');
+        const startMenu = document.getElementById('menu-start');
+        const winMenu = document.getElementById('menu-winner');
+        const winnerText = document.getElementById('winner-text');
+
+        // Game Configuration
+        const WIN_SCORE = 5;
+        let gameRunning = false;
+        let gameMode = 'pvp'; // 'pvp' or 'ai'
+        let shakeTime = 0;
+
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 15,
+            speed: 5,
+            dx: 5,
+            dy: 5,
+            rotation: 0
+        };
+
+        const paddleWidth = 15;
+        const paddleHeight = 90;
+
+        const p1 = {
+            x: 20,
+            y: canvas.height / 2 - paddleHeight / 2,
+            score: 0,
+            color: '#ff0055'
+        };
+
+        const p2 = {
+            x: canvas.width - 20 - paddleWidth,
+            y: canvas.height / 2 - paddleHeight / 2,
+            score: 0,
+            color: '#00dbde'
+        };
+
+        // Input Handling
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function startGame(mode) {
+            gameMode = mode;
+            p1.score = 0;
+            p2.score = 0;
+            score1El.innerText = "0";
+            score2El.innerText = "0";
+            resetBall();
+            overlay.classList.add('hidden');
+            gameRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetToMenu() {
+            winMenu.classList.add('hidden');
+            startMenu.classList.remove('hidden');
+            overlay.classList.remove('hidden');
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.speed = 5;
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
+            ball.dy = (Math.random() * 2 - 1) * ball.speed;
+        }
+
+        function drawRoundedRect(x, y, w, h, r, color) {
+            ctx.fillStyle = color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, r);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function update() {
+            if (!gameRunning) return;
+
+            // Screen Shake Logic
+            if (shakeTime > 0) {
+                shakeTime--;
+            }
+
+            // Paddle Movement - Player 1
+            if (gameMode === 'pvp') {
+                if (keys['KeyW'] && p1.y > 0) p1.y -= 7;
+                if (keys['KeyS'] && p1.y < canvas.height - paddleHeight) p1.y += 7;
+            } else {
+                // AI for P1
+                let p1Target = ball.y - paddleHeight / 2;
+                p1.y += (p1Target - p1.y) * 0.1;
+            }
+
+            // Paddle Movement - Player 2
+            if (gameMode === 'pvp') {
+                if (keys['ArrowUp'] && p2.y > 0) p2.y -= 7;
+                if (keys['ArrowDown'] && p2.y < canvas.height - paddleHeight) p2.y += 7;
+            } else {
+                // AI for P2
+                let p2Target = ball.y - paddleHeight / 2;
+                p2.y += (p2Target - p2.y) * 0.1;
+            }
+
+            // Ball Movement
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+            ball.rotation += 0.1;
+
+            // Wall Collisions
+            if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+                ball.dy *= -1;
+            }
+
+            // Paddle Collisions
+            let paddle = (ball.x < canvas.width / 2) ? p1 : p2;
+
+            if (checkCollision(ball, paddle)) {
+                // Determine where it hit the paddle to change angle
+                let collidePoint = (ball.y - (paddle.y + paddleHeight / 2));
+                collidePoint = collidePoint / (paddleHeight / 2);
+                let angleRad = (Math.PI / 4) * collidePoint;
+                
+                let direction = (ball.x < canvas.width / 2) ? 1 : -1;
+                ball.dx = direction * ball.speed * Math.cos(angleRad);
+                ball.dy = ball.speed * Math.sin(angleRad);
+                
+                ball.speed += 0.3; // Speed up slightly each hit
+                shakeTime = 5;
+            }
+
+            // Scoring
+            if (ball.x - ball.radius < 0) {
+                p2.score++;
+                score2El.innerText = p2.score;
+                goalEffect();
+            } else if (ball.x + ball.radius > canvas.width) {
+                p1.score++;
+                score1El.innerText = p1.score;
+                goalEffect();
+            }
+
+            // Check Win Condition
+            if (p1.score >= WIN_SCORE || p2.score >= WIN_SCORE) {
+                gameRunning = false;
+                showWinner();
+            }
+        }
+
+        function checkCollision(b, p) {
+            return b.x + b.radius > p.x && b.x - b.radius < p.x + paddleWidth &&
+                   b.y + b.radius > p.y && b.y - b.radius < p.y + paddleHeight;
+        }
+
+        function goalEffect() {
+            shakeTime = 20;
+            resetBall();
+        }
+
+        function showWinner() {
+            overlay.classList.remove('hidden');
+            startMenu.classList.add('hidden');
+            winMenu.classList.remove('hidden');
+            winnerText.innerText = p1.score >= WIN_SCORE ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!";
+            winnerText.style.color = p1.score >= WIN_SCORE ? p1.color : p2.color;
+        }
+
+        function draw() {
+            // Apply Screen Shake
+            ctx.save();
+            if (shakeTime > 0) {
+                ctx.translate(Math.random() * 10 - 5, Math.random() * 10 - 5);
+            }
+
+            // Clear Background
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Mid-line
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Paddles
+            drawRoundedRect(p1.x, p1.y, paddleWidth, paddleHeight, 8, p1.color);
+            drawRoundedRect(p2.x, p2.y, paddleWidth, paddleHeight, 8, p2.color);
+
+            // Draw Ball (Emoji)
+            ctx.save();
+            ctx.translate(ball.x, ball.y);
+            ctx.rotate(ball.rotation);
+            ctx.font = "30px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("⚽", 0, 0);
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize view
+        draw();
+    </script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Domino Chain Reaction</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+        
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 20px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            border-radius: 5px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 12px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <button onclick="generatePattern('spiral')">Spiral</button>
+        <button onclick="generatePattern('wave')">S-Wave</button>
+        <button onclick="generatePattern('heart')">Heart</button>
+        <button onclick="resetScene()">Reset</button>
+    </div>
+
+    <div id="instructions">Click a domino to start the reaction • Drag to rotate • Scroll to zoom</div>
+
+    <!-- Load Three.js from CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Configuration ---
+        const DOMINO_COUNT = 400;
+        const DOMINO_DIM = { w: 0.15, h: 1, d: 0.5 };
+        const SPACING = 0.6;
+        
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let dominoes = [];
+        let isFalling = false;
+
+        class Domino {
+            constructor(x, z, rotation, color) {
+                this.originalPos = new THREE.Vector3(x, DOMINO_DIM.h / 2, z);
+                this.originalRot = rotation;
+                
+                const geometry = new THREE.BoxGeometry(DOMINO_DIM.w, DOMINO_DIM.h, DOMINO_DIM.d);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: color,
+                    emissive: color,
+                    emissiveIntensity: 0.2,
+                    shininess: 100
+                });
+
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.copy(this.originalPos);
+                this.mesh.rotation.y = rotation;
+                this.mesh.castShadow = true;
+                this.mesh.receiveShadow = true;
+
+                this.state = 'standing'; // standing, falling, down
+                this.angle = 0; // Current tip angle
+                this.velocity = 0;
+                
+                scene.add(this.mesh);
+            }
+
+            update(dt) {
+                if (this.state === 'falling') {
+                    this.velocity += 9.8 * dt * 2; // Simulated gravity acceleration
+                    this.angle += this.velocity * dt;
+
+                    if (this.angle >= Math.PI / 2.2) {
+                        this.angle = Math.PI / 2.2;
+                        this.state = 'down';
+                    }
+
+                    // Rotate around the bottom front edge
+                    this.mesh.position.set(
+                        this.originalPos.x + Math.sin(this.originalRot) * Math.sin(this.angle) * (DOMINO_DIM.h/2),
+                        (DOMINO_DIM.h / 2) * Math.cos(this.angle),
+                        this.originalPos.z + Math.cos(this.originalRot) * Math.sin(this.angle) * (DOMINO_DIM.h/2)
+                    );
+                    this.mesh.rotation.set(-this.angle, this.originalRot, 0, 'YXZ');
+
+                    // Trigger next dominoes
+                    this.checkCollisions();
+                }
+            }
+
+            checkCollisions() {
+                if (this.angle < 0.3) return; // Only trigger when sufficiently tilted
+
+                dominoes.forEach(other => {
+                    if (other.state === 'standing') {
+                        const dist = this.mesh.position.distanceTo(other.mesh.position);
+                        if (dist < SPACING * 1.2) {
+                            // Calculate direction to other domino
+                            const dx = other.mesh.position.x - this.mesh.position.x;
+                            const dz = other.mesh.position.z - this.mesh.position.z;
+                            const angleToOther = Math.atan2(dx, dz);
+                            
+                            // Only trigger if we are falling towards it
+                            other.state = 'falling';
+                        }
+                    }
+                });
+            }
+
+            reset() {
+                this.state = 'standing';
+                this.angle = 0;
+                this.velocity = 0;
+                this.mesh.position.copy(this.originalPos);
+                this.mesh.rotation.set(0, this.originalRot, 0);
+            }
+        }
+
+        init();
+        animate();
+
+        function init() {
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.Fog(0x050505, 10, 50);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(15, 15, 15);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+
+            const light = new THREE.DirectionalLight(0xffffff, 2);
+            light.position.set(10, 20, 10);
+            light.castShadow = true;
+            light.shadow.mapSize.width = 2048;
+            light.shadow.mapSize.height = 2048;
+            scene.add(light);
+
+            // Floor
+            const floorGeo = new THREE.PlaneGeometry(100, 100);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Grid helper for design feel
+            const grid = new THREE.GridHelper(100, 50, 0x333333, 0x222222);
+            scene.add(grid);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            generatePattern('spiral');
+
+            window.addEventListener('mousedown', onMouseDown);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function generatePattern(type) {
+            // Clear existing
+            dominoes.forEach(d => scene.remove(d.mesh));
+            dominoes = [];
+
+            for (let i = 0; i < DOMINO_COUNT; i++) {
+                let x, z, rot;
+                const color = new THREE.Color().setHSL(i / DOMINO_COUNT, 0.8, 0.5);
+
+                if (type === 'spiral') {
+                    const angle = 0.15 * i;
+                    const radius = 0.1 * i;
+                    x = radius * Math.cos(angle);
+                    z = radius * Math.sin(angle);
+                    rot = -angle + Math.PI/2;
+                } else if (type === 'wave') {
+                    x = (i * 0.4) - (DOMINO_COUNT * 0.2);
+                    z = Math.sin(i * 0.2) * 3;
+                    rot = -Math.cos(i * 0.2) * 0.8;
+                } else if (type === 'heart') {
+                    const t = (i / DOMINO_COUNT) * Math.PI * 2;
+                    // Parametric heart equation
+                    x = 10 * Math.pow(Math.sin(t), 3);
+                    z = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)) * 0.8;
+                    rot = -t + Math.PI;
+                }
+
+                dominoes.push(new Domino(x, z, rot, color));
+            }
+        }
+
+        function onMouseDown(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(dominoes.map(d => d.mesh));
+
+            if (intersects.length > 0) {
+                const clickedMesh = intersects[0].object;
+                const domino = dominoes.find(d => d.mesh === clickedMesh);
+                if (domino && domino.state === 'standing') {
+                    domino.state = 'falling';
+                }
+            }
+        }
+
+        function resetScene() {
+            dominoes.forEach(d => d.reset());
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = 0.016; // Fixed timestep for simplicity
+
+            dominoes.forEach(d => d.update(dt));
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Expose functions to global scope for buttons
+        window.generatePattern = generatePattern;
+        window.resetScene = resetScene;
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber-Maze: Manual vs AI</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050505;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s;
+        }
+
+        .menu-card {
+            background: #111;
+            padding: 40px;
+            border: 2px solid #00f2ff;
+            box-shadow: 0 0 20px #00f2ff;
+            text-align: center;
+            border-radius: 10px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00f2ff;
+            color: #00f2ff;
+        }
+
+        .timer-msg {
+            color: #ff00ff;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: transparent;
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        #btn-ai { border-color: #ff00ff; color: #ff00ff; }
+        #btn-ai:hover { background: #ff00ff; color: #fff; }
+
+        #btn-player { border-color: #00f2ff; color: #00f2ff; }
+        #btn-player:hover { background: #00f2ff; color: #fff; }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        svg {
+            display: block;
+        }
+
+        .wall {
+            stroke: #222244;
+            stroke-width: 2;
+            stroke-linecap: round;
+        }
+
+        .player-path {
+            stroke: #00f2ff;
+            stroke-width: 3;
+            fill: none;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 0 5px #00f2ff);
+        }
+
+        .ai-path {
+            stroke: #ff00ff;
+            stroke-width: 3;
+            fill: none;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 0 5px #ff00ff);
+        }
+
+        .head {
+            fill: #fff;
+        }
+
+        #status-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 1.2rem;
+            color: #aaa;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-overlay">
+        <div class="menu-card">
+            <h1>NEON MAZE</h1>
+            <p id="countdown-text" class="timer-msg">AI Demo starting in 5...</p>
+            <button id="btn-player" class="btn">Play Myself</button>
+            <button id="btn-ai" class="btn">Watch AI</button>
+        </div>
+    </div>
+
+    <div id="status-bar">
+        MODE: <span id="mode-text">IDLE</span> | 
+        TIME: <span id="timer-text">0s</span>
+    </div>
+
+    <div id="game-container">
+        <svg id="maze-svg"></svg>
+    </div>
+
+    <script>
+        const svg = document.getElementById('maze-svg');
+        const overlay = document.getElementById('ui-overlay');
+        const countdownText = document.getElementById('countdown-text');
+        const modeText = document.getElementById('mode-text');
+        const timerText = document.getElementById('timer-text');
+
+        let config = {
+            cellSize: 20,
+            cols: 0,
+            rows: 0,
+            mode: 'demo', // 'player' or 'ai'
+            speed: 40 // ms per move for AI
+        };
+
+        let grid = [];
+        let snakeStack = [];
+        let currentCell = null;
+        let startCell, endCell;
+        let timer = 0;
+        let timerInterval;
+        let gameActive = false;
+        let menuTimeout;
+        let countdownVal = 5;
+
+        // --- Initialization ---
+
+        function init() {
+            // Fullscreen Setup
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            config.cols = Math.floor(width / config.cellSize) - 2;
+            config.rows = Math.floor(height / config.cellSize) - 4;
+            
+            svg.setAttribute('width', config.cols * config.cellSize);
+            svg.setAttribute('height', config.rows * config.cellSize);
+
+            startCountdown();
+        }
+
+        function startCountdown() {
+            menuTimeout = setInterval(() => {
+                countdownVal--;
+                countdownText.innerText = `AI Demo starting in ${countdownVal}...`;
+                if (countdownVal <= 0) {
+                    startMode('ai');
+                }
+            }, 1000);
+        }
+
+        document.getElementById('btn-player').onclick = () => startMode('player');
+        document.getElementById('btn-ai').onclick = () => startMode('ai');
+
+        function startMode(mode) {
+            clearInterval(menuTimeout);
+            config.mode = mode;
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 500);
+            resetGame();
+        }
+
+        // --- Maze Generation ---
+
+        class Cell {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.walls = { t: true, r: true, b: true, l: true };
+                this.visited = false;
+                this.explored = false;
+            }
+        }
+
+        function getIndex(x, y) {
+            if (x < 0 || y < 0 || x >= config.cols || y >= config.rows) return -1;
+            return x + y * config.cols;
+        }
+
+        function generateGrid() {
+            grid = [];
+            for (let y = 0; y < config.rows; y++) {
+                for (let x = 0; x < config.cols; x++) {
+                    grid.push(new Cell(x, y));
+                }
+            }
+
+            const stack = [];
+            let current = grid[0];
+            current.visited = true;
+
+            while (true) {
+                const neighbors = [];
+                const {x, y} = current;
+                [[x, y-1, 't', 'b'], [x+1, y, 'r', 'l'], [x, y+1, 'b', 't'], [x-1, y, 'l', 'r']].forEach(([nx, ny, wallA, wallB]) => {
+                    let next = grid[getIndex(nx, ny)];
+                    if (next && !next.visited) neighbors.push({next, wallA, wallB});
+                });
+
+                if (neighbors.length > 0) {
+                    const {next, wallA, wallB} = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    current.walls[wallA] = false;
+                    next.walls[wallB] = false;
+                    stack.push(current);
+                    current = next;
+                    current.visited = true;
+                } else if (stack.length > 0) {
+                    current = stack.pop();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // --- Drawing ---
+
+        function drawMaze() {
+            svg.innerHTML = '';
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            const sz = config.cellSize;
+
+            grid.forEach(cell => {
+                const x = cell.x * sz;
+                const y = cell.y * sz;
+                if (cell.walls.t) g.appendChild(createLine(x, y, x + sz, y));
+                if (cell.walls.r) g.appendChild(createLine(x + sz, y, x + sz, y + sz));
+                if (cell.walls.b) g.appendChild(createLine(x, y + sz, x + sz, y + sz));
+                if (cell.walls.l) g.appendChild(createLine(x, y, x, y + sz));
+            });
+            svg.appendChild(g);
+
+            // Path element
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+            path.id = 'active-path';
+            path.setAttribute('class', config.mode === 'ai' ? 'ai-path' : 'player-path');
+            svg.appendChild(path);
+
+            // Head
+            const head = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            head.id = 'snake-head';
+            head.setAttribute('r', sz/4);
+            head.setAttribute('class', 'head');
+            svg.appendChild(head);
+
+            // Exit Marker
+            const exit = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            exit.setAttribute('x', (config.cols-1) * sz + 4);
+            exit.setAttribute('y', (config.rows-1) * sz + 4);
+            exit.setAttribute('width', sz - 8);
+            exit.setAttribute('height', sz - 8);
+            exit.setAttribute('fill', '#ff0000');
+            svg.appendChild(exit);
+        }
+
+        function createLine(x1, y1, x2, y2) {
+            const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+            l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+            l.setAttribute('class', 'wall');
+            return l;
+        }
+
+        // --- Gameplay Logic ---
+
+        function resetGame() {
+            generateGrid();
+            startCell = grid[0];
+            endCell = grid[grid.length - 1];
+            currentCell = startCell;
+            currentCell.explored = true;
+            snakeStack = [];
+            
+            drawMaze();
+            gameActive = true;
+            modeText.innerText = config.mode.toUpperCase();
+            
+            clearInterval(timerInterval);
+            timer = 0;
+            timerInterval = setInterval(() => {
+                timer++;
+                timerText.innerText = timer + 's';
+            }, 1000);
+
+            if (config.mode === 'ai') {
+                aiMove();
+            }
+        }
+
+        function updateGraphics() {
+            const sz = config.cellSize;
+            const head = document.getElementById('snake-head');
+            const pathEl = document.getElementById('active-path');
+
+            head.setAttribute('cx', currentCell.x * sz + sz/2);
+            head.setAttribute('cy', currentCell.y * sz + sz/2);
+
+            const points = [...snakeStack, currentCell].map(c => 
+                `${c.x * sz + sz/2},${c.y * sz + sz/2}`
+            ).join(" ");
+            pathEl.setAttribute('points', points);
+
+            if (currentCell === endCell) {
+                gameActive = false;
+                clearInterval(timerInterval);
+                if (config.mode === 'ai') {
+                    setTimeout(resetGame, 3000);
+                } else {
+                    alert(`MAZE COMPLETE! Time: ${timer}s`);
+                    location.reload();
+                }
+            }
+        }
+
+        // --- AI Solver (DFS) ---
+        function aiMove() {
+            if (!gameActive) return;
+
+            const neighbors = [];
+            const {x, y} = currentCell;
+            if (!currentCell.walls.t) neighbors.push(grid[getIndex(x, y - 1)]);
+            if (!currentCell.walls.r) neighbors.push(grid[getIndex(x + 1, y)]);
+            if (!currentCell.walls.b) neighbors.push(grid[getIndex(x, y + 1)]);
+            if (!currentCell.walls.l) neighbors.push(grid[getIndex(x - 1, y)]);
+
+            const unvisited = neighbors.filter(n => !n.explored);
+
+            if (unvisited.length > 0) {
+                const next = unvisited[Math.floor(Math.random() * unvisited.length)];
+                snakeStack.push(currentCell);
+                currentCell = next;
+                currentCell.explored = true;
+            } else if (snakeStack.length > 0) {
+                currentCell = snakeStack.pop();
+            }
+
+            updateGraphics();
+            setTimeout(aiMove, config.speed);
+        }
+
+        // --- Player Movement ---
+        window.addEventListener('keydown', (e) => {
+            if (config.mode !== 'player' || !gameActive) return;
+
+            let next = null;
+            if (e.key === 'ArrowUp' && !currentCell.walls.t) next = grid[getIndex(currentCell.x, currentCell.y - 1)];
+            if (e.key === 'ArrowRight' && !currentCell.walls.r) next = grid[getIndex(currentCell.x + 1, currentCell.y)];
+            if (e.key === 'ArrowDown' && !currentCell.walls.b) next = grid[getIndex(currentCell.x, currentCell.y + 1)];
+            if (e.key === 'ArrowLeft' && !currentCell.walls.l) next = grid[getIndex(currentCell.x - 1, currentCell.y)];
+
+            if (next) {
+                // If moving back to previous cell, backtrack stack
+                if (snakeStack.length > 0 && next === snakeStack[snakeStack.length - 1]) {
+                    snakeStack.pop();
+                    currentCell = next;
+                } else {
+                    snakeStack.push(currentCell);
+                    currentCell = next;
+                }
+                updateGraphics();
+            }
+        });
+
+        window.onresize = () => location.reload();
+
+        init();
+    </script>
+</body>
+</html>

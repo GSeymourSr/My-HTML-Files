@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Bouncy Hoops</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bungee+Spice&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0d0221;
+            font-family: 'Bungee Spice', cursive;
+            user-select: none;
+            touch-action: none;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .stat { text-align: center; }
+        .label { font-size: 14px; color: #00f2ff; display: block; }
+        .value { font-size: 40px; color: #fff; }
+
+        #msg {
+            position: absolute;
+            bottom: 10%;
+            width: 100%;
+            text-align: center;
+            color: #ff007f;
+            font-size: 1.2rem;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="stat"><span class="label">SCORE</span><span id="score" class="value">0</span></div>
+        <div class="stat"><span class="label">STREAK</span><span id="streak" class="value">0</span></div>
+    </div>
+
+    <div id="msg">DRAG ANYWHERE TO AIM & SHOOT!</div>
+
+    <canvas id="game"></canvas>
+
+<script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const streakEl = document.getElementById('streak');
+
+    let width, height;
+    let score = 0;
+    let streak = 0;
+    let particles = [];
+    
+    // Physics Config
+    const gravity = 0.5;
+    const dragStrength = 0.15;
+
+    const ball = {
+        originX: 150,
+        originY: 0,
+        x: 150,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        radius: 35,
+        isFlying: false,
+        isDragging: false,
+        dragX: 0,
+        dragY: 0,
+        angle: 0
+    };
+
+    const hoop = {
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 10,
+        timer: 0
+    };
+
+    function init() {
+        resize();
+        resetBall();
+        loop();
+    }
+
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        ball.originX = 150;
+        ball.originY = height - 150;
+        hoop.x = width - 200;
+        hoop.y = height * 0.4;
+        resetBall();
+    }
+
+    function resetBall() {
+        ball.x = ball.originX;
+        ball.y = ball.originY;
+        ball.vx = 0;
+        ball.vy = 0;
+        ball.isFlying = false;
+        ball.isDragging = false;
+    }
+
+    // Input Handling - Now works ANYWHERE on screen
+    window.addEventListener('mousedown', e => {
+        if (ball.isFlying) return;
+        ball.isDragging = true;
+        ball.dragX = e.clientX;
+        ball.dragY = e.clientY;
+    });
+
+    window.addEventListener('mousemove', e => {
+        if (!ball.isDragging) return;
+        ball.dragX = e.clientX;
+        ball.dragY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', e => {
+        if (!ball.isDragging) return;
+        
+        const dx = ball.originX - (e.clientX - (ball.dragX - ball.originX));
+        const dy = ball.originY - (e.clientY - (ball.dragY - ball.originY));
+        
+        // Launch strength
+        ball.vx = (ball.originX - e.clientX) * dragStrength;
+        ball.vy = (ball.originY - e.clientY) * dragStrength;
+        
+        ball.isDragging = false;
+        ball.isFlying = true;
+    });
+
+    function createExplosion(x, y, color) {
+        for(let i=0; i<15; i++) {
+            particles.push({
+                x, y,
+                vx: (Math.random()-0.5) * 10,
+                vy: (Math.random()-0.5) * 10,
+                life: 1,
+                c: color
+            });
+        }
+    }
+
+    function update() {
+        // Move Hoop
+        hoop.timer += 0.03;
+        hoop.x = (width - 250) + Math.sin(hoop.timer) * (100 + score * 5);
+
+        if (ball.isFlying) {
+            ball.vy += gravity;
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // Bounce off walls
+            if (ball.x < 0 || ball.x > width) ball.vx *= -0.7;
+
+            // Check Score (Simplified hit box for fun)
+            const dx = ball.x - hoop.x;
+            const dy = ball.y - hoop.y;
+            
+            if (ball.vy > 0 && Math.abs(dx) < hoop.w/2 && Math.abs(dy) < 20) {
+                score++;
+                streak++;
+                scoreEl.innerText = score;
+                streakEl.innerText = streak;
+                createExplosion(ball.x, ball.y, '#00f2ff');
+                resetBall();
+            }
+
+            // Reset if out of bounds or hits floor
+            if (ball.y > height + 100 || ball.x > width + 100) {
+                streak = 0;
+                streakEl.innerText = streak;
+                resetBall();
+            }
+        }
+
+        particles.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+            if(p.life <= 0) particles.splice(i, 1);
+        });
+    }
+
+    function draw() {
+        ctx.fillStyle = '#0d0221';
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw Hoop Backboard
+        ctx.fillStyle = '#333';
+        ctx.fillRect(hoop.x + hoop.w/2, hoop.y - 100, 10, 120);
+        
+        // Draw Hoop Rim
+        ctx.strokeStyle = '#ff007f';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(hoop.x - hoop.w/2, hoop.y);
+        ctx.lineTo(hoop.x + hoop.w/2, hoop.y);
+        ctx.stroke();
+
+        // Draw Aiming Guide Line
+        if (ball.isDragging) {
+            const powerX = (ball.originX - ball.dragX) * dragStrength;
+            const powerY = (ball.originY - ball.dragY) * dragStrength;
+            
+            ctx.beginPath();
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = 'rgba(0, 242, 255, 0.5)';
+            let tx = ball.originX, ty = ball.originY, tvx = powerX, tvy = powerY;
+            for(let i=0; i<20; i++) {
+                ctx.lineTo(tx, ty);
+                tvx *= 0.99; tvy += gravity;
+                tx += tvx; ty += tvy;
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Draw Ball
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        // Glow effect
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ff9100';
+        ctx.fillStyle = '#ff9100';
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.radius, 0, Math.PI*2);
+        ctx.fill();
+        // Details
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw Particles
+        particles.forEach(p => {
+            ctx.fillStyle = p.c;
+            ctx.globalAlpha = p.life;
+            ctx.fillRect(p.x, p.y, 5, 5);
+        });
+        ctx.globalAlpha = 1;
+    }
+
+    function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('resize', resize);
+    init();
+
+</script>
+</body>
+</html>

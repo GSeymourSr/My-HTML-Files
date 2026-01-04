@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>American Flag Fireworks</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+        #instruction {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: sans-serif;
+            pointer-events: none;
+            transition: opacity 1s;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+    
+    // Configuration
+    const FLAG_WIDTH = 600;
+    const FLAG_HEIGHT = 315; // Standard approx ratio
+    const PARTICLE_DENSITY = 6; // Lower = more particles (heavier on CPU)
+    
+    // State Management
+    let particles = [];
+    let rockets = [];
+    let phase = 'rocket'; // rocket, explode, wave, fade
+    let timer = 0;
+    let waveOffset = 0;
+    let globalAlpha = 1;
+
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // --- Helper Classes ---
+
+    class Rocket {
+        constructor(color, xOffset) {
+            this.x = width / 2 + xOffset;
+            this.y = height;
+            this.color = color;
+            this.speed = 12 + Math.random() * 2;
+            this.exploded = false;
+        }
+
+        update() {
+            this.y -= this.speed;
+            // Draw rocket tail
+            ctx.beginPath();
+            ctx.fillStyle = this.color;
+            ctx.arc(this.x, this.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw spark trail
+            for(let i=0; i<3; i++) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.random()})`;
+                ctx.fillRect(this.x + (Math.random()-0.5)*5, this.y + Math.random()*20, 2, 2);
+            }
+
+            if (this.y < height / 2 - 50) {
+                this.exploded = true;
+            }
+        }
+    }
+
+    class FlagParticle {
+        constructor(targetX, targetY, color) {
+            // Start position (center of explosion)
+            this.x = width / 2 + (Math.random() - 0.5) * 50;
+            this.y = height / 2 - 50 + (Math.random() - 0.5) * 50;
+            
+            // Where the particle belongs in the flag
+            this.targetX = targetX;
+            this.targetY = targetY;
+            
+            // Movement physics
+            this.vx = (Math.random() - 0.5) * 20;
+            this.vy = (Math.random() - 0.5) * 20;
+            this.color = color;
+            this.baseX = targetX; // Remember original target for waving math
+            this.baseY = targetY;
+        }
+
+        update(easing) {
+            // Easing determines if we are flying to position or holding position
+            if (easing) {
+                // Fly towards target position with Ease-Out logic
+                this.x += (this.targetX - this.x) * 0.08;
+                this.y += (this.targetY - this.y) * 0.08;
+            } else {
+                // Wave Logic
+                // Sine wave based on X position and Time
+                const waveHeight = 10;
+                const waveFreq = 0.02;
+                const yOffset = Math.sin(this.baseX * waveFreq + waveOffset) * waveHeight;
+                
+                this.x = this.baseX;
+                this.y = this.baseY + yOffset;
+            }
+
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, PARTICLE_DENSITY, PARTICLE_DENSITY);
+        }
+    }
+
+    // --- Logic ---
+
+    function generateFlagData() {
+        particles = [];
+        
+        // Center the flag
+        const startX = (width - FLAG_WIDTH) / 2;
+        const startY = (height - FLAG_HEIGHT) / 2 - 50; // Lift it up a bit
+
+        const stripeHeight = FLAG_HEIGHT / 13;
+        const cantonWidth = FLAG_WIDTH * 0.4;
+        const cantonHeight = stripeHeight * 7;
+
+        for (let y = 0; y < FLAG_HEIGHT; y += PARTICLE_DENSITY) {
+            for (let x = 0; x < FLAG_WIDTH; x += PARTICLE_DENSITY) {
+                
+                let color = '';
+                
+                // Logic to determine color based on US Flag rules
+                const isCanton = x < cantonWidth && y < cantonHeight;
+
+                if (isCanton) {
+                    // Blue Field
+                    color = '#002868'; // Old Glory Blue
+                    
+                    // Simple logic to create "Stars" (holes in the blue)
+                    // We simulate stars by checking grid positions
+                    // 9 rows of stars, alternating 6 and 5 columns
+                    // Note: This is a visual approximation for particle effects
+                    let starX = x % 30;
+                    let starY = y % 22;
+                    if (starX > 10 && starX < 18 && starY > 8 && starY < 16) {
+                         color = '#FFFFFF';
+                    }
+
+                } else {
+                    // Stripes
+                    // 13 stripes. Even index = Red, Odd = White
+                    const stripeIndex = Math.floor(y / stripeHeight);
+                    if (stripeIndex % 2 === 0) {
+                        color = '#BF0A30'; // Old Glory Red
+                    } else {
+                        color = '#FFFFFF'; // White
+                    }
+                }
+
+                // Add particle
+                particles.push(new FlagParticle(startX + x, startY + y, color));
+            }
+        }
+    }
+
+    function initRockets() {
+        rockets = [];
+        // Shoot 3 rockets: Red, White, Blue
+        rockets.push(new Rocket('#BF0A30', -50)); // Red left
+        rockets.push(new Rocket('#FFFFFF', 0));   // White center
+        rockets.push(new Rocket('#002868', 50));  // Blue right
+    }
+
+    function reset() {
+        phase = 'rocket';
+        timer = 0;
+        globalAlpha = 1;
+        initRockets();
+    }
+
+    // --- Main Loop ---
+
+    function animate() {
+        // Clear screen with slight fade trail for rockets, full clear for flag
+        if (phase === 'rocket') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+        } else {
+            ctx.clearRect(0, 0, width, height);
+        }
+
+        if (phase === 'rocket') {
+            let allExploded = true;
+            rockets.forEach(r => {
+                r.update();
+                if (!r.exploded) allExploded = false;
+            });
+
+            if (allExploded) {
+                phase = 'explode';
+                generateFlagData(); // Create the particles at the explosion point
+            }
+        } 
+        else if (phase === 'explode') {
+            // Particles fly from center to flag formation
+            particles.forEach(p => p.update(true)); // true = ease to position
+            
+            timer++;
+            if (timer > 100) { // After 100 frames, switch to waving
+                phase = 'wave';
+                timer = 0;
+            }
+        } 
+        else if (phase === 'wave') {
+            waveOffset += 0.1; // Move the wave
+            particles.forEach(p => p.update(false)); // false = wave in place
+            
+            timer++;
+            if (timer > 300) { // Wave for about 5 seconds (60fps * 5)
+                phase = 'fade';
+            }
+        }
+        else if (phase === 'fade') {
+            globalAlpha -= 0.01;
+            ctx.globalAlpha = globalAlpha;
+            
+            waveOffset += 0.1;
+            particles.forEach(p => p.update(false));
+            
+            if (globalAlpha <= 0) {
+                ctx.globalAlpha = 1;
+                reset();
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    // Start
+    initRockets();
+    animate();
+
+</script>
+</body>
+</html>

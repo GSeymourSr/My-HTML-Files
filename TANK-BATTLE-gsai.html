@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Greg Seymour AI Tank Battle</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@500;700&display=swap');
+
+        /* --- CORE LAYOUT --- */
+        * { box-sizing: border-box; touch-action: none; user-select: none; }
+        body {
+            margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
+            background: linear-gradient(270deg, #0b0c10, #1f2833, #0b0c10);
+            background-size: 400% 400%;
+            animation: bgShift 15s ease infinite;
+            font-family: 'Rajdhani', sans-serif;
+            color: white;
+        }
+        @keyframes bgShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+        /* --- GAME CONTAINER --- */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            flex: 1; /* Fills remaining space */
+            cursor: crosshair;
+            z-index: 1;
+        }
+
+        /* --- HUD --- */
+        #hud-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* Let clicks pass through to controls */
+            z-index: 10;
+        }
+
+        .score-board {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            font-family: 'Black Ops One', cursive;
+            font-size: 2rem;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        #turn-msg {
+            position: absolute;
+            top: 100px; left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Black Ops One', cursive;
+            font-size: 3rem;
+            text-shadow: 0 0 15px rgba(0,0,0,0.8);
+            transition: opacity 0.3s;
+            opacity: 0;
+        }
+
+        /* --- CONTROLS PANEL (Fixed Bottom) --- */
+        #controls-panel {
+            height: 160px;
+            background: rgba(10, 10, 20, 0.95);
+            border-top: 3px solid #45a29e;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            padding: 10px 20px;
+            z-index: 20;
+            transition: transform 0.3s ease;
+        }
+        
+        body.watch-mode #controls-panel {
+            transform: translateY(180px); /* Hide in watch mode */
+        }
+
+        .control-group {
+            width: 200px;
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #66fcf1;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        input[type=range] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 25px; width: 25px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #45a29e;
+            margin-top: -10px;
+            box-shadow: 0 0 10px #45a29e;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 5px;
+            background: #333;
+            border-radius: 2px;
+        }
+
+        #fire-btn {
+            width: 120px; height: 80px;
+            background: radial-gradient(circle, #ff3333 0%, #990000 100%);
+            border: 3px solid #ffaaaa;
+            border-radius: 15px;
+            color: white;
+            font-family: 'Black Ops One', cursive;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 0 20px #ff0000;
+            transition: transform 0.1s;
+        }
+        #fire-btn:active { transform: scale(0.95); }
+        #fire-btn:disabled { filter: grayscale(1); cursor: not-allowed; opacity: 0.5; }
+
+        .hint {
+            position: absolute;
+            bottom: 170px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
+
+        /* --- MENUS --- */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        h1 {
+            font-family: 'Black Ops One', cursive;
+            font-size: 4rem;
+            text-align: center;
+            background: linear-gradient(to right, #66fcf1, #ff0055);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+            line-height: 1.1;
+        }
+
+        .btn-menu {
+            width: 280px;
+            padding: 15px;
+            margin: 10px;
+            font-size: 1.4rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: bold;
+            color: #66fcf1;
+            background: transparent;
+            border: 2px solid #66fcf1;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+        .btn-menu:hover { background: #66fcf1; color: #000; box-shadow: 0 0 20px #66fcf1; }
+        
+        .btn-red { color: #ff0055; border-color: #ff0055; }
+        .btn-red:hover { background: #ff0055; color: #fff; box-shadow: 0 0 20px #ff0055; }
+
+    </style>
+</head>
+<body>
+
+    <!-- START MENU -->
+    <div id="start-screen" class="overlay">
+        <h1>GREG SEYMOUR<br>AI TANK BATTLE</h1>
+        <button class="btn-menu" onclick="startGame('pvp')">2 Players</button>
+        <button class="btn-menu" onclick="startGame('ai')">1 Player vs AI</button>
+        <button class="btn-menu btn-red" onclick="startGame('watch')">Watch AI vs AI</button>
+    </div>
+
+    <!-- GAME OVER MENU -->
+    <div id="end-screen" class="overlay" style="display: none;">
+        <h1 id="winner-txt">PLAYER 1 WINS</h1>
+        <button class="btn-menu" onclick="resetGame(true)">Rematch</button>
+        <button class="btn-menu btn-red" onclick="location.reload()">Main Menu</button>
+    </div>
+
+    <div id="game-container">
+        <!-- HUD -->
+        <div id="hud-layer">
+            <div class="score-board">
+                <div style="color: #66fcf1">P1: <span id="score1">0</span></div>
+                <div style="color: #ff0055">P2: <span id="score2">0</span></div>
+            </div>
+            <div id="turn-msg">PLAYER 1 TURN</div>
+            <div class="hint" id="move-hint">Use Arrow Keys to Move • W/S for Power • Up/Down for Angle</div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- CONTROLS -->
+        <div id="controls-panel">
+            <div class="control-group">
+                <label>Angle: <span id="disp-angle">45</span>°</label>
+                <input type="range" id="inp-angle" min="0" max="90" value="45">
+            </div>
+
+            <button id="fire-btn">FIRE!</button>
+
+            <div class="control-group">
+                <label>Power: <span id="disp-power">60</span>%</label>
+                <input type="range" id="inp-power" min="10" max="100" value="60">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME ENGINE SETUP ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        // --- DOM ELEMENTS ---
+        const inpAngle = document.getElementById('inp-angle');
+        const inpPower = document.getElementById('inp-power');
+        const dispAngle = document.getElementById('disp-angle');
+        const dispPower = document.getElementById('disp-power');
+        const fireBtn = document.getElementById('fire-btn');
+        const turnMsg = document.getElementById('turn-msg');
+        const score1El = document.getElementById('score1');
+        const score2El = document.getElementById('score2');
+
+        // --- CONSTANTS ---
+        const GRAVITY = 0.45;
+        const P1_COLOR = '#66fcf1'; // Cyan
+        const P2_COLOR = '#ff0055'; // Pink/Red
+        const WIND_MAX = 0.2;
+
+        // --- STATE ---
+        let gameMode = 'pvp'; // 'pvp', 'ai', 'watch'
+        let turn = 1; // 1 or 2
+        let locked = false; // Prevents input during animations
+        let p1Score = 0;
+        let p2Score = 0;
+        let shake = 0;
+
+        // --- OBJECTS ---
+        let terrain = [];
+        let scenery = [];
+        let particles = [];
+        let popups = []; // Damage numbers
+        let projectile = null;
+        
+        let tank1 = { x: 0, y: 0, hp: 100, angle: 45, power: 60, color: P1_COLOR };
+        let tank2 = { x: 0, y: 0, hp: 100, angle: 45, power: 60, color: P2_COLOR };
+        
+        // AI Memory (To simulate learning)
+        let aiParams = {
+            errorX: 0,     // How far we missed last time
+            confidence: 30 // Start with high inaccuracy, lower gets better
+        };
+
+        // Inputs
+        let keys = { Left: false, Right: false };
+
+        // --- INITIALIZATION ---
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            if(terrain.length === 0) generateMap(); // Only gen map if empty
+        }
+        window.addEventListener('resize', resize);
+
+        function startGame(mode) {
+            gameMode = mode;
+            p1Score = 0; p2Score = 0;
+            score1El.innerText = '0'; score2El.innerText = '0';
+            document.getElementById('start-screen').style.display = 'none';
+            
+            if(mode === 'watch') {
+                document.body.classList.add('watch-mode');
+                document.getElementById('move-hint').style.display = 'none';
+            } else {
+                document.body.classList.remove('watch-mode');
+            }
+
+            resize();
+            resetGame(true); // New Map
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame(newMap = true) {
+            document.getElementById('end-screen').style.display = 'none';
+            
+            // Reset Stats
+            tank1.hp = 100; tank1.angle = 45; tank1.power = 60;
+            tank2.hp = 100; tank2.angle = 45; tank2.power = 60;
+            
+            // Reset AI Brain slightly
+            aiParams.confidence = 25; 
+            
+            projectile = null;
+            particles = [];
+            popups = [];
+            turn = 1;
+            locked = false;
+
+            if(newMap) generateMap();
+            placeTanks();
+            updateTurnUI();
+        }
+
+        // --- MAP GENERATION (Procedural) ---
+        function generateMap() {
+            terrain = new Float32Array(width);
+            scenery = [];
+            
+            // Generate Heightmap (Perlin-ish)
+            let y = height * 0.65;
+            let dy = 0;
+            const roughness = 0.5; // Jagged mountains
+
+            for(let x=0; x<width; x++) {
+                // Change slope gradually
+                dy += (Math.random() - 0.5) * roughness;
+                // Pull towards center height to keep it on screen
+                dy += ((height * 0.7) - y) * 0.002;
+                // Speed clamp
+                if(dy > 3) dy = 3; if(dy < -3) dy = -3;
+                
+                y += dy;
+                terrain[x] = y;
+
+                // Add Scenery randomly
+                if(x % 60 === 0 && Math.random() > 0.7) {
+                    scenery.push({
+                        x: x, y: y,
+                        type: Math.random() > 0.5 ? 'tree' : 'rock',
+                        size: 0.5 + Math.random() * 0.5
+                    });
+                }
+            }
+        }
+
+        function placeTanks() {
+            // P1 on left 10-25%, P2 on right 75-90%
+            tank1.x = Math.floor(width * 0.15);
+            tank2.x = Math.floor(width * 0.85);
+            snapTank(tank1);
+            snapTank(tank2);
+        }
+
+        function snapTank(t) {
+            // Keep in bounds
+            if(t.x < 20) t.x = 20;
+            if(t.x > width-20) t.x = width-20;
+            
+            // Find ground height
+            t.y = terrain[Math.floor(t.x)];
+        }
+
+        // --- INPUTS & CONTROLS ---
+
+        // Bind Sliders
+        function updateInputs() {
+            const t = turn === 1 ? tank1 : tank2;
+            inpAngle.value = t.angle;
+            inpPower.value = t.power;
+            dispAngle.innerText = t.angle;
+            dispPower.innerText = t.power;
+        }
+
+        inpAngle.oninput = (e) => {
+            if(locked) return;
+            const t = turn === 1 ? tank1 : tank2;
+            t.angle = parseInt(e.target.value);
+            dispAngle.innerText = t.angle;
+        };
+        inpPower.oninput = (e) => {
+            if(locked) return;
+            const t = turn === 1 ? tank1 : tank2;
+            t.power = parseInt(e.target.value);
+            dispPower.innerText = t.power;
+        };
+
+        fireBtn.onclick = () => {
+            if(!locked) fire();
+        };
+
+        // Keyboard Controls
+        window.addEventListener('keydown', (e) => {
+            if(locked || gameMode === 'watch') return;
+            // Only Human turn
+            if(gameMode === 'ai' && turn === 2) return;
+
+            const t = turn === 1 ? tank1 : tank2;
+
+            if(e.code === 'ArrowLeft') keys.Left = true;
+            if(e.code === 'ArrowRight') keys.Right = true;
+            
+            // Aim adjustments
+            if(e.code === 'ArrowUp') { t.angle = Math.min(90, t.angle+1); updateInputs(); }
+            if(e.code === 'ArrowDown') { t.angle = Math.max(0, t.angle-1); updateInputs(); }
+            if(e.code === 'KeyW') { t.power = Math.min(100, t.power+1); updateInputs(); }
+            if(e.code === 'KeyS') { t.power = Math.max(10, t.power-1); updateInputs(); }
+            
+            if(e.code === 'Space') fire();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if(e.code === 'ArrowLeft') keys.Left = false;
+            if(e.code === 'ArrowRight') keys.Right = false;
+        });
+
+        // --- GAME LOGIC ---
+
+        function updateTurnUI() {
+            updateInputs();
+            
+            // Banner
+            turnMsg.innerText = turn === 1 ? "PLAYER 1" : "PLAYER 2";
+            turnMsg.style.color = turn === 1 ? P1_COLOR : P2_COLOR;
+            turnMsg.style.opacity = 1;
+            setTimeout(() => turnMsg.style.opacity = 0, 1500);
+
+            // Controls Lock Logic
+            let isAI = (gameMode === 'watch') || (gameMode === 'ai' && turn === 2);
+            
+            fireBtn.disabled = isAI;
+            inpAngle.disabled = isAI;
+            inpPower.disabled = isAI;
+
+            if(isAI) {
+                // AI Turn
+                locked = true; // Lock player out
+                setTimeout(runAI, 1000); // Think for 1 sec
+            } else {
+                locked = false;
+            }
+        }
+
+        function runAI() {
+            const shooter = turn === 1 ? tank1 : tank2;
+            const target = turn === 1 ? tank2 : tank1;
+
+            // PHYSICS BASED AI
+            // 1. Calculate distance
+            const dx = target.x - shooter.x;
+            const dist = Math.abs(dx);
+            
+            // 2. Pick a random angle (High arc or low drive)
+            // AI prefers High Arc (50-80) to go over mountains
+            const aiAngle = 45 + Math.random() * 30;
+            shooter.angle = Math.floor(aiAngle);
+
+            // 3. Calculate Perfect Velocity (v)
+            // Range Formula (Simplified): v = sqrt( (d * g) / sin(2*theta) )
+            // Note: This assumes flat ground. Height diff makes it complex.
+            // We use this as a "base guess" and apply the "Confidence" jitter.
+            
+            const rad = (aiAngle * 2) * (Math.PI / 180);
+            const baseV = Math.sqrt( (dist * GRAVITY) / Math.sin(rad) );
+            
+            // Convert Velocity to Power (Power 0-100 scales to Velocity ~0-35)
+            // Velocity = Power * 0.38 (approx from fire function)
+            let idealPower = baseV / 0.38;
+
+            // 4. Apply "Clumsiness" (Learning)
+            // As the game goes on, confidence error shrinks
+            const error = (Math.random() - 0.5) * aiParams.confidence;
+            shooter.power = Math.floor(idealPower + error);
+
+            // Clamp
+            shooter.power = Math.max(10, Math.min(100, shooter.power));
+
+            // Reduce error for next time (Learning)
+            aiParams.confidence *= 0.8; 
+
+            // Update UI to show what AI picked
+            updateInputs();
+            
+            // FIRE
+            setTimeout(fire, 500);
+        }
+
+        function fire() {
+            if(projectile) return; // Prevent double fire
+            locked = true;
+            
+            const t = turn === 1 ? tank1 : tank2;
+            
+            // Calc Vectors
+            // P1: Right is +x. Angle 0 is Right. 90 is Up (-y).
+            // P2: Left is -x. We mirror logic.
+            
+            let rad;
+            if(turn === 1) {
+                rad = -t.angle * (Math.PI / 180);
+            } else {
+                rad = -(180 - t.angle) * (Math.PI / 180);
+            }
+
+            const speed = t.power * 0.38;
+            
+            // Spawn at tip of barrel
+            const barrelLen = 30;
+            const sx = t.x + Math.cos(rad) * barrelLen;
+            const sy = t.y - 15 + Math.sin(rad) * barrelLen;
+
+            projectile = {
+                x: sx, y: sy,
+                vx: Math.cos(rad) * speed,
+                vy: Math.sin(rad) * speed,
+                active: true
+            };
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            if(shake > 0) shake *= 0.9;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            // 1. Move Tanks (Human only)
+            if(!locked && (gameMode === 'pvp' || (gameMode === 'ai' && turn === 1))) {
+                const t = turn === 1 ? tank1 : tank2;
+                const speed = 2;
+                if(keys.Left) t.x -= speed;
+                if(keys.Right) t.x += speed;
+                
+                // Bounds Check (Stay on own side)
+                if(turn === 1) t.x = Math.max(20, Math.min(width * 0.45, t.x));
+                else t.x = Math.max(width * 0.55, Math.min(width - 20, t.x));
+                
+                snapTank(t);
+            }
+
+            // 2. Projectile Physics
+            if(projectile && projectile.active) {
+                projectile.x += projectile.vx;
+                projectile.y += projectile.vy;
+                projectile.vy += GRAVITY;
+
+                // Create Smoke Trail
+                if(Math.random() > 0.2) {
+                    particles.push(createParticle(projectile.x, projectile.y, 'smoke'));
+                }
+
+                // Collisions
+                // A. Bounds
+                if(projectile.x < -100 || projectile.x > width + 100) {
+                    endTurn(); // Missed
+                }
+                // B. Terrain
+                else if(projectile.y >= terrain[Math.floor(projectile.x)]) {
+                    explode(projectile.x, projectile.y, 'ground');
+                }
+                // C. Tanks
+                else if(checkHit(projectile, tank1)) hitTank(tank1);
+                else if(checkHit(projectile, tank2)) hitTank(tank2);
+            }
+
+            // 3. Particles Update
+            for(let i=particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.life -= p.decay;
+                if(p.type === 'confetti' && p.y > height) p.active = false;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+            
+            // 4. Popups Update
+            for(let i=popups.length-1; i>=0; i--) {
+                popups[i].y -= 1;
+                popups[i].life -= 0.02;
+                if(popups[i].life <= 0) popups.splice(i, 1);
+            }
+        }
+
+        function checkHit(proj, tank) {
+            const dx = proj.x - tank.x;
+            const dy = proj.y - (tank.y - 15);
+            return (dx*dx + dy*dy) < 600; // 25px radius
+        }
+
+        function explode(x, y, type) {
+            shake = 10;
+            projectile.active = false; // Stop physics
+            
+            // Particles
+            const count = type === 'tank' ? 60 : 30;
+            for(let i=0; i<count; i++) {
+                particles.push(createParticle(x, y, type === 'tank' ? 'fire' : 'dirt'));
+            }
+
+            // DESTRUCTIBLE TERRAIN
+            if(x > 0 && x < width) {
+                const r = 30;
+                for(let i = Math.floor(x - r); i < x + r; i++) {
+                    if(i >= 0 && i < width) {
+                        // Crater math (Circle)
+                        const dist = Math.abs(i - x);
+                        const depth = Math.sqrt(r*r - dist*dist);
+                        terrain[i] += depth * 0.7; // Push ground down
+                    }
+                }
+                // Re-adjust tanks if ground moved
+                snapTank(tank1);
+                snapTank(tank2);
+            }
+
+            if(type !== 'tank') setTimeout(endTurn, 1000);
+        }
+
+        function hitTank(t) {
+            shake = 20;
+            projectile.active = false;
+            
+            const dmg = 35;
+            t.hp -= dmg;
+            explode(t.x, t.y-10, 'tank');
+            
+            // Add damage popup
+            popups.push({x: t.x, y: t.y - 40, text: `-${dmg}`, color: '#fff', life: 1.0});
+
+            if(t.hp <= 0) {
+                t.hp = 0;
+                setTimeout(() => handleWin(turn === 1 ? 1 : 2), 1500);
+            } else {
+                setTimeout(endTurn, 1000);
+            }
+        }
+
+        function endTurn() {
+            projectile = null;
+            turn = turn === 1 ? 2 : 1;
+            updateTurnUI();
+        }
+
+        function handleWin(winner) {
+            if(winner === 1) p1Score++; else p2Score++;
+            score1El.innerText = p1Score;
+            score2El.innerText = p2Score;
+            
+            document.getElementById('end-screen').style.display = 'flex';
+            const txt = document.getElementById('winner-txt');
+            txt.innerText = winner === 1 ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!";
+            txt.style.background = winner === 1 ? 
+                `linear-gradient(to right, ${P1_COLOR}, #fff)` : `linear-gradient(to right, ${P2_COLOR}, #fff)`;
+            txt.style.webkitBackgroundClip = "text";
+            txt.style.webkitTextFillColor = "transparent";
+
+            // Victory Confetti
+            for(let i=0; i<150; i++) particles.push(createParticle(width/2, height/2, 'confetti'));
+
+            // Auto-Restart for Watch Mode
+            if(gameMode === 'watch') {
+                setTimeout(() => {
+                    if(gameMode === 'watch') resetGame(true);
+                }, 3000);
+            }
+        }
+
+        // --- DRAWING ---
+
+        function draw() {
+            // Screen Shake
+            ctx.save();
+            if(shake > 0.5) {
+                const dx = (Math.random()-0.5)*shake;
+                const dy = (Math.random()-0.5)*shake;
+                ctx.translate(dx, dy);
+            }
+            ctx.clearRect(0, 0, width, height);
+
+            // Scenery
+            scenery.forEach(s => {
+                ctx.save();
+                ctx.translate(s.x, s.y);
+                ctx.scale(s.size, s.size);
+                if(s.type === 'tree') {
+                    ctx.fillStyle = '#0b1d14'; // Dark silhouette tree
+                    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,-40); ctx.lineTo(10,-40); ctx.fill();
+                    ctx.beginPath(); ctx.arc(0, -45, 15, 0, Math.PI*2); ctx.fill();
+                } else {
+                    ctx.fillStyle = '#1c1c22'; // Rock
+                    ctx.beginPath(); ctx.moveTo(-15,0); ctx.lineTo(-5,-15); ctx.lineTo(10,-10); ctx.lineTo(15,0); ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // Terrain
+            ctx.beginPath();
+            ctx.moveTo(0, height);
+            for(let x=0; x<width; x++) ctx.lineTo(x, terrain[x]);
+            ctx.lineTo(width, height);
+            ctx.fillStyle = '#111';
+            ctx.fill();
+            ctx.strokeStyle = '#66fcf1'; // Neon line
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#66fcf1';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Tanks
+            if(tank1.hp > 0) drawTank(tank1);
+            if(tank2.hp > 0) drawTank(tank2);
+
+            // Projectile
+            if(projectile && projectile.active) {
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, 5, 0, Math.PI*2);
+                ctx.fillStyle = '#fff';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#fff';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                if(p.type === 'smoke') {
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
+                } else {
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                }
+                ctx.globalAlpha = 1;
+            });
+
+            // Popups
+            ctx.font = "bold 24px 'Black Ops One'";
+            popups.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillText(p.text, p.x, p.y);
+                ctx.globalAlpha = 1;
+            });
+
+            ctx.restore();
+        }
+
+        function drawTank(t) {
+            const isP1 = (t === tank1);
+            ctx.save();
+            ctx.translate(t.x, t.y);
+            
+            // HP
+            ctx.fillStyle = '#333';
+            ctx.fillRect(-20, -45, 40, 6);
+            ctx.fillStyle = t.hp > 30 ? '#0f0' : '#f00';
+            ctx.fillRect(-20, -45, 40 * (t.hp/100), 6);
+
+            // Body
+            ctx.fillStyle = t.color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = t.color;
+            ctx.beginPath();
+            ctx.moveTo(-20, 0); ctx.lineTo(-15, -15); ctx.lineTo(15, -15); ctx.lineTo(20, 0);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Tracks
+            ctx.fillStyle = '#000';
+            ctx.fillRect(-22, -5, 44, 8);
+
+            // Turret
+            let ang = t.angle * (Math.PI/180);
+            if(isP1) ang = -ang; else ang = -(180 - t.angle) * (Math.PI/180);
+            
+            ctx.rotate(ang);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, -3, 30, 6);
+
+            ctx.restore();
+        }
+
+        function createParticle(x, y, type) {
+            const p = { x: x, y: y, type: type, life: 1.0, decay: 0.02 };
+            const speed = Math.random() * 3 + 1;
+            const angle = Math.random() * Math.PI * 2;
+            
+            p.vx = Math.cos(angle) * speed;
+            p.vy = Math.sin(angle) * speed;
+
+            if(type === 'smoke') {
+                p.vx *= 0.2; p.vy *= 0.2;
+                p.color = 'rgba(200,200,200,0.5)';
+                p.size = Math.random() * 5 + 3;
+            } 
+            else if(type === 'fire') {
+                p.color = `hsl(${Math.random()*60}, 100%, 50%)`;
+                p.size = Math.random() * 4 + 2;
+                p.vy -= 1; // Float up
+            }
+            else if(type === 'dirt') {
+                p.color = '#4a4a4a';
+                p.size = Math.random() * 3 + 1;
+                p.vy = Math.random() * -5; // Kick up
+            }
+            else if(type === 'confetti') {
+                const colors = ['#f00', '#0f0', '#00f', '#ff0', '#0ff', '#f0f'];
+                p.color = colors[Math.floor(Math.random()*colors.length)];
+                p.size = 5;
+                p.decay = 0.005;
+                p.vx = (Math.random()-0.5)*5;
+                p.vy = (Math.random()-0.5)*10;
+            }
+            return p;
+        }
+
+    </script>
+</body>
+</html>

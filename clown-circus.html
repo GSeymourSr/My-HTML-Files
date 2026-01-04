@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Infinite Bright Circus</title>
+    <style>
+        :root {
+            /* Dynamic Variables */
+            --suit-color: #7b68ee;
+            --ruffle-color: #ff69b4;
+            --hair-color: #ff8c00;
+            --hat-color: #00fa9a;
+            --plate-color: #ffffff; 
+        }
+
+        body { 
+            margin: 0; overflow: hidden; 
+            background-color: #000;
+            font-family: 'Segoe UI', sans-serif; 
+            height: 100vh; width: 100vw;
+        }
+
+        /* DYNAMIC STAGE */
+        #stage {
+            position: relative; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+            transition: background 0.5s ease;
+        }
+
+        /* Floor */
+        #floor {
+            position: absolute; bottom: 0; width: 100%; height: 20vh;
+            background: linear-gradient(to bottom, #ffd600, #ffab00);
+            border-top: 8px solid #fff;
+            z-index: 1;
+            transition: background 1s ease;
+        }
+
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; }
+
+        /* CURTAINS */
+        .curtain {
+            position: absolute; top: 0; width: 51%; height: 100%;
+            background: #d50000; z-index: 500;
+            transition: transform 1.5s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+            background-image: repeating-linear-gradient(90deg, #b71c1c 0px, #b71c1c 40px, #d50000 40px, #d50000 80px);
+            box-shadow: 0 0 50px rgba(0,0,0,0.3);
+        }
+        #curtain-l { left: 0; border-right: 6px solid #ffd700; transform: translateX(0); }
+        #curtain-r { right: 0; border-left: 6px solid #ffd700; transform: translateX(0); }
+        .curtains-open #curtain-l { transform: translateX(-100%); }
+        .curtains-open #curtain-r { transform: translateX(100%); }
+
+        /* ACTORS */
+        .actor {
+            position: absolute; width: 400px; height: 500px;
+            /* Bottom alignment to stand ON the floor */
+            bottom: 16vh; 
+            transition: transform 1.5s ease-in-out, bottom 1.5s ease;
+            will-change: transform; transform: translateX(-200vw); 
+            z-index: 10;
+        }
+
+        .actor.spotlight { z-index: 200; }
+
+        /* Positioning Helpers */
+        .pos-center { transform: translateX(0); }
+        .pos-left-off { transform: translateX(-150vw); }
+
+        /* SVG Styling */
+        svg { width: 100%; height: 100%; overflow: visible; }
+        .clown-suit { fill: var(--suit-color); }
+        .clown-ruffle { fill: var(--ruffle-color); }
+        .clown-hair { fill: var(--hair-color); }
+        .clown-hat { fill: var(--hat-color); }
+        
+        /* --- ANIMATIONS --- */
+
+        /* Juggler */
+        .juggler-ball { animation: juggle-arc 1.5s infinite linear; }
+        @keyframes juggle-arc {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-120px, -180px); }
+            50% { transform: translate(-240px, 0); }
+            75% { transform: translate(-120px, -20px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* Plate Spinner */
+        .plate { 
+            animation: plate-spin 0.4s infinite linear; 
+            transform-origin: center; 
+            fill: var(--plate-color); 
+            stroke: #ddd; stroke-width: 2; 
+        }
+        @keyframes plate-spin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+
+        /* Magician */
+        .magic-wand { transform-origin: 340px 340px; animation: wand-wave 2s infinite ease-in-out; }
+        .magic-rabbit { animation: rabbit-pop 3s infinite ease-in-out; }
+        @keyframes wand-wave { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-20deg); } }
+        @keyframes rabbit-pop { 0%, 10% { transform: translateY(50px); } 40%, 60% { transform: translateY(-40px); } 90%, 100% { transform: translateY(50px); } }
+
+        /* Unicyclist */
+        .uni-wheel { transform-origin: 200px 480px; animation: wheel-spin 1s infinite linear; }
+        @keyframes wheel-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .uni-arms { animation: balance 1s infinite ease-in-out alternate; transform-origin: 200px 360px; }
+        @keyframes balance { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+
+        /* Strongman */
+        .strongman-lift-group { animation: lift 2.5s infinite ease-in-out; }
+        @keyframes lift { 
+            0%, 100% { transform: translateY(40px); } 
+            50% { transform: translateY(-100px); } 
+        }
+        .sweat { animation: sweat-drop 1s infinite linear; opacity: 0; }
+        @keyframes sweat-drop { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(30px); } }
+
+        /* Balloon Artist */
+        .balloon-dog-group { 
+            animation: balloon-bounce 2s infinite ease-in-out; 
+            transform-box: fill-box;
+            transform-origin: center;
+        }
+        @keyframes balloon-bounce { 
+            0%, 100% { transform: rotate(-5deg); } 
+            50% { transform: rotate(5deg); } 
+        }
+
+        /* Fire Breather */
+        .fire-plume { animation: breathe-fire 2s infinite ease-out; transform-origin: 200px 300px; opacity: 0; }
+        @keyframes breathe-fire {
+            0% { transform: scale(0.1); opacity: 0; }
+            10% { opacity: 1; }
+            40% { transform: scale(1.5) translateY(-50px); opacity: 0.8; }
+            100% { transform: scale(2) translateY(-100px); opacity: 0; }
+        }
+
+        /* Accordionist */
+        .accordion-bellows { animation: squeeze 1s infinite ease-in-out alternate; transform-origin: center; }
+        @keyframes squeeze { from { transform: scaleX(1); } to { transform: scaleX(0.7); } }
+
+        /* General Bounce */
+        .clown-body-group { animation: bounce 1s infinite ease-in-out; transform-origin: bottom; }
+        @keyframes bounce { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.02); } }
+
+        #ui-layer {
+            position: absolute; top: 30px; width: 100%; text-align: center;
+            font-size: 32px; color: #fff; font-weight: 900; z-index: 300;
+            text-shadow: 3px 3px 0px #d50000, -1px -1px 0 #000;
+            letter-spacing: 2px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">THE SPECTACULAR INFINITE CIRCUS</div>
+
+<div id="stage">
+    <div id="floor"></div>
+    <div id="curtain-l" class="curtain"></div>
+    <div id="curtain-r" class="curtain"></div>
+    <canvas id="slinky-canvas"></canvas>
+
+    <!-- 1. JUGGLER -->
+    <div id="juggler" class="actor">
+        <svg viewBox="0 0 400 500">
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M140 360 Q200 340 260 360 L280 500 L120 500 Z" class="clown-suit" />
+                <circle cx="200" cy="400" r="10" fill="yellow" />
+                <circle cx="200" cy="440" r="10" fill="red" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="145" cy="250" r="25" class="clown-hair" /><circle cx="255" cy="250" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+            </g>
+            <path d="M140 380 Q100 380 80 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <path d="M260 380 Q300 380 320 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <g id="juggler-balls"></g>
+        </svg>
+    </div>
+
+    <!-- 2. SLINKY -->
+    <div id="slinky-clown" class="actor">
+        <svg viewBox="0 0 400 500">
+            <circle id="hand-left-marker" cx="80" cy="340" r="5" fill="none" />
+            <circle id="hand-right-marker" cx="320" cy="340" r="5" fill="none" />
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M140 360 Q200 340 260 360 L280 500 L120 500 Z" class="clown-suit" />
+                <circle cx="200" cy="400" r="10" fill="yellow" />
+                <circle cx="200" cy="440" r="10" fill="red" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="145" cy="250" r="25" class="clown-hair" /><circle cx="255" cy="250" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+            </g>
+            <path d="M140 380 Q100 380 80 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <path d="M260 380 Q300 380 320 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+        </svg>
+    </div>
+
+    <!-- 3. SPINNER -->
+    <div id="spinner" class="actor">
+        <svg viewBox="0 0 400 500">
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M140 360 Q200 340 260 360 L280 500 L120 500 Z" class="clown-suit" />
+                <circle cx="200" cy="400" r="10" fill="yellow" />
+                <circle cx="200" cy="440" r="10" fill="red" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="145" cy="250" r="25" class="clown-hair" /><circle cx="255" cy="250" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+            </g>
+            <path d="M140 380 Q100 380 80 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <path d="M260 380 Q300 380 320 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <line x1="80" y1="340" x2="80" y2="180" stroke="#654321" stroke-width="4" />
+            <ellipse class="plate" cx="80" cy="180" rx="60" ry="12" />
+            <line x1="320" y1="340" x2="320" y2="180" stroke="#654321" stroke-width="4" />
+            <ellipse class="plate" cx="320" cy="180" rx="60" ry="12" />
+        </svg>
+    </div>
+
+    <!-- 4. MAGICIAN -->
+    <div id="magician" class="actor">
+        <svg viewBox="0 0 400 500">
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M140 360 Q200 340 260 360 L280 500 L120 500 Z" class="clown-suit" />
+                <circle cx="200" cy="400" r="10" fill="yellow" />
+                <circle cx="200" cy="440" r="10" fill="red" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="145" cy="250" r="25" class="clown-hair" /><circle cx="255" cy="250" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+            </g>
+            <path d="M140 380 Q100 380 80 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <path d="M260 380 Q300 380 340 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <g class="magic-wand">
+                <line x1="340" y1="340" x2="360" y2="280" stroke="#333" stroke-width="6" stroke-linecap="round" />
+                <circle cx="360" cy="280" r="5" fill="white" />
+            </g>
+            <rect x="40" y="380" width="80" height="120" fill="#8d6e63" />
+            <rect x="30" y="380" width="100" height="10" fill="#5d4037" />
+            <g transform="translate(80, 380)">
+                <g class="magic-rabbit">
+                    <ellipse cx="0" cy="0" rx="15" ry="20" fill="white" />
+                    <ellipse cx="-8" cy="-15" rx="5" ry="15" fill="white" />
+                    <ellipse cx="8" cy="-15" rx="5" ry="15" fill="white" />
+                    <circle cx="-5" cy="-5" r="2" fill="black" />
+                    <circle cx="5" cy="-5" r="2" fill="black" />
+                </g>
+                <rect x="-25" y="-10" width="50" height="40" fill="#222" />
+                <rect x="-35" y="30" width="70" height="5" fill="#222" />
+            </g>
+        </svg>
+    </div>
+
+    <!-- 5. UNICYCLIST -->
+    <div id="unicyclist" class="actor">
+        <svg viewBox="0 0 400 500">
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M140 360 Q200 340 260 360 L260 450 L140 450 Z" class="clown-suit" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="145" cy="250" r="25" class="clown-hair" /><circle cx="255" cy="250" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+            </g>
+            <g class="uni-arms">
+                <path d="M140 380 Q50 350 20 300" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+                <path d="M260 380 Q350 350 380 300" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            </g>
+            <line x1="200" y1="450" x2="200" y2="480" stroke="#333" stroke-width="8" />
+            <g class="uni-wheel">
+                <circle cx="200" cy="480" r="40" fill="none" stroke="#333" stroke-width="5" />
+                <line x1="200" y1="440" x2="200" y2="520" stroke="#888" stroke-width="2" />
+                <line x1="160" y1="480" x2="240" y2="480" stroke="#888" stroke-width="2" />
+            </g>
+        </svg>
+    </div>
+
+    <!-- 6. STRONGMAN -->
+    <div id="strongman" class="actor">
+        <svg viewBox="0 0 400 500">
+            <!-- Arms behind body, starting higher up (380) so they don't look like poles -->
+            <g class="strongman-lift-group">
+                <path d="M130 380 L80 280" fill="none" class="clown-suit" stroke="currentColor" stroke-width="20" stroke-linecap="round" style="stroke:var(--suit-color)" />
+                <path d="M270 380 L320 280" fill="none" class="clown-suit" stroke="currentColor" stroke-width="20" stroke-linecap="round" style="stroke:var(--suit-color)" />
+                <line x1="20" y1="280" x2="380" y2="280" stroke="#333" stroke-width="10" stroke-linecap="round" />
+                <circle cx="40" cy="280" r="30" fill="#222" /><circle cx="50" cy="280" r="15" fill="#555" />
+                <circle cx="360" cy="280" r="30" fill="#222" /><circle cx="350" cy="280" r="15" fill="#555" />
+            </g>
+
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M130 360 Q200 340 270 360 L280 500 L120 500 Z" class="clown-suit" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="145" cy="250" r="25" class="clown-hair" /><circle cx="255" cy="250" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+                <circle class="sweat" cx="160" cy="260" r="3" fill="#00e5ff" />
+                <circle class="sweat" cx="240" cy="260" r="3" fill="#00e5ff" style="animation-delay:0.5s"/>
+            </g>
+        </svg>
+    </div>
+
+    <!-- 7. BALLOONIST -->
+    <div id="balloonist" class="actor">
+        <svg viewBox="0 0 400 500">
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M140 360 Q200 340 260 360 L280 500 L120 500 Z" class="clown-suit" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="145" cy="250" r="25" class="clown-hair" /><circle cx="255" cy="250" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+            </g>
+            <!-- Arms -->
+            <path d="M140 380 Q100 380 80 320" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <path d="M260 380 Q300 380 320 320" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            
+            <path d="M80 320 Q60 300 80 280" stroke="#00e5ff" stroke-width="5" fill="none" />
+            <path d="M80 320 Q100 300 90 270" stroke="#ffeb3b" stroke-width="5" fill="none" />
+            
+            <!-- Balloon Dog - Fixed to Hand (320, 320) and Scaled Up -->
+            <g transform="translate(320, 300) scale(3)">
+                <g class="balloon-dog-group">
+                    <ellipse cx="0" cy="0" rx="20" ry="8" fill="#ff4081" /> 
+                    <ellipse cx="-15" cy="-10" rx="8" ry="12" fill="#ff4081" /> 
+                    <ellipse cx="-15" cy="-25" rx="5" ry="10" fill="#ff4081" /> 
+                    <ellipse cx="15" cy="10" rx="5" ry="10" fill="#ff4081" /> 
+                    <ellipse cx="-10" cy="10" rx="5" ry="10" fill="#ff4081" /> 
+                    <ellipse cx="20" cy="-5" rx="3" ry="5" fill="#ff4081" />
+                </g>
+            </g>
+        </svg>
+    </div>
+
+    <!-- 8. FIRE BREATHER -->
+    <div id="firebreather" class="actor">
+        <svg viewBox="0 0 400 500">
+            <defs>
+                <linearGradient id="fireGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                    <stop offset="0%" style="stop-color:yellow;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:orange;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:red;stop-opacity:1" />
+                </linearGradient>
+            </defs>
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M140 360 Q200 340 260 360 L280 500 L120 500 Z" class="clown-suit" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+                <circle cx="200" cy="320" r="10" fill="black" />
+            </g>
+            <path d="M260 380 Q300 380 240 320" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <path d="M140 380 Q100 380 120 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <line x1="240" y1="320" x2="240" y2="250" stroke="#5d4037" stroke-width="6" />
+            <path d="M240 250 Q230 230 240 210 Q250 230 240 250" fill="orange" opacity="0.8" />
+            <path d="M200 320 Q150 200 200 100 Q250 200 200 320" fill="url(#fireGrad)" class="fire-plume" />
+        </svg>
+    </div>
+
+    <!-- 9. ACCORDIONIST (New) -->
+    <div id="accordionist" class="actor">
+        <svg viewBox="0 0 400 500">
+            <g class="clown-body-group">
+                <ellipse cx="200" cy="360" rx="70" ry="20" class="clown-ruffle" />
+                <path d="M140 360 Q200 340 260 360 L280 500 L120 500 Z" class="clown-suit" />
+                <circle cx="200" cy="280" r="60" fill="white" stroke="#ccc" stroke-width="2" />
+                <circle cx="140" cy="280" r="25" class="clown-hair" /><circle cx="260" cy="280" r="25" class="clown-hair" />
+                <circle cx="145" cy="250" r="25" class="clown-hair" /><circle cx="255" cy="250" r="25" class="clown-hair" />
+                <circle cx="180" cy="270" r="6" fill="black" /><circle cx="220" cy="270" r="6" fill="black" />
+                <circle cx="200" cy="295" r="15" fill="red" />
+                <path d="M150 240 L200 150 L250 240 Z" class="clown-hat" />
+            </g>
+            <!-- Arms holding Accordion -->
+            <path d="M140 380 Q100 380 120 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            <path d="M260 380 Q300 380 280 340" fill="none" class="clown-suit" stroke="currentColor" stroke-width="15" stroke-linecap="round" style="stroke:var(--suit-color)" />
+            
+            <!-- Accordion -->
+            <g transform="translate(200, 340)">
+                <!-- Left Block -->
+                <rect x="-80" y="-30" width="30" height="60" fill="#333" />
+                <rect x="-75" y="-25" width="20" height="50" fill="white" opacity="0.2" />
+                <!-- Right Block -->
+                <rect x="50" y="-30" width="30" height="60" fill="#333" />
+                <circle cx="65" cy="-10" r="3" fill="white" />
+                <circle cx="65" cy="10" r="3" fill="white" />
+                
+                <!-- Bellows -->
+                <g class="accordion-bellows">
+                    <path d="M-50 -25 L50 -25 L50 25 L-50 25 Z" fill="#d32f2f" stroke="#b71c1c" stroke-width="2" />
+                    <path d="M-40 -25 L-40 25 M-30 -25 L-30 25 M-20 -25 L-20 25 M-10 -25 L-10 25 M0 -25 L0 25 M10 -25 L10 25 M20 -25 L20 25 M30 -25 L30 25 M40 -25 L40 25" stroke="#b71c1c" stroke-width="1" />
+                </g>
+            </g>
+        </svg>
+    </div>
+</div>
+
+<script>
+    /** --- DIRECTOR & SHOW LOGIC --- **/
+    const actors = {
+        juggler: { el: document.getElementById('juggler'), name: "THE MAGNIFICENT JUGGLER" },
+        accordionist: { el: document.getElementById('accordionist'), name: "THE MUSICAL MIME" },
+        balloonist: { el: document.getElementById('balloonist'), name: "THE BALLOON ARTIST" },
+        strongman: { el: document.getElementById('strongman'), name: "THE MIGHTY HERCULES" },
+        firebreather: { el: document.getElementById('firebreather'), name: "THE DRAGON BREATH" },
+        slinky: { el: document.getElementById('slinky-clown'), name: "THE BENDY BROTHER" },
+        unicyclist: { el: document.getElementById('unicyclist'), name: "THE HIGH-ROLLING UNICYCLIST" },
+        magician: { el: document.getElementById('magician'), name: "THE MYSTICAL MAGICIAN" },
+        spinner: { el: document.getElementById('spinner'), name: "THE PLATE PERFECTIONIST" },
+    };
+    
+    const actLabel = document.getElementById('ui-layer');
+    const stage = document.getElementById('stage');
+    const floor = document.getElementById('floor');
+    let turnIndex = 0;
+
+    const randomColor = () => `hsl(${Math.floor(Math.random() * 360)}, 85%, 60%)`;
+
+    function changeStageBackground() {
+        const c1 = randomColor();
+        const c2 = randomColor();
+        const c3 = randomColor();
+        const patterns = [
+            `repeating-conic-gradient(${c1} 0% 5%, ${c2} 5% 10%)`,
+            `radial-gradient(circle, ${c1} 20%, ${c2} 21%) 0 0 / 100px 100px`,
+            `repeating-linear-gradient(0deg, ${c1} 0px, ${c1} 50px, ${c2} 50px, ${c2} 100px)`,
+            `conic-gradient(${c1} 90deg, ${c2} 90deg 180deg, ${c1} 180deg 270deg, ${c2} 270deg) 0 0 / 80px 80px`
+        ];
+        stage.style.background = patterns[Math.floor(Math.random() * patterns.length)];
+        stage.style.boxShadow = "inset 0 0 200px rgba(0,0,0,0.2)";
+        floor.style.background = `linear-gradient(to bottom, ${c3}, #333)`;
+    }
+
+    // Dynamic Ball Generator for Juggler (3 to 10 balls)
+    function setupJugglerBalls() {
+        const container = document.getElementById('juggler-balls');
+        container.innerHTML = ''; // Clear previous
+        const count = Math.floor(Math.random() * 8) + 3; // 3 to 10
+        
+        for(let i=0; i<count; i++) {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", "300");
+            circle.setAttribute("cy", "340");
+            circle.setAttribute("r", "15");
+            circle.setAttribute("fill", randomColor());
+            circle.setAttribute("class", "juggler-ball");
+            circle.style.animationDelay = `-${(1.5 / count) * i}s`;
+            container.appendChild(circle);
+        }
+    }
+
+    function randomizeActorColors(key) {
+        const el = actors[key].el;
+        el.style.setProperty('--suit-color', randomColor());
+        el.style.setProperty('--ruffle-color', randomColor());
+        el.style.setProperty('--hair-color', randomColor());
+        el.style.setProperty('--hat-color', randomColor());
+        el.style.setProperty('--plate-color', randomColor());
+        if(key === 'juggler') setupJugglerBalls();
+        if(key === 'slinky') randomizeSlinkyColors();
+    }
+
+    async function playShow() {
+        const sequence = ['juggler', 'accordionist', 'firebreather', 'balloonist', 'strongman', 'slinky', 'unicyclist', 'magician', 'spinner', 'FINALE'];
+        const mode = sequence[turnIndex % sequence.length];
+
+        // 1. Close Curtains
+        document.body.classList.remove('curtains-open');
+        await new Promise(r => setTimeout(r, 1500));
+
+        // 2. CHANGE SCENE (Background & Reset)
+        changeStageBackground();
+        Object.keys(actors).forEach(k => {
+            actors[k].el.className = 'actor pos-left-off';
+            actors[k].el.style.transform = ''; 
+            actors[k].el.classList.remove('spotlight');
+        });
+
+        // 3. Setup Next Act
+        if(mode === 'FINALE') {
+            actLabel.innerText = "GRAND FINALE CURTAIN CALL!";
+            Object.keys(actors).forEach(k => randomizeActorColors(k));
+            
+            await new Promise(r => setTimeout(r, 500));
+            document.body.classList.add('curtains-open');
+            
+            await runFinaleSpotlightSequence();
+            
+        } else {
+            actLabel.innerText = actors[mode].name;
+            randomizeActorColors(mode);
+            actors[mode].el.className = 'actor pos-center';
+            
+            await new Promise(r => setTimeout(r, 500));
+            document.body.classList.add('curtains-open');
+            
+            await new Promise(r => setTimeout(r, 5000));
+        }
+
+        turnIndex++;
+        playShow();
+    }
+
+    async function runFinaleSpotlightSequence() {
+        const actorKeys = Object.keys(actors);
+        const count = actorKeys.length;
+        const scaleSmall = 0.45;
+        const scaleBig = 1.0;
+        const gap = window.innerWidth / count;
+
+        // 1. Line them up initially
+        actorKeys.forEach((key, index) => {
+            const el = actors[key].el;
+            const xPos = (gap * index) + (gap / 2) - (window.innerWidth / 2);
+            el.style.transform = `translateX(${xPos}px) scale(${scaleSmall})`;
+            el.className = 'actor'; 
+            el.style.left = "calc(50% - 200px)"; 
+        });
+
+        await new Promise(r => setTimeout(r, 1500));
+
+        // 2. Loop through each actor
+        for (let i = 0; i < actorKeys.length; i++) {
+            const key = actorKeys[i];
+            const el = actors[key].el;
+            const originalX = (gap * i) + (gap / 2) - (window.innerWidth / 2);
+
+            // HIGHLIGHT: Move to center and grow
+            el.style.zIndex = 100;
+            el.style.transform = `translateX(0px) scale(${scaleBig})`;
+            
+            // Perform for 5 seconds
+            await new Promise(r => setTimeout(r, 5000));
+
+            // RETURN: Go back to line
+            el.style.transform = `translateX(${originalX}px) scale(${scaleSmall})`;
+            el.style.zIndex = 10;
+            
+            await new Promise(r => setTimeout(r, 500));
+        }
+    }
+
+    /** --- SLINKY PHYSICS --- **/
+    const canvas = document.getElementById('slinky-canvas');
+    const ctx = canvas.getContext('2d');
+    const leftMarker = document.getElementById('hand-left-marker');
+    const rightMarker = document.getElementById('hand-right-marker');
+    let slinkyTime = 0, slinkyDirection = 1, ringHues = [];
+
+    function randomizeSlinkyColors() {
+        const base = Math.random() * 360;
+        ringHues = Array.from({length: 60}, (_, i) => (base + (i * 3)) % 360);
+    }
+
+    function drawSlinky() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const rectL = leftMarker.getBoundingClientRect();
+        const rectR = rightMarker.getBoundingClientRect();
+
+        if (rectL.right < 0 || rectL.left > window.innerWidth) {
+            requestAnimationFrame(drawSlinky);
+            return;
+        }
+
+        slinkyTime += 0.025; 
+        if (slinkyTime >= 1) { slinkyTime = 0; slinkyDirection *= -1; }
+
+        const hands = {
+            left: { x: rectL.left + rectL.width/2, y: rectL.top + rectL.height/2 },
+            right: { x: rectR.left + rectR.width/2, y: rectR.top + rectR.height/2 }
+        };
+
+        const dx = hands.right.x - hands.left.x;
+        const dy = hands.right.y - hands.left.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const currentScale = Math.max(0.1, dist / 240);
+
+        let startX = slinkyDirection === 1 ? hands.left.x : hands.right.x;
+        let startY = slinkyDirection === 1 ? hands.left.y : hands.right.y;
+        let endX = slinkyDirection === 1 ? hands.right.x : hands.left.x;
+        let endY = slinkyDirection === 1 ? hands.right.y : hands.left.y;
+
+        for (let i = 0; i < 60; i++) {
+            let t = Math.max(0, Math.min(1, (slinkyTime * 1.45) - (i/60 * 0.45)));
+            const ease = (1 - Math.cos(t * Math.PI)) / 2;
+            const px = startX + (endX - startX) * ease;
+            const py = startY + (endY - startY) * ease - Math.sin(ease * Math.PI) * (180 * currentScale);
+            
+            const wireThickness = 4 * currentScale;
+            const currentH = ((60-i)*wireThickness) + (i*wireThickness - (60-i)*wireThickness) * ease;
+            const radiusX = 40 * currentScale;
+            const radiusY = 40 * currentScale * (0.3 + Math.sin(ease * Math.PI)*0.4);
+
+            ctx.strokeStyle = `hsla(${ringHues[slinkyDirection === 1 ? i : 59-i]}, 85%, 55%, 0.9)`;
+            ctx.lineWidth = wireThickness;
+            ctx.beginPath();
+            ctx.ellipse(px, py - currentH/2, radiusX, radiusY, ease * Math.PI, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        requestAnimationFrame(drawSlinky);
+    }
+
+    window.addEventListener('resize', () => { 
+        canvas.width = window.innerWidth; 
+        canvas.height = window.innerHeight; 
+    });
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    
+    randomizeSlinkyColors();
+    drawSlinky();
+    playShow();
+
+</script>
+</body>
+</html>

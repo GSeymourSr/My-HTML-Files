@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Teeter-Totter Extreme: High Jump Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #333;
+            font-family: 'Luckiest Guy', cursive;
+            touch-action: none;
+            cursor: none;
+            transition: background 1s ease;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .ui-layer {
+            position: absolute;
+            pointer-events: none;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #topHud {
+            margin-top: 20px;
+            display: flex;
+            width: 90%;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .hud-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .hud-text {
+            font-size: 30px;
+            color: #FFF;
+            text-shadow: 3px 3px 0px #000;
+        }
+
+        #livesDisplay {
+            color: #FF1744;
+            text-shadow: 2px 2px 0 #FFF;
+        }
+
+        #demoMsg {
+            position: absolute;
+            bottom: 20px;
+            font-size: 24px;
+            color: #FFF;
+            background: #D500F9;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 0 #AA00FF;
+            display: none;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        #levelMsg {
+            position: absolute;
+            top: 40%;
+            width: 100%;
+            text-align: center;
+            font-size: 90px;
+            color: #FFF;
+            text-shadow: 6px 6px 0 #000, 0 0 20px rgba(255,255,255,0.5);
+            pointer-events: none;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 30;
+        }
+        
+        #levelMsg.show {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 20;
+            cursor: default;
+        }
+
+        h1 {
+            font-size: 80px;
+            color: #FF4081;
+            margin: 0;
+            text-shadow: 4px 4px 0 #000;
+            transform: rotate(-3deg);
+            animation: floatTitle 3s ease-in-out infinite;
+        }
+
+        @keyframes floatTitle {
+            0%, 100% { transform: rotate(-3deg) translateY(0); }
+            50% { transform: rotate(3deg) translateY(-15px); }
+        }
+
+        p {
+            font-size: 24px;
+            color: #555;
+            max-width: 600px;
+            margin: 10px;
+        }
+
+        button {
+            background: #00E676;
+            border: 4px solid #fff;
+            color: #000;
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 30px;
+            padding: 15px 40px;
+            margin-top: 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #00C853, 0 15px 20px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        button:hover { transform: translateY(-5px); }
+        button:active { transform: translateY(5px); box-shadow: 0 5px 0 #00C853; }
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="ui-layer">
+            <div id="topHud">
+                <div class="hud-group">
+                    <div id="livesDisplay" class="hud-text">❤️❤️❤️❤️❤️</div>
+                </div>
+                <div class="hud-group">
+                    <div id="levelDisplay" class="hud-text">Level 1</div>
+                    <div id="scoreBoard" class="hud-text">Score: 0</div>
+                </div>
+            </div>
+            <div id="levelMsg">SWAP!</div>
+            <div id="demoMsg">AI PERFECT MODE</div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="screen">
+            <h1>Teeter<br>Totter!</h1>
+            <p style="font-size: 40px;">🦄 🔃 🐲</p>
+            <p>Move mouse to slide & tilt.</p>
+            <p style="color: #D32F2F;"><strong>5 LIVES!</strong><br>Land on the EMPTY side.</p>
+            <button id="btnStart">START GAME</button>
+            <p style="font-size: 16px; margin-top: 30px; color: #999;">Perfect AI Demo in 5 seconds...</p>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen hidden">
+            <h1>GAME OVER!</h1>
+            <p>Out of lives!</p>
+            <p id="finalScoreDisplay">Score: 0</p>
+            <button id="btnRestart">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('scoreBoard');
+        const levelEl = document.getElementById('levelDisplay');
+        const livesEl = document.getElementById('livesDisplay');
+        const levelMsg = document.getElementById('levelMsg');
+        const demoMsg = document.getElementById('demoMsg');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreDisplay = document.getElementById('finalScoreDisplay');
+        const btnStart = document.getElementById('btnStart');
+
+        // --- Config ---
+        const config = {
+            maxTilt: 45,
+            dragTilt: 1.5, 
+            ballSpeed: 10.5, // Increased base speed
+            gravity: 0.11, // Reduced gravity for higher jumps
+            boardWidth: 280,
+            emojis: [
+                '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐵',
+                '🐔','🐧','🐦','🐤','🦆','🦅','🦉','🐺','🐗','🐴','🦄','🐝','🐛','🦋',
+                '🐢','🐍','🦎','🐙','🐠','🐬','🦈','🐳','🐊','🐆','🦓','🦍','🐘','🦒',
+                '😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😎','😍','😘','🥰',
+                '🤔','🤨','😐','🙄','😏','😣','😮','😯','😫','😴','😜','😝','🤤','😒',
+                '😓','😔','😕','🙃','🤑','😲','☹️','🙁','😖','😤','😢','😭','😱','🥵',
+                '🥶','😳','🤪','😵','😡','😠','🤬','😷','🤒','🤕','🤢','🤮','🤠','🤡',
+                '🥳','🥴','🥺','🤥','🤫','🤭','🧐','🤓','😈','👿','👹','👺','💀','👻','👽','🤖','💩',
+                '🐲','🌵','🌲','🍄','🪐','🌙','🔥','⚡','🌈','🍔','🍕','🍩','🍦','🚀'
+            ]
+        };
+
+        // --- Game State ---
+        let state = {
+            width: 0,
+            height: 0,
+            active: false,
+            aiMode: false,
+            score: 0,
+            level: 1,
+            lives: 5,
+            shake: 0,
+            particles: [],
+            floatTexts: [],
+            clouds: [],
+            mouseX: window.innerWidth/2,
+            lastInputTime: Date.now()
+        };
+
+        let idleTimer = null;
+
+        // --- Input ---
+        function handleInput(x) {
+            state.mouseX = x;
+            state.lastInputTime = Date.now();
+            if (state.active && state.aiMode) resetGameToTitle();
+            resetIdleTimer();
+        }
+        window.addEventListener('mousemove', e => handleInput(e.clientX));
+        window.addEventListener('touchmove', e => { e.preventDefault(); handleInput(e.touches[0].clientX); }, {passive: false});
+        window.addEventListener('click', () => { if (state.active && state.aiMode) resetGameToTitle(); resetIdleTimer(); });
+
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            if (!state.active && startScreen.classList.contains('hidden') === false) {
+                idleTimer = setTimeout(startDemoMode, 5000); 
+            }
+        }
+
+        // --- Classes ---
+
+        class Cloud {
+            constructor() { this.reset(); this.x = Math.random() * window.innerWidth; }
+            reset() {
+                this.x = -150; this.y = Math.random() * (window.innerHeight / 2);
+                this.speed = Math.random() * 0.5 + 0.2; this.size = Math.random() * 0.5 + 0.5;
+            }
+            update() { this.x += this.speed; if(this.x > window.innerWidth + 150) this.reset(); }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y); ctx.scale(this.size, this.size);
+                ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+                ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.arc(25, -10, 35, 0, Math.PI * 2); ctx.arc(50, 0, 30, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color="#FFD700") { this.x = x; this.y = y; this.text = text; this.color = color; this.life = 1.0; this.vy = -2; }
+            update() { this.y += this.vy; this.life -= 0.02; }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.font = "bold 40px 'Luckiest Guy'"; ctx.fillStyle = this.color; ctx.strokeStyle = "black"; ctx.lineWidth = 4;
+                ctx.strokeText(this.text, this.x, this.y); ctx.fillText(this.text, this.x, this.y);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                const angle = Math.random() * Math.PI * 2; const speed = Math.random() * 5 + 2;
+                this.dx = Math.cos(angle) * speed; this.dy = Math.sin(angle) * speed;
+                this.life = 1.0; this.size = Math.random() * 10 + 5;
+                this.rotation = Math.random() * Math.PI;
+            }
+            update() { 
+                this.x += this.dx; this.y += this.dy; this.dy += 0.2; 
+                this.life -= 0.02; this.size *= 0.96; this.rotation += 0.1;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.rect(-this.size/2, -this.size/2, this.size, this.size); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Brick {
+            constructor(x, y, w, h, color, type) {
+                this.x = x; this.y = y; this.w = w; this.h = h; 
+                this.visible = true; this.color = color;
+                this.type = type; 
+                this.scale = 0; this.targetScale = 1; this.delay = Math.random() * 20;
+            }
+            update() {
+                if (this.delay > 0) { this.delay--; return; }
+                if (this.scale < this.targetScale) this.scale += 0.1;
+                if (this.scale > this.targetScale) this.scale = this.targetScale;
+            }
+            draw(ctx) {
+                if (!this.visible || this.scale <= 0) return;
+                const cx = this.x + this.w/2; const cy = this.y + this.h/2;
+                const size = Math.min(this.w, this.h) / 2;
+
+                ctx.save(); 
+                ctx.translate(cx, cy); 
+                ctx.scale(this.scale, this.scale);
+                ctx.fillStyle = this.color;
+                ctx.strokeStyle = "rgba(0,0,0,0.2)";
+                ctx.lineWidth = 3;
+
+                ctx.beginPath();
+                if (this.type === 'rect') ctx.roundRect(-this.w/2, -this.h/2, this.w, this.h, 8);
+                else if (this.type === 'circle') ctx.arc(0, 0, size, 0, Math.PI*2);
+                else if (this.type === 'triangle') { ctx.moveTo(0, -size); ctx.lineTo(size, size); ctx.lineTo(-size, size); ctx.closePath(); }
+                else if (this.type === 'diamond') { ctx.moveTo(0, -size); ctx.lineTo(size, 0); ctx.lineTo(0, size); ctx.lineTo(-size, 0); ctx.closePath(); }
+                else if (this.type === 'star') drawStar(ctx, 0, 0, 5, size, size/2);
+                else if (this.type === 'heart') drawHeart(ctx, 0, -5, size * 1.2);
+                else if (this.type === 'hex') drawPolygon(ctx, 0, 0, size, 6);
+                else if (this.type === 'cross') drawCross(ctx, 0, 0, size, 8);
+                else if (this.type === 'moon') drawMoon(ctx, 0, 0, size);
+                
+                ctx.fill();
+                ctx.stroke();
+
+                // Highlight
+                ctx.fillStyle = "rgba(255,255,255,0.25)";
+                ctx.beginPath(); 
+                if(this.type === 'rect') ctx.ellipse(-this.w/4, -this.h/4, 10, 5, 0, 0, Math.PI*2);
+                else ctx.arc(-size/3, -size/3, size/4, 0, Math.PI*2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // --- Shape Helpers ---
+        function drawPolygon(ctx, x, y, radius, sides) {
+            if (sides < 3) return;
+            const a = (Math.PI * 2)/sides;
+            ctx.moveTo(x + radius, y);
+            for (let i = 1; i < sides; i++) ctx.lineTo(x + radius * Math.cos(a*i), y + radius * Math.sin(a*i));
+            ctx.closePath();
+        }
+        function drawStar(ctx, cx, cy, spikes, outer, inner) {
+            let rot = Math.PI/2*3; let x = cx; let y = cy; let step = Math.PI/spikes;
+            ctx.moveTo(cx, cy - outer);
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot)*outer; y = cy + Math.sin(rot)*outer; ctx.lineTo(x, y); rot += step;
+                x = cx + Math.cos(rot)*inner; y = cy + Math.sin(rot)*inner; ctx.lineTo(x, y); rot += step;
+            }
+            ctx.lineTo(cx, cy - outer); ctx.closePath();
+        }
+        function drawHeart(ctx, x, y, size) {
+            let top = size * 0.3;
+            ctx.moveTo(x, y + top);
+            ctx.bezierCurveTo(x, y, x - size / 2, y, x - size / 2, y + top);
+            ctx.bezierCurveTo(x - size / 2, y + (size + top) / 2, x, y + (size + top) / 2, x, y + size);
+            ctx.bezierCurveTo(x, y + (size + top) / 2, x + size / 2, y + (size + top) / 2, x + size / 2, y + top);
+            ctx.bezierCurveTo(x + size / 2, y, x, y, x, y + top);
+            ctx.closePath();
+        }
+        function drawCross(ctx, x, y, size, w) {
+            ctx.rect(x-w, y-size, w*2, size*2);
+            ctx.rect(x-size, y-w, size*2, w*2);
+        }
+        function drawMoon(ctx, x, y, r) {
+            ctx.arc(x, y, r, 0, Math.PI*2);
+            ctx.arc(x+r*0.5, y, r, 0, Math.PI*2);
+        }
+
+        class Character {
+            constructor(emoji) { this.emoji = emoji; this.r = 20; this.reset(); }
+            reset() { this.x = 0; this.y = 0; this.dx = 0; this.dy = 0; this.isFlying = false; this.sittingOffset = 0; }
+            draw(ctx) {
+                // Main flying draw
+                ctx.font = "50px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=15; ctx.shadowOffsetY=10;
+                ctx.fillText(this.emoji, this.x, this.y);
+                ctx.shadowBlur=0; ctx.shadowOffsetY=0;
+            }
+        }
+
+        class TeeterBoard {
+            constructor() {
+                this.width = config.boardWidth; this.height = 20; this.angle = 0;
+                this.x = state.width / 2; this.y = state.height - 60; this.velocity = 0;
+            }
+            
+            update() {
+                let targetX = state.mouseX;
+                if (state.aiMode) {
+                    const ball = jumper;
+                    let catchOffset = (waiter && waiter.sittingOffset < 0) ? (this.width / 4) : -(this.width / 4);
+                    targetX = ball.x - catchOffset;
+                    this.x = targetX; 
+                    let weightTilt = (waiter) ? (waiter.sittingOffset / (this.width/2)) * 30 : 0;
+                    this.angle += (weightTilt - this.angle) * 0.2; 
+                } else {
+                    this.velocity = (targetX - this.x) * 0.2; this.x += this.velocity;
+                    let mouseRel = (state.mouseX - state.width/2) / (state.width/2); 
+                    let inputTilt = mouseRel * config.maxTilt;
+                    let weightTilt = (waiter) ? (waiter.sittingOffset / (this.width/2)) * 30 : 0;
+                    let inertiaTilt = (this.velocity * -1) * config.dragTilt;
+                    let targetAngle = (inputTilt * 0.8) + (weightTilt * 0.5) + (inertiaTilt * 0.5);
+                    targetAngle = Math.max(-config.maxTilt, Math.min(config.maxTilt, targetAngle));
+                    this.angle += (targetAngle - this.angle) * 0.15;
+                }
+                if (this.x < 0) this.x = 0; if (this.x > state.width) this.x = state.width;
+                this.y = state.height - 80;
+            }
+
+            draw(ctx, waiterChar) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Fulcrum
+                ctx.fillStyle = "#3E2723"; ctx.beginPath(); ctx.moveTo(-25, 70); ctx.lineTo(25, 70); ctx.lineTo(0, 0); ctx.fill();
+                ctx.fillStyle = "#FFD600"; ctx.beginPath(); ctx.arc(0, 10, 15, 0, Math.PI*2); ctx.fill(); 
+                ctx.strokeStyle = "#FFF"; ctx.lineWidth = 3; ctx.stroke();
+
+                ctx.rotate(this.angle * Math.PI / 180);
+
+                // Plank Gradient
+                let grad = ctx.createLinearGradient(0, -this.height, 0, this.height);
+                grad.addColorStop(0, "#8D6E63"); grad.addColorStop(1, "#4E342E");
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.roundRect(-this.width/2, -this.height/2, this.width, this.height, 10); ctx.fill();
+                ctx.strokeStyle = "#3E2723"; ctx.lineWidth = 2; ctx.stroke();
+                
+                // Stripes
+                ctx.fillStyle = "rgba(255,255,255,0.2)";
+                ctx.fillRect(-this.width/2 + 20, -this.height/2, 15, this.height);
+                ctx.fillRect(this.width/2 - 35, -this.height/2, 15, this.height);
+
+                if (waiterChar) {
+                    waiterChar.x = this.x + Math.cos(this.angle * Math.PI/180) * waiterChar.sittingOffset - Math.sin(this.angle * Math.PI/180) * (-30);
+                    waiterChar.y = this.y + Math.sin(this.angle * Math.PI/180) * waiterChar.sittingOffset + Math.cos(this.angle * Math.PI/180) * (-30);
+                    
+                    ctx.save();
+                    ctx.rotate((this.angle * -0.2) * Math.PI / 180); 
+                    
+                    // --- BRIGHT EMOJI FIX ---
+                    ctx.shadowColor = "transparent";
+                    ctx.shadowBlur = 0;
+                    ctx.filter = "none";
+                    ctx.globalCompositeOperation = "source-over"; 
+                    
+                    ctx.font = "50px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.shadowColor = "white"; ctx.shadowBlur = 10;
+                    ctx.fillStyle = "rgba(0,0,0,0)";
+                    ctx.fillText(waiterChar.emoji, waiterChar.sittingOffset, -38);
+                    
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = "black";
+                    ctx.fillText(waiterChar.emoji, waiterChar.sittingOffset, -38);
+                    
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+        }
+
+        // --- Objects ---
+        const board = new TeeterBoard();
+        const char1 = new Character(config.emojis[0]);
+        const char2 = new Character(config.emojis[1]);
+        let bricks = [];
+        let particles = [];
+        let jumper = char1;
+        let waiter = char2;
+
+        // --- Extended Palettes ---
+        const palettes = [
+            { bg: '#212121', colors: ['#FF355E', '#FD5B78', '#FF6037', '#FFFF66', '#66FF66', '#50BFE6', '#FF00CC'] }, // Neon
+            { bg: '#E0F7FA', colors: ['#FF6F61', '#6B5B95', '#88B04B', '#F7CAC9', '#92A8D1', '#955251'] }, // Pastel
+            { bg: '#FFF3E0', colors: ['#D32F2F', '#C2185B', '#7B1FA2', '#512DA8', '#303F9F', '#1976D2'] }, // Berry
+            { bg: '#ECEFF1', colors: ['#FFC300', '#FF5733', '#C70039', '#900C3F', '#581845'] }, // Sunset
+            { bg: '#F1F8E9', colors: ['#2E7D32', '#43A047', '#66BB6A', '#81C784', '#AED581', '#DCEDC8'] }, // Forest
+            { bg: '#1A237E', colors: ['#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5'] }, // Deep Space
+            { bg: '#263238', colors: ['#FFD700', '#FFA500', '#FF8C00', '#FF4500', '#FF0000'] }, // Fire
+            { bg: '#FFFFFF', colors: ['#000000', '#333333', '#666666', '#999999', '#CCCCCC'] }, // Mono
+            { bg: '#FFF8E1', colors: ['#F57F17', '#FBC02D', '#FDD835', '#FFEB3B', '#FFEE58'] }, // Gold
+            { bg: '#E8F5E9', colors: ['#00BFA5', '#1DE9B6', '#64FFDA', '#A7FFEB', '#009688'] }, // Mint
+            { bg: '#3E2723', colors: ['#D7CCC8', '#BCAAA4', '#A1887F', '#8D6E63', '#795548', '#6D4C41'] }, // Earth
+            { bg: '#311B92', colors: ['#EA80FC', '#E040FB', '#D500F9', '#AA00FF', '#7C4DFF'] }  // Cyber
+        ];
+
+        function generateLevel(lvl) {
+            bricks = [];
+            const pIndex = (lvl - 1) % palettes.length;
+            const theme = palettes[pIndex];
+            const colors = theme.colors;
+            
+            document.body.style.background = `linear-gradient(to bottom, ${theme.bg} 0%, ${theme.colors[0]} 120%)`;
+
+            const cols = 9; 
+            const rows = 5 + Math.floor(lvl/3);
+            const brickW = (state.width - 60) / cols;
+            const brickH = 40;
+            const startY = 80;
+
+            const pattern = (lvl - 1) % 10;
+
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    let x = 30 + c * brickW;
+                    let y = startY + r * (brickH + 5);
+                    let color = colors[(r+c) % colors.length];
+                    let shape = 'rect';
+                    let add = false;
+
+                    if (pattern === 0) { // Standard Mix
+                        add = true; 
+                        shape = ['rect','circle','hex'][r%3];
+                    }
+                    else if (pattern === 1) { // Checkers
+                        if((r+c)%2===0) { add=true; shape='rect'; }
+                    }
+                    else if (pattern === 2) { // Pyramid
+                        let mid = Math.floor(cols/2);
+                        if (c >= mid - r && c <= mid + r) { add=true; shape='triangle'; }
+                    }
+                    else if (pattern === 3) { // Hearts
+                        let mid = Math.floor(cols/2);
+                        if (c !== mid && (r+c)%2!==0) { add=true; shape='heart'; }
+                    }
+                    else if (pattern === 4) { // Stars & Moons
+                        if (Math.random()>0.3) { add=true; shape = (c%2===0)?'star':'moon'; }
+                        color = colors[Math.floor(Math.random()*colors.length)];
+                    }
+                    else if (pattern === 5) { // Walls
+                        if (c%2===0) { add=true; shape='hex'; }
+                    }
+                    else if (pattern === 6) { // Tunnel
+                        if (c < 2 || c > cols-3) { add=true; shape='rect'; }
+                        else if (r === 0 || r === rows-1) { add=true; shape='diamond'; }
+                    }
+                    else if (pattern === 7) { // Crosses
+                        if (c%3===0 || r%2===0) { add=true; shape='cross'; }
+                    }
+                    else if (pattern === 8) { // DNA
+                        let mid = Math.floor(cols/2);
+                        let offset = Math.floor(Math.sin(r)*2);
+                        if (c === mid + offset || c === mid - offset) { add=true; shape='circle'; }
+                    }
+                    else if (pattern === 9) { // Chaos
+                        if(Math.random()>0.4) {
+                            add=true; 
+                            shape = ['rect','circle','tri','star','moon','heart','hex','cross'][Math.floor(Math.random()*8)];
+                        }
+                    }
+
+                    if(add) bricks.push(new Brick(x, y, brickW-5, brickH, color, shape));
+                }
+            }
+        }
+
+        // --- Physics & Game Logic ---
+
+        function physics() {
+            if (!state.active) return;
+            jumper.x += jumper.dx; jumper.y += jumper.dy; jumper.dy += config.gravity;
+
+            if (jumper.x < jumper.r) { jumper.x = jumper.r; jumper.dx *= -1; }
+            if (jumper.x > state.width - jumper.r) { jumper.x = state.width - jumper.r; jumper.dx *= -1; }
+            if (jumper.y < jumper.r) { jumper.y = jumper.r; jumper.dy *= -1; }
+            if (jumper.y > state.height + 50) {
+                if(state.aiMode) resetGame(); else loseLife("Dropped!");
+                return;
+            }
+
+            // Board Collision
+            let dx = jumper.x - board.x; let dy = jumper.y - board.y;
+            let rad = (board.angle * -1) * (Math.PI / 180); 
+            let lx = dx * Math.cos(rad) - dy * Math.sin(rad);
+            let ly = dx * Math.sin(rad) + dy * Math.cos(rad);
+            
+            if (lx >= -board.width/2 - 20 && lx <= board.width/2 + 20 && ly >= -35 && ly <= 35 && jumper.dy > 0) {
+                let safe = true;
+                if (waiter) {
+                    if (waiter.sittingOffset < 0 && lx < 0) safe = false;
+                    if (waiter.sittingOffset > 0 && lx > 0) safe = false;
+                }
+                if (!safe) {
+                    if (!state.aiMode) loseLife("Ouch!");
+                } else {
+                    swapCharacters(lx);
+                }
+            }
+
+            // Bricks
+            let hit = false;
+            for (let b of bricks) {
+                if (!b.visible) continue;
+                if (jumper.x+jumper.r > b.x && jumper.x-jumper.r < b.x+b.w && jumper.y+jumper.r > b.y && jumper.y-jumper.r < b.y+b.h) {
+                    b.visible = false;
+                    let oL = (jumper.x+jumper.r)-b.x; let oR = (b.x+b.w)-(jumper.x-jumper.r);
+                    let min = Math.min(oL, oR, (jumper.y+jumper.r)-b.y, (b.y+b.h)-(jumper.y-jumper.r));
+                    if(min==oL || min==oR) jumper.dx*=-1; else jumper.dy*=-1;
+                    
+                    state.score+=10; scoreEl.textContent = "Score: " + state.score;
+                    createParticles(b.x+b.w/2, b.y+b.h/2, b.color);
+                    state.shake=5; hit=true;
+                    break; 
+                }
+            }
+            if (hit && bricks.every(b => !b.visible)) nextLevel();
+        }
+
+        function loseLife(msg) {
+            state.lives--; updateLivesUI(); state.shake = 20;
+            state.floatTexts.push(new FloatingText(state.width/2, state.height/2, msg, "#FF1744"));
+            if (state.lives <= 0) gameOver();
+            else { jumper.x = state.width/2; jumper.y = 100; jumper.dx = 0; jumper.dy = 2; }
+        }
+        function updateLivesUI() {
+            let s = ""; for(let i=0; i<state.lives; i++) s += "❤️";
+            for(let i=state.lives; i<5; i++) s += "💀";
+            livesEl.textContent = s;
+        }
+        function swapCharacters(lx) {
+            state.shake = 15;
+            let offset = waiter.sittingOffset;
+            let rad = board.angle * (Math.PI / 180);
+            let launchA = rad - Math.PI / 2 + (offset / (board.width/2)) * 0.4;
+            
+            // --- PHYSICS BOOST HERE ---
+            let launchSpeed = config.ballSpeed * 2.4; // Was 1.8. HUGE POWER.
+            
+            waiter.x = board.x + Math.cos(rad) * offset - Math.sin(rad) * (-30);
+            waiter.y = board.y + Math.sin(rad) * offset + Math.cos(rad) * (-30);
+            waiter.dx = Math.cos(launchA) * launchSpeed;
+            waiter.dy = Math.sin(launchA) * launchSpeed;
+            
+            // GUARANTEE HIGH JUMP
+            if (waiter.dy > -13) waiter.dy = -13; 
+            
+            waiter.isFlying = true; waiter.emoji = config.emojis[Math.floor(Math.random()*config.emojis.length)];
+            
+            // SIT AT EDGE
+            let edge = (config.boardWidth/2) - 30;
+            jumper.sittingOffset = (lx < 0) ? -edge : edge;
+            jumper.isFlying = false;
+
+            createParticles(jumper.x, jumper.y, "#FFF");
+            let t = jumper; jumper = waiter; waiter = t;
+        }
+        function createParticles(x, y, c) { for(let i=0; i<8; i++) state.particles.push(new Particle(x, y, c)); }
+
+        // --- Core ---
+        function draw() {
+            ctx.clearRect(0, 0, state.width, state.height);
+            if (state.shake > 0) { ctx.translate(Math.random()*state.shake-state.shake/2, Math.random()*state.shake-state.shake/2); state.shake*=0.9; if(state.shake<0.5) state.shake=0; }
+            
+            state.clouds.forEach(c => c.draw(ctx));
+            bricks.forEach(b => b.draw(ctx));
+            board.draw(ctx, waiter);
+            if (state.active || !gameOverScreen.classList.contains('hidden')) jumper.draw(ctx);
+            
+            state.particles.forEach((p,i) => { p.update(); p.draw(ctx); if(p.life<=0) state.particles.splice(i,1); });
+            state.floatTexts.forEach((t,i) => { t.update(); t.draw(ctx); if(t.life<=0) state.floatTexts.splice(i,1); });
+            
+            ctx.setTransform(1,0,0,1,0,0); // Reset Transform
+        }
+        function loop() {
+            if (state.active) {
+                state.clouds.forEach(c => c.update()); board.update(); bricks.forEach(b => b.update()); physics();
+            }
+            draw(); requestAnimationFrame(loop);
+        }
+
+        function resetGame() {
+            resize(); state.score = 0; state.level = 1; state.lives = 5; updateLivesUI();
+            scoreEl.textContent = "Score: 0"; levelEl.textContent = "Level 1";
+            state.clouds = []; for(let i=0; i<5; i++) state.clouds.push(new Cloud());
+            waiter = char1; jumper = char2;
+            waiter.emoji = config.emojis[Math.floor(Math.random()*config.emojis.length)];
+            jumper.emoji = config.emojis[Math.floor(Math.random()*config.emojis.length)];
+            waiter.isFlying = false; waiter.sittingOffset = -((config.boardWidth/2)-30);
+            jumper.isFlying = true; jumper.x = state.width/2; jumper.y = 200; jumper.dx = 2; jumper.dy = -5;
+            generateLevel(1);
+        }
+        function startDemoMode() { if (state.active) return; state.active=true; state.aiMode=true; resetGame(); startScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); demoMsg.style.display='block'; }
+        function resetGameToTitle() { state.active=false; state.aiMode=false; demoMsg.style.display='none'; startScreen.classList.remove('hidden'); gameOverScreen.classList.add('hidden'); resetIdleTimer(); }
+        function startGame() { resetGame(); state.active=true; state.aiMode=false; startScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden'); demoMsg.style.display='none'; }
+        function nextLevel() {
+            state.level++; levelEl.textContent = "Level " + state.level;
+            const titles = ["SHAPES!", "NEON!", "SPACE!", "CHAOS!", "CRAZY!"];
+            levelMsg.textContent = titles[(state.level-1)%titles.length] + " " + state.level;
+            levelMsg.classList.add('show'); setTimeout(() => levelMsg.classList.remove('show'), 2000);
+            jumper.x = state.width/2; jumper.y = 100; jumper.dy = 2; jumper.dx = 0;
+            generateLevel(state.level);
+        }
+        function gameOver() { state.active=false; finalScoreDisplay.textContent="Score: "+state.score; gameOverScreen.classList.remove('hidden'); }
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; state.width = canvas.width; state.height = canvas.height; }
+
+        window.addEventListener('resize', resize);
+        btnStart.addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
+        document.getElementById('btnRestart').addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
+        resize(); resetIdleTimer(); requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

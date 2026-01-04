@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enhanced Snake Maze Explorer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #eee;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #header {
+      text-align: center;
+      margin: 20px;
+    }
+    #stats {
+      display: flex;
+      gap: 20px;
+      font-size: 1.1em;
+      margin-bottom: 10px;
+    }
+    .stat-box {
+      background: #333;
+      padding: 5px 15px;
+      border-radius: 5px;
+      border: 1px solid #555;
+    }
+    svg {
+      border: 4px solid #444;
+      background-color: #050505;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    .wall {
+      stroke: #666;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    /* The current path the snake is on */
+    .snake-body {
+      stroke: #00d4ff;
+      stroke-width: 4;
+      fill: none;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      transition: all 0.1s;
+    }
+    /* Dead ends already explored */
+    .explored-path {
+      stroke: #333;
+      stroke-width: 2;
+      fill: none;
+    }
+    /* The snake head */
+    .snake-head {
+      fill: #fff;
+      filter: drop-shadow(0 0 5px #00d4ff);
+    }
+    .start-marker { fill: #2ecc71; }
+    .end-marker { fill: #e74c3c; }
+    
+    .controls-hint {
+      margin-top: 15px;
+      color: #888;
+      font-size: 0.9em;
+    }
+    kbd {
+      background: #444;
+      padding: 2px 4px;
+      border-radius: 3px;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="header">
+    <h1>Maze Explorer</h1>
+    <div id="stats">
+      <div class="stat-box" id="timer">Time: 0s</div>
+      <div class="stat-box" id="speed-display">Speed: Medium</div>
+    </div>
+  </div>
+
+  <svg id="maze" width="500" height="500"></svg>
+
+  <div class="controls-hint">
+    Use <kbd>↑</kbd> and <kbd>↓</kbd> to change exploration speed.
+  </div>
+
+  <script>
+    const svg = document.getElementById("maze");
+    const timerDiv = document.getElementById("timer");
+    const speedDiv = document.getElementById("speed-display");
+    
+    const width = 500;
+    const height = 500;
+    const cols = 25;
+    const rows = 25;
+    const cellSize = width / cols;
+    
+    let speed = 100; // Delay in ms
+    let timerInterval;
+    let grid = [];
+    let snakeStack = [];
+    let snakeCurrent = null;
+    let startCell, endCell;
+
+    // --- Input Handling ---
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp") speed = Math.max(10, speed - 20);
+      if (e.key === "ArrowDown") speed = Math.min(500, speed + 20);
+      updateSpeedDisplay();
+    });
+
+    function updateSpeedDisplay() {
+      let label = speed < 50 ? "Fast" : speed > 200 ? "Slow" : "Medium";
+      speedDiv.textContent = `Speed: ${label} (${speed}ms)`;
+    }
+
+    // --- Maze Logic ---
+    class Cell {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.walls = { top: true, right: true, bottom: true, left: true };
+        this.visited = false;  // For generation
+        this.explored = false; // For solving
+      }
+    }
+
+    function index(x, y) {
+      if (x < 0 || y < 0 || x >= cols || y >= rows) return -1;
+      return x + y * cols;
+    }
+
+    function removeWalls(a, b) {
+      const x = a.x - b.x;
+      const y = a.y - b.y;
+      if (x === 1) { a.walls.left = false; b.walls.right = false; }
+      else if (x === -1) { a.walls.right = false; b.walls.left = false; }
+      if (y === 1) { a.walls.top = false; b.walls.bottom = false; }
+      else if (y === -1) { a.walls.bottom = false; b.walls.top = false; }
+    }
+
+    function generateMaze() {
+      grid = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) grid.push(new Cell(x, y));
+      }
+
+      let stack = [];
+      let current = grid[0];
+      current.visited = true;
+
+      while (true) {
+        let neighbors = [];
+        let x = current.x, y = current.y;
+        [[x, y-1], [x+1, y], [x, y+1], [x-1, y]].forEach(([nx, ny]) => {
+          let cell = grid[index(nx, ny)];
+          if (cell && !cell.visited) neighbors.push(cell);
+        });
+
+        if (neighbors.length > 0) {
+          let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+          stack.push(current);
+          removeWalls(current, next);
+          current = next;
+          current.visited = true;
+        } else if (stack.length > 0) {
+          current = stack.pop();
+        } else {
+          break;
+        }
+      }
+    }
+
+    // --- Drawing ---
+    function drawBaseMaze() {
+      svg.innerHTML = '';
+      const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      grid.forEach(cell => {
+        const x = cell.x * cellSize;
+        const y = cell.y * cellSize;
+        if (cell.walls.top) group.appendChild(createLine(x, y, x + cellSize, y));
+        if (cell.walls.right) group.appendChild(createLine(x + cellSize, y, x + cellSize, y + cellSize));
+        if (cell.walls.bottom) group.appendChild(createLine(x, y + cellSize, x + cellSize, y + cellSize));
+        if (cell.walls.left) group.appendChild(createLine(x, y, x, y + cellSize));
+      });
+      svg.appendChild(group);
+      
+      // Layers for paths
+      const exploredLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      exploredLayer.id = "explored-layer";
+      svg.appendChild(exploredLayer);
+
+      const snakePath = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      snakePath.id = "snake-path";
+      snakePath.setAttribute("class", "snake-body");
+      svg.appendChild(snakePath);
+
+      const head = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      head.id = "snake-head";
+      head.setAttribute("r", cellSize/3);
+      head.setAttribute("class", "snake-head");
+      svg.appendChild(head);
+    }
+
+    function createLine(x1, y1, x2, y2) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+      line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+      line.setAttribute("class", "wall");
+      return line;
+    }
+
+    function drawMarkers() {
+      const createMarker = (cell, cls) => {
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        c.setAttribute("x", cell.x * cellSize + 4);
+        c.setAttribute("y", cell.y * cellSize + 4);
+        c.setAttribute("width", cellSize - 8);
+        c.setAttribute("height", cellSize - 8);
+        c.setAttribute("rx", 2);
+        c.setAttribute("class", cls);
+        svg.appendChild(c);
+      };
+      createMarker(startCell, "start-marker");
+      createMarker(endCell, "end-marker");
+    }
+
+    // --- Solving Logic ---
+    function moveSnake() {
+      const head = document.getElementById("snake-head");
+      const pathEl = document.getElementById("snake-path");
+      const exploredLayer = document.getElementById("explored-layer");
+
+      // Update head position
+      head.setAttribute("cx", snakeCurrent.x * cellSize + cellSize / 2);
+      head.setAttribute("cy", snakeCurrent.y * cellSize + cellSize / 2);
+
+      // Update body path string
+      let points = [...snakeStack, snakeCurrent].map(c => 
+        `${c.x * cellSize + cellSize/2},${c.y * cellSize + cellSize/2}`
+      ).join(" ");
+      pathEl.setAttribute("points", points);
+
+      if (snakeCurrent === endCell) {
+        clearInterval(timerInterval);
+        pathEl.style.stroke = "#2ecc71"; // Change color to green on win
+        setTimeout(initGame, 3000);
+        return;
+      }
+
+      // Check for valid moves
+      const neighbors = [];
+      const {x, y} = snakeCurrent;
+      if (!snakeCurrent.walls.top) neighbors.push(grid[index(x, y - 1)]);
+      if (!snakeCurrent.walls.right) neighbors.push(grid[index(x + 1, y)]);
+      if (!snakeCurrent.walls.bottom) neighbors.push(grid[index(x, y + 1)]);
+      if (!snakeCurrent.walls.left) neighbors.push(grid[index(x - 1, y)]);
+
+      const unvisited = neighbors.filter(n => !n.explored);
+
+      if (unvisited.length > 0) {
+        const next = unvisited[Math.floor(Math.random() * unvisited.length)];
+        snakeStack.push(snakeCurrent);
+        snakeCurrent = next;
+        snakeCurrent.explored = true;
+      } else if (snakeStack.length > 0) {
+        // Backtrack: add the path being removed to the "dead end" layer
+        const prev = snakeCurrent;
+        snakeCurrent = snakeStack.pop();
+        
+        const line = createLine(
+          prev.x * cellSize + cellSize/2, prev.y * cellSize + cellSize/2,
+          snakeCurrent.x * cellSize + cellSize/2, snakeCurrent.y * cellSize + cellSize/2
+        );
+        line.setAttribute("class", "explored-path");
+        exploredLayer.appendChild(line);
+      }
+
+      setTimeout(moveSnake, speed);
+    }
+
+    function initGame() {
+      generateMaze();
+      startCell = grid[0];
+      endCell = grid[grid.length - 1];
+      drawBaseMaze();
+      drawMarkers();
+      
+      snakeCurrent = startCell;
+      snakeCurrent.explored = true;
+      snakeStack = [];
+      
+      clearInterval(timerInterval);
+      let startTime = Date.now();
+      timerInterval = setInterval(() => {
+        timerDiv.textContent = `Time: ${Math.floor((Date.now() - startTime)/1000)}s`;
+      }, 1000);
+
+      updateSpeedDisplay();
+      moveSnake();
+    }
+
+    initGame();
+  </script>
+</body>
+</html>

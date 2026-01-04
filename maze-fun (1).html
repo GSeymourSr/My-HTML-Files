@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Maze: Human vs AI</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0c;
+            --wall-color: #3d3d5c;
+            --player-color: #f1c40f;
+            --ai-color: #00f2ff;
+            --accent-color: #ff0055;
+            --ui-font: 'Courier New', Courier, monospace;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: white;
+            font-family: var(--ui-font);
+        }
+
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 10, 12, 0.9);
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+
+        .menu-box {
+            text-align: center;
+            border: 2px solid var(--ai-color);
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.2);
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            color: var(--ai-color);
+            text-shadow: 0 0 10px var(--ai-color);
+        }
+
+        .btn {
+            background: transparent;
+            color: white;
+            border: 1px solid white;
+            padding: 15px 30px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-family: var(--ui-font);
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            background: white;
+            color: black;
+        }
+
+        #stats {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .stat-line {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px black;
+        }
+
+        svg {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .wall { stroke: var(--wall-color); stroke-width: 1.5; stroke-linecap: square; }
+        .path-ai { stroke: var(--ai-color); stroke-width: 3; fill: none; opacity: 0.6; }
+        .path-player { stroke: var(--player-color); stroke-width: 3; fill: none; }
+        .head-ai { fill: var(--ai-color); filter: drop-shadow(0 0 8px var(--ai-color)); }
+        .head-player { fill: var(--player-color); filter: drop-shadow(0 0 8px var(--player-color)); }
+        .goal { fill: var(--accent-color); filter: drop-shadow(0 0 10px var(--accent-color)); }
+    </style>
+</head>
+<body>
+
+<div id="ui-overlay">
+    <div class="menu-box">
+        <h1>MAZE OS v4.0</h1>
+        <p id="timer-msg">Automatic AI Demo in 5s...</p>
+        <button class="btn" onclick="startMode('player')">PLAY MYSELF</button>
+        <button class="btn" onclick="startMode('ai')">WATCH AI</button>
+        <br>
+        <button class="btn" style="font-size: 0.8rem; border-color: #555;" onclick="toggleFS()">Toggle Fullscreen</button>
+    </div>
+</div>
+
+<div id="stats">
+    <div class="stat-line" id="mode-display">MODE: IDLE</div>
+    <div class="stat-line" id="time-display">TIME: 0.0s</div>
+</div>
+
+<svg id="game-canvas"></svg>
+
+<script>
+    const svg = document.getElementById('game-canvas');
+    const ui = document.getElementById('ui-overlay');
+    const timerMsg = document.getElementById('timer-msg');
+    
+    let grid = [], cols, rows, cellSize;
+    let playerPos = { x: 0, y: 0 };
+    let aiStack = [], aiCurrent = null;
+    let gameState = 'MENU'; // MENU, PLAYER, AI
+    let startTime, gameInterval;
+    let menuTimeout;
+    let countdown = 5;
+
+    // --- Initialization ---
+
+    function setupGrid() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        // High density: cell size around 25px
+        cellSize = 25;
+        cols = Math.floor(w / cellSize);
+        rows = Math.floor(h / cellSize);
+        
+        svg.setAttribute('viewBox', `0 0 ${cols * cellSize} ${rows * cellSize}`);
+        
+        grid = [];
+        for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+                grid.push({
+                    x, y,
+                    walls: { t: true, r: true, b: true, l: true },
+                    visited: false,
+                    explored: false
+                });
+            }
+        }
+        generateMaze(grid[0]);
+    }
+
+    function index(x, y) {
+        if (x < 0 || y < 0 || x >= cols || y >= rows) return -1;
+        return x + y * cols;
+    }
+
+    function generateMaze(startCell) {
+        const stack = [];
+        let current = startCell;
+        current.visited = true;
+
+        while (true) {
+            const neighbors = [];
+            const {x, y} = current;
+            [[x, y-1, 't', 'b'], [x+1, y, 'r', 'l'], [x, y+1, 'b', 't'], [x-1, y, 'l', 'r']].forEach(([nx, ny, wallA, wallB]) => {
+                const next = grid[index(nx, ny)];
+                if (next && !next.visited) neighbors.push({next, wallA, wallB});
+            });
+
+            if (neighbors.length > 0) {
+                const {next, wallA, wallB} = neighbors[Math.floor(Math.random() * neighbors.length)];
+                current.walls[wallA] = false;
+                next.walls[wallB] = false;
+                stack.push(current);
+                current = next;
+                current.visited = true;
+            } else if (stack.length > 0) {
+                current = stack.pop();
+            } else {
+                break;
+            }
+        }
+    }
+
+    // --- Rendering ---
+
+    function draw() {
+        svg.innerHTML = '';
+        const wallGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        grid.forEach(c => {
+            const x = c.x * cellSize, y = c.y * cellSize;
+            if (c.walls.t) wallGroup.appendChild(line(x, y, x+cellSize, y));
+            if (c.walls.r) wallGroup.appendChild(line(x+cellSize, y, x+cellSize, y+cellSize));
+            if (c.walls.b) wallGroup.appendChild(line(x, y+cellSize, x+cellSize, y+cellSize));
+            if (c.walls.l) wallGroup.appendChild(line(x, y, x, y+cellSize));
+        });
+        svg.appendChild(wallGroup);
+
+        // Goal
+        const goal = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        goal.setAttribute('x', (cols-1) * cellSize + 5);
+        goal.setAttribute('y', (rows-1) * cellSize + 5);
+        goal.setAttribute('width', cellSize - 10);
+        goal.setAttribute('height', cellSize - 10);
+        goal.setAttribute('class', 'goal');
+        svg.appendChild(goal);
+
+        // Path
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+        path.id = 'snake-path';
+        path.setAttribute('class', gameState === 'AI' ? 'path-ai' : 'path-player');
+        svg.appendChild(path);
+
+        // Head
+        const head = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        head.id = 'snake-head';
+        head.setAttribute('r', cellSize / 3);
+        head.setAttribute('class', gameState === 'AI' ? 'head-ai' : 'head-player');
+        svg.appendChild(head);
+    }
+
+    function line(x1, y1, x2, y2) {
+        const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        l.setAttribute('x1', x1); l.setAttribute('y1', y1);
+        l.setAttribute('x2', x2); l.setAttribute('y2', y2);
+        l.setAttribute('class', 'wall');
+        return l;
+    }
+
+    // --- Game Logic ---
+
+    function startMode(mode) {
+        clearTimeout(menuTimeout);
+        ui.style.opacity = '0';
+        setTimeout(() => ui.style.display = 'none', 500);
+        
+        gameState = mode.toUpperCase();
+        document.getElementById('mode-display').textContent = `MODE: ${gameState}`;
+        
+        setupGrid();
+        draw();
+        
+        playerPos = { x: 0, y: 0 };
+        aiStack = [];
+        aiCurrent = grid[0];
+        aiCurrent.explored = true;
+        startTime = Date.now();
+
+        if (gameInterval) clearInterval(gameInterval);
+        
+        if (mode === 'ai') {
+            gameInterval = setInterval(updateAI, 30);
+        } else {
+            updatePlayerVisuals();
+            gameInterval = setInterval(updateTimer, 100);
+        }
+    }
+
+    function updateTimer() {
+        const elapsed = (Date.now() - startTime) / 1000;
+        document.getElementById('time-display').textContent = `TIME: ${elapsed.toFixed(1)}s`;
+    }
+
+    function updateAI() {
+        updateTimer();
+        const head = document.getElementById('snake-head');
+        const path = document.getElementById('snake-path');
+
+        head.setAttribute('cx', aiCurrent.x * cellSize + cellSize/2);
+        head.setAttribute('cy', aiCurrent.y * cellSize + cellSize/2);
+
+        let points = [...aiStack, aiCurrent].map(c => 
+            `${c.x * cellSize + cellSize/2},${c.y * cellSize + cellSize/2}`
+        ).join(" ");
+        path.setAttribute('points', points);
+
+        if (aiCurrent.x === cols - 1 && aiCurrent.y === rows - 1) {
+            clearInterval(gameInterval);
+            setTimeout(() => startMode('ai'), 2000); // Continuous loop
+            return;
+        }
+
+        const neighbors = [];
+        const {x, y} = aiCurrent;
+        if (!aiCurrent.walls.t) neighbors.push(grid[index(x, y - 1)]);
+        if (!aiCurrent.walls.r) neighbors.push(grid[index(x + 1, y)]);
+        if (!aiCurrent.walls.b) neighbors.push(grid[index(x, y + 1)]);
+        if (!aiCurrent.walls.l) neighbors.push(grid[index(x - 1, y)]);
+
+        const unvisited = neighbors.filter(n => !n.explored);
+
+        if (unvisited.length > 0) {
+            const next = unvisited[Math.floor(Math.random() * unvisited.length)];
+            aiStack.push(aiCurrent);
+            aiCurrent = next;
+            aiCurrent.explored = true;
+        } else if (aiStack.length > 0) {
+            aiCurrent = aiStack.pop();
+        }
+    }
+
+    function updatePlayerVisuals() {
+        const head = document.getElementById('snake-head');
+        head.setAttribute('cx', playerPos.x * cellSize + cellSize/2);
+        head.setAttribute('cy', playerPos.y * cellSize + cellSize/2);
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (gameState !== 'PLAYER') return;
+
+        const current = grid[index(playerPos.x, playerPos.y)];
+        let moved = false;
+
+        if ((e.key === 'ArrowUp' || e.key === 'w') && !current.walls.t) { playerPos.y--; moved = true; }
+        if ((e.key === 'ArrowRight' || e.key === 'd') && !current.walls.r) { playerPos.x++; moved = true; }
+        if ((e.key === 'ArrowDown' || e.key === 's') && !current.walls.b) { playerPos.y++; moved = true; }
+        if ((e.key === 'ArrowLeft' || e.key === 'a') && !current.walls.l) { playerPos.x--; moved = true; }
+
+        if (moved) {
+            updatePlayerVisuals();
+            if (playerPos.x === cols - 1 && playerPos.y === rows - 1) {
+                alert("MAZE BREACHED. Returning to menu.");
+                location.reload();
+            }
+        }
+    });
+
+    // --- Utilities ---
+
+    function toggleFS() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    function menuTimer() {
+        if (countdown > 0) {
+            countdown--;
+            timerMsg.textContent = `Automatic AI Demo in ${countdown}s...`;
+            menuTimeout = setTimeout(menuTimer, 1000);
+        } else {
+            startMode('ai');
+        }
+    }
+
+    // Auto-resize
+    window.addEventListener('resize', () => {
+        if (gameState !== 'MENU') setupGrid();
+    });
+
+    // Start countdown
+    menuTimer();
+
+</script>
+</body>
+</html>

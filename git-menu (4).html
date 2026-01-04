@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greg Seymour AI, Fun Mix</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka+One&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f8ff;
+            background-image: radial-gradient(#ffe4e1 20%, transparent 20%), radial-gradient(#e0ffff 20%, transparent 20%);
+            background-position: 0 0, 50px 50px;
+            background-size: 100px 100px;
+            font-family: 'Fredoka One', cursive;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            font-family: 'Bungee', cursive;
+            font-size: clamp(2rem, 8vw, 4rem);
+            text-align: center;
+            background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(4px 4px 0px rgba(0,0,0,0.1));
+            margin-bottom: 50px;
+            animation: rainbow 5s linear infinite;
+        }
+
+        @keyframes rainbow {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        .arcade-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 25px;
+            max-width: 1400px;
+        }
+
+        .btn {
+            text-decoration: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 1rem;
+            padding: 15px;
+            width: 160px;
+            height: 100px;
+            font-weight: bold;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 8px 0px rgba(0,0,0,0.2);
+            cursor: pointer;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        /* --- SHAPE VARIATIONS --- */
+        .shape-sq { border-radius: 10px; }
+        .shape-oval { border-radius: 50px; width: 180px; }
+        .shape-circle { border-radius: 50%; width: 130px; height: 130px; }
+        .shape-blob { border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; }
+        .shape-skew { transform: skewX(-10deg); border-radius: 5px; }
+
+        /* --- COLOR VARIATIONS --- */
+        .c1 { background: #FF5733; } /* Orange Red */
+        .c2 { background: #33FF57; color: #004d00; } /* Lime */
+        .c3 { background: #3357FF; } /* Blue */
+        .c4 { background: #F333FF; } /* Pink */
+        .c5 { background: #FFD700; color: #554400; } /* Gold */
+        .c6 { background: #00CED1; } /* Turquoise */
+        .c7 { background: #FF4500; } /* Orange */
+
+        /* --- HOVER EFFECTS --- */
+        .btn:hover {
+            transform: scale(1.1) translateY(-10px);
+            box-shadow: 0 15px 20px rgba(0,0,0,0.3);
+            filter: brightness(1.1);
+            z-index: 10;
+        }
+
+        .btn:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 0px rgba(0,0,0,0.2);
+        }
+
+        /* Unique Hover Animations */
+        .h-wiggle:hover { animation: wiggle 0.5s infinite; }
+        .h-pulse:hover { animation: pulse 1s infinite; }
+        .h-spin:hover { transform: rotate(360deg) scale(1.2); }
+        .h-float:hover { animation: float 1.5s ease-in-out infinite; }
+
+        @keyframes wiggle {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(5deg); }
+            75% { transform: rotate(-5deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(-10px); }
+            50% { transform: translateY(-25px); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Greg Seymour AI, Fun Mix</h1>
+
+    <div class="arcade-container">
+        <!-- 31 Buttons with Mixed Styles -->
+        <a href="7snakes (1).html" class="btn shape-oval c1 h-wiggle">7snakes (1)</a>
+        <a href="BUTTERFLIES.html" class="btn shape-circle c2 h-pulse">BUTTERFLIES</a>
+        <a href="clown-circus.html" class="btn shape-sq c3 h-spin">clown-circus</a>
+        <a href="dominoes (1).html" class="btn shape-blob c4 h-float">dominoes (1)</a>
+        <a href="dominoes (3).html" class="btn shape-skew c5 h-wiggle">dominoes (3)</a>
+        <a href="dominoes (5).html" class="btn shape-sq c6 h-pulse">dominoes (5)</a>
+        <a href="duckpond (2).html" class="btn shape-circle c7 h-spin">duckpond (2)</a>
+        <a href="FIREWORK-TEXT (5).html" class="btn shape-oval c1 h-float">FIREWORK-TEXT</a>
+        <a href="FLAGS-50.html" class="btn shape-sq c2 h-wiggle">FLAGS-50</a>
+        <a href="flag-USA.html" class="btn shape-blob c3 h-pulse">flag-USA</a>
+        <a href="Football-GSAI.html" class="btn shape-skew c4 h-spin">Football-GSAI</a>
+        <a href="HACKY-sack (2).html" class="btn shape-circle c5 h-float">HACKY-sack</a>
+        <a href="hoops (2).html" class="btn shape-sq c6 h-wiggle">hoops (2)</a>
+        <a href="maze-fun (1).html" class="btn shape-oval c7 h-pulse">maze-fun (1)</a>
+        <a href="maze-fun (2).html" class="btn shape-blob c1 h-spin">maze-fun (2)</a>
+        <a href="maze-fun (3).html" class="btn shape-circle c2 h-float">maze-fun (3)</a>
+        <a href="maze-fun (4).html" class="btn shape-sq c3 h-wiggle">maze-fun (4)</a>
+        <a href="mazeplay (2).html" class="btn shape-skew c4 h-pulse">mazeplay (2)</a>
+        <a href="SLINKY-STAIRS.html" class="btn shape-oval c5 h-spin">SLINKY STAIRS</a>
+        <a href="soccer (4).html" class="btn shape-circle c6 h-float">soccer (4)</a>
+        <a href="soccerpong (1).html" class="btn shape-sq c7 h-wiggle">soccerpong (1)</a>
+        <a href="soccerpong (2).html" class="btn shape-blob c1 h-pulse">soccerpong (2)</a>
+        <a href="spiders-helping.html" class="btn shape-skew c2 h-spin">spiders helping</a>
+        <a href="TANK-BATTLE-gsai.html" class="btn shape-circle c3 h-float">TANK BATTLE</a>
+        <a href="tet-tot (1).html" class="btn shape-sq c4 h-wiggle">tet-tot (1)</a>
+        <a href="tet-tot (6).html" class="btn shape-oval c5 h-pulse">tet-tot (6)</a>
+        <a href="tet-tot (9).html" class="btn shape-blob c6 h-spin">tet-tot (9)</a>
+        <a href="tet-tot.html" class="btn shape-circle c7 h-float">tet-tot</a>
+        <a href="TETTTERS (6).html" class="btn shape-sq c1 h-wiggle">TETTTERS (6)</a>
+        <a href="TETTTERS (10).html" class="btn shape-skew c2 h-pulse">TETTTERS (10)</a>
+        <a href="Tunnels-menu.html" class="btn shape-oval c3 h-spin">Tunnels Menu</a>
+    </div>
+
+</body>
+</html>

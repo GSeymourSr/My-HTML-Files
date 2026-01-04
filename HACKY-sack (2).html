@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clown Hacky Sack Fun!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pink: #ff69b4;
+            --yellow: #ffd700;
+            --blue: #00ced1;
+            --red: #ff4500;
+            --purple: #9370db;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #fff5f8;
+            font-family: 'Fredoka One', cursive;
+            user-select: none;
+            touch-action: none;
+        }
+
+        /* Whimsical Polka Dot Background */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(var(--yellow) 2px, transparent 2px);
+            background-size: 40px 40px;
+            opacity: 0.3;
+            z-index: -1;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            cursor: none; /* We'll use a custom clown cursor */
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        #score-board {
+            font-size: 3rem;
+            color: var(--pink);
+            text-shadow: 3px 3px 0px white, 5px 5px 0px var(--blue);
+        }
+
+        #message {
+            font-size: 1.5rem;
+            color: var(--purple);
+            margin-top: 10px;
+            background: white;
+            display: inline-block;
+            padding: 5px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 0 var(--pink);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: var(--blue);
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="ui">
+        <div id="score-board">0</div>
+        <div id="message">Bouncing Fun! 🤡</div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <div class="instructions">Move your mouse/finger to bounce the sack!</div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score-board');
+    const messageElement = document.getElementById('message');
+
+    let width, height;
+    let score = 0;
+    let particles = [];
+    
+    // Game State
+    const gravity = 0.25;
+    const friction = 0.98;
+    const bounceStrength = -12;
+
+    // The Sack (Ball)
+    const sack = {
+        x: 0,
+        y: 0,
+        radius: 25,
+        vx: 5,
+        vy: 0,
+        rotation: 0,
+        vr: 0.1,
+        colors: ['#ff69b4', '#ffd700', '#00ced1', '#ff4500', '#9370db']
+    };
+
+    // The Player (Clown)
+    const clown = {
+        x: 0,
+        y: 0,
+        radius: 50,
+        targetX: 0,
+        targetY: 0
+    };
+
+    function init() {
+        resize();
+        sack.x = width / 2;
+        sack.y = height / 3;
+        clown.x = width / 2;
+        clown.y = height - 100;
+        animate();
+    }
+
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+    }
+
+    window.addEventListener('resize', resize);
+    
+    // Mouse/Touch Tracking
+    window.addEventListener('mousemove', (e) => {
+        clown.targetX = e.clientX;
+        clown.targetY = e.clientY;
+    });
+
+    window.addEventListener('touchmove', (e) => {
+        clown.targetX = e.touches[0].clientX;
+        clown.targetY = e.touches[0].clientY;
+    });
+
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.size = Math.random() * 8 + 4;
+            this.vx = (Math.random() - 0.5) * 10;
+            this.vy = (Math.random() - 0.5) * 10;
+            this.life = 1.0;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.life -= 0.02;
+        }
+        draw() {
+            ctx.globalAlpha = this.life;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    function drawClown(x, y) {
+        // Hair
+        ctx.fillStyle = '#ff4500';
+        ctx.beginPath();
+        ctx.arc(x - 40, y - 20, 25, 0, Math.PI * 2);
+        ctx.arc(x + 40, y - 20, 25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Face
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x, y, 50, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Eyes
+        ctx.fillStyle = '#333';
+        ctx.beginPath();
+        ctx.arc(x - 15, y - 10, 6, 0, Math.PI * 2);
+        ctx.arc(x + 15, y - 10, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Nose (The Red Button)
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(x, y + 5, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Smile
+        ctx.beginPath();
+        ctx.arc(x, y + 15, 20, 0.1 * Math.PI, 0.9 * Math.PI);
+        ctx.stroke();
+    }
+
+    function drawSack() {
+        ctx.save();
+        ctx.translate(sack.x, sack.y);
+        ctx.rotate(sack.rotation);
+        
+        // Draw a multi-colored segments hacky sack
+        const segments = 6;
+        for (let i = 0; i < segments; i++) {
+            ctx.fillStyle = sack.colors[i % sack.colors.length];
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, sack.radius, (i * (Math.PI * 2)) / segments, ((i + 1) * (Math.PI * 2)) / segments);
+            ctx.lineTo(0, 0);
+            ctx.fill();
+        }
+        
+        // Sack texture/border
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, sack.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        ctx.restore();
+    }
+
+    function update() {
+        // Move Clown towards mouse with slight lag for smoothness
+        clown.x += (clown.targetX - clown.x) * 0.2;
+        clown.y += (clown.targetY - clown.y) * 0.2;
+
+        // Apply Physics to Sack
+        sack.vy += gravity;
+        sack.x += sack.vx;
+        sack.y += sack.vy;
+        sack.rotation += sack.vr;
+
+        // Wall Collisions
+        if (sack.x + sack.radius > width) {
+            sack.x = width - sack.radius;
+            sack.vx *= -0.8;
+        } else if (sack.x - sack.radius < 0) {
+            sack.x = sack.radius;
+            sack.vx *= -0.8;
+        }
+
+        // Top collision
+        if (sack.y - sack.radius < 0) {
+            sack.y = sack.radius;
+            sack.vy *= -0.8;
+        }
+
+        // Clown Collision (Hacky Sack Kick!)
+        const dx = sack.x - clown.x;
+        const dy = sack.y - clown.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < sack.radius + clown.radius) {
+            // Repel the sack
+            const angle = Math.atan2(dy, dx);
+            
+            // Only bounce if falling into the clown or hit from side
+            sack.vy = bounceStrength;
+            // Add horizontal momentum based on hit position
+            sack.vx = (dx / clown.radius) * 10;
+            sack.vr = (Math.random() - 0.5) * 0.5; // Change spin
+
+            // Bounce sack out of collision zone
+            sack.y = clown.y - (clown.radius + sack.radius);
+
+            // Effects
+            score++;
+            scoreElement.innerText = score;
+            createConfetti(sack.x, sack.y);
+            
+            const msgs = ["Great kick!", "Yay!", "Whoopee!", "Keep going!", "Honk Honk!"];
+            messageElement.innerText = msgs[Math.floor(Math.random() * msgs.length)];
+        }
+
+        // Check for Game Over (Floor hit)
+        if (sack.y - sack.radius > height) {
+            score = 0;
+            scoreElement.innerText = score;
+            messageElement.innerText = "Oops! Try again! 🤡";
+            sack.x = width / 2;
+            sack.y = 50;
+            sack.vy = 0;
+            sack.vx = (Math.random() - 0.5) * 10;
+        }
+
+        // Update Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            if (particles[i].life <= 0) particles.splice(i, 1);
+        }
+    }
+
+    function createConfetti(x, y) {
+        for (let i = 0; i < 8; i++) {
+            particles.push(new Particle(x, y, sack.colors[Math.floor(Math.random() * sack.colors.length)]));
+        }
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, width, height);
+        
+        update();
+        
+        particles.forEach(p => p.draw());
+        drawClown(clown.x, clown.y);
+        drawSack();
+        
+        requestAnimationFrame(animate);
+    }
+
+    init();
+</script>
+
+</body>
+</html>

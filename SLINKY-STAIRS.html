@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extreme Slinky Descent</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let width, height;
+
+// --- Config ---
+const stepH = 90;   
+const numRings = 75; 
+const ringRadius = 55;
+const wireThickness = 2.5;
+
+// --- State ---
+let time = 0;
+let currentIndex = 0; 
+let jumpSize = 1;      
+let movesCounter = 0;  // 10 moves per phase
+
+// Camera
+let cameraX = 0, cameraY = 0;
+
+// Path Logic
+const path = []; 
+let stepsUntilTurn = 0;
+let currentDirType = 1; 
+
+// Visuals
+let ringColors = []; // Stores the color string for each ring
+let theme = { top: '', side: '', riser: '', highlight: '' };
+
+// --- Theme Generator ---
+
+function randomizeTheme() {
+    // 1. Generate Stair Theme
+    const stairMode = Math.floor(Math.random() * 4); // 0-3
+    let r, g, b;
+
+    if (stairMode === 0) { // Random Vibrant
+        r = Math.floor(Math.random() * 155 + 100);
+        g = Math.floor(Math.random() * 155 + 100);
+        b = Math.floor(Math.random() * 155 + 100);
+        theme.top = `rgb(${r},${g},${b})`;
+        theme.side = `rgb(${r*0.6},${g*0.6},${b*0.6})`;
+        theme.riser = `rgb(${r*0.2},${g*0.2},${b*0.2})`;
+        theme.highlight = 'rgba(255,255,255,0.3)';
+    } 
+    else if (stairMode === 1) { // Neon / Dark
+        const hue = Math.random() * 360;
+        theme.top = `hsl(${hue}, 20%, 20%)`; // Dark top
+        theme.side = `hsl(${hue}, 30%, 10%)`; // Darker side
+        theme.riser = '#050505';
+        theme.highlight = `hsl(${hue}, 100%, 60%)`; // Neon Edge
+    }
+    else if (stairMode === 2) { // Pastel
+        r = Math.floor(Math.random() * 50 + 200);
+        g = Math.floor(Math.random() * 50 + 200);
+        b = Math.floor(Math.random() * 50 + 200);
+        theme.top = `rgb(${r},${g},${b})`;
+        theme.side = `rgb(${r-40},${g-40},${b-40})`;
+        theme.riser = `rgb(${r-100},${g-100},${b-100})`;
+        theme.highlight = 'rgba(255,255,255,0.6)';
+    }
+    else { // Industrial / Monotone
+        const val = Math.floor(Math.random() * 100 + 50);
+        theme.top = `rgb(${val},${val},${val})`;
+        theme.side = `rgb(${val-30},${val-30},${val-30})`;
+        theme.riser = '#111';
+        theme.highlight = '#888';
+    }
+
+    // 2. Generate Slinky Palette
+    ringColors = [];
+    const slinkyMode = Math.floor(Math.random() * 6); // 0-5
+
+    // Helper variables for generation
+    const baseHue = Math.random() * 360;
+    const secondaryHue = (baseHue + 180) % 360;
+    
+    for(let i=0; i<numRings; i++) {
+        let col;
+        
+        if (slinkyMode === 0) { 
+            // Classic Rainbow
+            col = `hsla(${(baseHue + (i * 3)) % 360}, 80%, 60%, 0.9)`;
+        } 
+        else if (slinkyMode === 1) { 
+            // Solid Metallic (Gold/Silver/Bronze/etc)
+            // Saturation 0 for silver, higher for gold/copper
+            const sat = Math.random() > 0.5 ? 0 : 80; 
+            col = `hsla(${baseHue}, ${sat}%, 50%, 0.9)`;
+        } 
+        else if (slinkyMode === 2) { 
+            // Striped (Dual Tone)
+            const isPrim = (i % 4 < 2); // 2 rings color A, 2 rings color B
+            const h = isPrim ? baseHue : secondaryHue;
+            col = `hsla(${h}, 90%, 55%, 0.9)`;
+        } 
+        else if (slinkyMode === 3) { 
+            // Fire Gradient
+            // Map 0-numRings to 0-60 hue (Red to Yellow)
+            const fireHue = (i / numRings) * 50; 
+            col = `hsla(${fireHue}, 100%, 50%, 0.9)`;
+        }
+        else if (slinkyMode === 4) { 
+            // Cool Gradient (Blue to Purple)
+            const coolHue = 180 + (i / numRings) * 100; 
+            col = `hsla(${coolHue}, 90%, 60%, 0.9)`;
+        }
+        else { 
+            // Total Chaos
+            col = `hsla(${Math.random() * 360}, 80%, 60%, 0.9)`;
+        }
+        ringColors.push(col);
+    }
+}
+
+// Initial Step
+path.push({ x: 0, y: 0, type: 1 });
+randomizeTheme();
+
+function ensurePathExists(targetIndex) {
+    while (path.length <= targetIndex + 25) {
+        const last = path[path.length - 1];
+        
+        if (stepsUntilTurn <= 0) {
+            const rand = Math.random();
+            // No Straight Down (0)
+            if (rand < 0.35) currentDirType = 1;       // Soft Right
+            else if (rand < 0.70) currentDirType = -1; // Soft Left
+            else if (rand < 0.85) currentDirType = 2;  // Hard Right
+            else currentDirType = -2;                  // Hard Left
+            
+            stepsUntilTurn = Math.floor(Math.random() * 5) + 3;
+        }
+
+        let dx = 0;
+        if (currentDirType === 1) dx = 100;
+        if (currentDirType === -1) dx = -100;
+        if (currentDirType === 2) dx = 220;
+        if (currentDirType === -2) dx = -220;
+
+        const newX = last.x + dx;
+        const newY = last.y + stepH;
+
+        path.push({
+            x: newX,
+            y: newY,
+            type: currentDirType
+        });
+        
+        stepsUntilTurn--;
+    }
+}
+
+function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- Visuals ---
+
+function drawStair(index) {
+    if (index < 0 || index >= path.length) return;
+    
+    const p = path[index];
+    const x = p.x;
+    const y = p.y;
+    const type = p.type;
+    
+    const w = 180; 
+    const thick = 15; 
+
+    let skew = 0;
+    if (type === 1) skew = -40;
+    if (type === 2) skew = -80;
+    if (type === -1) skew = 40;
+    if (type === -2) skew = 80;
+
+    // Riser
+    ctx.fillStyle = theme.riser;
+    ctx.beginPath();
+    ctx.moveTo(x - w/2 + skew, y); 
+    ctx.lineTo(x + w/2 + skew, y);
+    ctx.lineTo(x + w/2, y + stepH);
+    ctx.lineTo(x - w/2, y + stepH);
+    ctx.fill();
+
+    // Side Face
+    ctx.fillStyle = theme.side;
+    ctx.beginPath();
+    if (type > 0) {
+        // Left Side visible
+        ctx.moveTo(x - w/2 + skew, y); 
+        ctx.lineTo(x - w/2 + skew, y + thick); 
+        ctx.lineTo(x - w/2, y + stepH + thick); 
+        ctx.lineTo(x - w/2, y + stepH); 
+    } else {
+        // Right Side visible
+        ctx.moveTo(x + w/2 + skew, y); 
+        ctx.lineTo(x + w/2 + skew, y + thick);
+        ctx.lineTo(x + w/2, y + stepH + thick);
+        ctx.lineTo(x + w/2, y + stepH);
+    }
+    ctx.fill();
+
+    // Tread Top
+    ctx.fillStyle = theme.top;
+    ctx.beginPath();
+    ctx.moveTo(x - w/2 + skew, y);         
+    ctx.lineTo(x + w/2 + skew, y);         
+    ctx.lineTo(x + w/2, y + thick * 2);    
+    ctx.lineTo(x - w/2, y + thick * 2);    
+    ctx.fill();
+
+    // Tread Lip
+    ctx.fillStyle = theme.side; 
+    ctx.beginPath();
+    ctx.moveTo(x - w/2, y + thick * 2);
+    ctx.lineTo(x + w/2, y + thick * 2);
+    ctx.lineTo(x + w/2, y + thick * 3);
+    ctx.lineTo(x - w/2, y + thick * 3);
+    ctx.fill();
+    
+    // Highlight
+    ctx.strokeStyle = theme.highlight;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+}
+
+function update() {
+    ensurePathExists(currentIndex + jumpSize + 10);
+
+    const speed = 0.02 + (jumpSize * 0.0035);
+    time += speed;
+
+    if (time >= 1) {
+        time = 0;
+        currentIndex += jumpSize;
+        movesCounter++;
+
+        if (movesCounter >= 10) {
+            movesCounter = 0;
+            jumpSize++; 
+
+            if (jumpSize > 5) {
+                jumpSize = 1;
+                randomizeTheme(); // The big color reset
+            }
+        }
+    }
+
+    // Camera
+    const p1 = path[currentIndex];
+    const p2 = path[Math.min(currentIndex + jumpSize, path.length-1)];
+    const targetX = p1.x + (p2.x - p1.x) * time;
+    const targetY = p1.y + (p2.y - p1.y) * time;
+    cameraX += (targetX - width/2 - cameraX) * 0.06;
+    cameraY += (targetY - height/2 - cameraY) * 0.06;
+}
+
+function draw() {
+    ctx.clearRect(0, 0, width, height);
+    update();
+
+    ctx.save();
+    ctx.translate(-cameraX, -cameraY);
+
+    const drawStart = Math.max(0, currentIndex - 8);
+    const drawEnd = currentIndex + 20;
+
+    for (let i = drawEnd; i >= drawStart; i--) {
+        drawStair(i);
+    }
+
+    // --- Slinky ---
+    const startP = path[currentIndex];
+    const endP = path[Math.min(currentIndex + jumpSize, path.length-1)];
+
+    const startX = startP.x;
+    const startY = startP.y + 30; 
+    const endX = endP.x;
+    const endY = endP.y + 30;
+
+    for (let i = 0; i < numRings; i++) {
+        const ringDelay = (i / numRings) * 0.45;
+        let t = (time * 1.45) - ringDelay;
+        t = Math.max(0, Math.min(1, t));
+
+        const ease = (1 - Math.cos(t * Math.PI)) / 2;
+
+        const px = startX + (endX - startX) * ease;
+        const arcPower = 140 + (jumpSize * 65);
+        const py = startY + (endY - startY) * ease - Math.sin(ease * Math.PI) * arcPower;
+
+        const hStart = (numRings - i) * wireThickness;
+        const hEnd = i * wireThickness;
+        const currentH = hStart + (hEnd - hStart) * ease;
+
+        const dx = endX - startX;
+        const jumpDir = dx >= 0 ? 1 : -1;
+        let rotation = ease * Math.PI * jumpDir; 
+        
+        const bankAmount = (dx * 0.002);
+        rotation += bankAmount * Math.sin(ease * Math.PI);
+
+        // Shadow
+        if (i === 0 || i === numRings - 1) {
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.beginPath();
+            const shadowY = (ease < 0.5) ? startY : endY;
+            const shadowX = (ease < 0.5) ? startX : endX;
+            ctx.ellipse(shadowX, shadowY, ringRadius, 14, 0, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        // Color
+        ctx.strokeStyle = ringColors[i];
+        ctx.lineWidth = 3;
+
+        ctx.beginPath();
+        const stretchFactor = Math.sin(ease * Math.PI);
+        const squash = 0.35 + (stretchFactor * 0.3);
+        
+        ctx.ellipse(px, py - currentH, ringRadius, ringRadius * squash, rotation, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Glint
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(px, py - currentH, ringRadius, ringRadius * squash, rotation, 4, 5.5); 
+        ctx.stroke();
+    }
+
+    ctx.restore();
+    requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>

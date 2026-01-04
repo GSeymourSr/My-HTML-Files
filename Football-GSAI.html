@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Stadium: Championship Edition</title>
+    <style>
+        :root {
+            --grass: #3d8c40;
+            --field-line: rgba(255, 255, 255, 0.7);
+            --gold: #ffd700;
+            --bleacher: #2a2a2a;
+        }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #050505;
+            overflow: hidden;
+            font-family: 'Arial Black', sans-serif;
+            color: white;
+        }
+
+        #series-tally {
+            font-size: 14px;
+            color: var(--gold);
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+
+        #scoreboard {
+            display: flex;
+            gap: 40px;
+            background: #111;
+            padding: 10px 50px;
+            border: 2px solid #444;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 28px;
+            box-shadow: 0 0 30px black;
+            align-items: center;
+        }
+
+        #stadium-outer {
+            position: relative;
+            background: #000;
+            padding: 80px 100px;
+            border-radius: 80px;
+            box-shadow: inset 0 0 100px #000;
+        }
+
+        /* Bleachers with Circle Heads */
+        .stands {
+            position: absolute;
+            background: var(--bleacher);
+            display: flex;
+            flex-wrap: wrap;
+            padding: 5px;
+            opacity: 0.6;
+            overflow: hidden;
+            justify-content: center;
+        }
+        .stands.top { top: 0; left: 100px; right: 100px; height: 70px; }
+        .stands.bottom { bottom: 0; left: 100px; right: 100px; height: 70px; }
+        .stands.left { left: 0; top: 0; bottom: 0; width: 90px; }
+        .stands.right { right: 0; top: 0; bottom: 0; width: 90px; }
+
+        .fan {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            margin: 2px;
+            background: #555;
+        }
+
+        /* The Field */
+        #field {
+            position: relative;
+            width: 1000px;
+            height: 500px;
+            background-color: var(--grass);
+            background-image: repeating-linear-gradient(90deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 50px, transparent 50px, transparent 100px);
+            border: 4px solid white;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--field-line); }
+
+        .yard-marker {
+            position: absolute;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 100px;
+            box-sizing: border-box;
+            color: var(--field-line);
+            font-size: 38px;
+            font-family: serif;
+            font-weight: 900;
+            pointer-events: none;
+        }
+        .ym-top { top: 60px; }
+        .ym-bottom { bottom: 60px; transform: rotate(180deg); }
+        .yard-marker span { width: 100px; text-align: center; }
+
+        .endzone {
+            position: absolute;
+            width: 100px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.1);
+            font-size: 24px;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+        .ez-left { left: 0; background: #1a3a5a; border-right: 4px solid white; }
+        .ez-right { right: 0; background: #5a1a1a; border-left: 4px solid white; }
+
+        .goal-post {
+            position: absolute;
+            width: 10px;
+            height: 80px;
+            background: var(--gold);
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .goal-post::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 10px;
+            background: var(--gold);
+            right: 0; top: 0;
+            box-shadow: 0 70px 0 var(--gold);
+        }
+        .gp-left { left: 10px; }
+        .gp-right { right: 10px; transform: translateY(-50%) rotate(180deg); }
+
+        .player {
+            position: absolute;
+            font-size: 85px;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        #ball {
+            position: absolute;
+            font-size: 25px;
+            width: 40px;
+            height: 40px;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            /* Anchored to field */
+        }
+        
+        .spiral { animation: bSpin 0.1s infinite linear; }
+        @keyframes bSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        #announcement {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            text-shadow: 0 0 30px black;
+            z-index: 100;
+            display: none;
+            text-align: center;
+        }
+
+        .firework {
+            position: absolute;
+            width: 8px; height: 8px; border-radius: 50%;
+            pointer-events: none; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+<div id="series-tally">SERIES WINS: P1 [<span id="p1-s">0</span>] — P2 [<span id="p2-s">0</span>]</div>
+
+<div id="scoreboard">
+    <div id="score1">P1: 0</div>
+    <div style="color:#444; font-size: 16px;">STADIUM LIVE</div>
+    <div id="score2">P2: 0</div>
+</div>
+
+<div id="stadium-outer">
+    <div class="stands top" id="s-top"></div>
+    <div class="stands bottom" id="s-bottom"></div>
+    <div class="stands left" id="s-left"></div>
+    <div class="stands right" id="s-right"></div>
+
+    <div id="field">
+        <div class="endzone ez-left">HOME</div>
+        <div class="endzone ez-right">AWAY</div>
+
+        <div class="line" style="left:200px"></div>
+        <div class="line" style="left:300px"></div>
+        <div class="line" style="left:400px"></div>
+        <div class="line" style="left:500px; width:4px;"></div>
+        <div class="line" style="left:600px"></div>
+        <div class="line" style="left:700px"></div>
+        <div class="line" style="left:800px"></div>
+
+        <div class="yard-marker ym-top">
+            <span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span>
+        </div>
+        <div class="yard-marker ym-bottom">
+            <span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>40</span><span>30</span><span>20</span><span>10</span>
+        </div>
+
+        <div id="p1" class="player">🧍🏼</div>
+        <div id="p2" class="player">🧍🏼‍♂️</div>
+        <div id="ball">🏈</div>
+
+        <div class="goal-post gp-left"></div>
+        <div class="goal-post gp-right"></div>
+    </div>
+    
+    <div id="announcement">TOUCHDOWN!</div>
+</div>
+
+<script>
+    const p1 = document.getElementById('p1'), p2 = document.getElementById('p2');
+    const ball = document.getElementById('ball'), announce = document.getElementById('announcement');
+    const field = document.getElementById('field');
+
+    let session = {p1:0, p2:0}, series = {p1:0, p2:0};
+
+    let state = {
+        ballOwner: p1, targetPlayer: p2,
+        isBallInAir: false, isRunning: false,
+        catchCount: 0,
+        p1Pos: { x: 120, y: 200 }, p2Pos: { x: 780, y: 200 },
+        p1Target: { x: 120, y: 200 }, p2Target: { x: 780, y: 200 },
+        ballX: 170, ballY: 240,
+        gameOver: false
+    };
+
+    // Populate Bleachers
+    function makeFans(id, num) {
+        const el = document.getElementById(id);
+        const colors = ['#e74c3c', '#3498db', '#f1c40f', '#fff', '#95a5a6', '#e67e22'];
+        for(let i=0; i<num; i++){
+            const f = document.createElement('div');
+            f.className = 'fan';
+            f.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+            el.appendChild(f);
+        }
+    }
+    makeFans('s-top', 1000); makeFans('s-bottom', 1000); makeFans('s-left', 600); makeFans('s-right', 600);
+
+    function engine() {
+        if (state.gameOver) return;
+
+        // Player Movement
+        if (state.isRunning) {
+            runLogic();
+        } else {
+            state.p1Pos.x += (state.p1Target.x - state.p1Pos.x) * 0.05;
+            state.p1Pos.y += (state.p1Target.y - state.p1Pos.y) * 0.05;
+            state.p2Pos.x += (state.p2Target.x - state.p2Pos.x) * 0.05;
+            state.p2Pos.y += (state.p2Target.y - state.p2Pos.y) * 0.05;
+        }
+
+        // Draw Players
+        p1.style.left = state.p1Pos.x + "px";
+        p1.style.top = state.p1Pos.y + "px";
+        p2.style.left = state.p2Pos.x + "px";
+        p2.style.top = state.p2Pos.y + "px";
+
+        // Draw Ball (if not flying)
+        if (!state.isBallInAir) {
+            const currentOwner = state.ballOwner === p1 ? state.p1Pos : state.p2Pos;
+            state.ballX = currentOwner.x + 50;
+            state.ballY = currentOwner.y + 40;
+        }
+        
+        ball.style.left = state.ballX + "px";
+        ball.style.top = state.ballY + "px";
+
+        requestAnimationFrame(engine);
+    }
+
+    function runLogic() {
+        const r = state.ballOwner, d = r === p1 ? p2 : p1;
+        const rPos = r === p1 ? state.p1Pos : state.p2Pos;
+        const dPos = r === p1 ? state.p2Pos : state.p1Pos;
+
+        const winChance = state.runLuck > 0.45;
+        const rSpd = winChance ? 5.5 : 3.5;
+        const dSpd = winChance ? 3.0 : 4.6;
+
+        rPos.x += rSpd * (r === p1 ? 1 : -1);
+        rPos.y += Math.sin(Date.now() * 0.009) * 8;
+        rPos.y = Math.max(50, Math.min(350, rPos.y));
+
+        const dx = rPos.x - dPos.x, dy = rPos.y - dPos.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        dPos.x += (dx/dist) * dSpd;
+        dPos.y += (dy/dist) * dSpd;
+
+        if (dist < 60) concludePlay("TACKLED!", false);
+        if ((r === p1 && rPos.x > 880) || (r === p2 && rPos.x < 20)) concludePlay("TOUCHDOWN!", true);
+    }
+
+    function startSequence() {
+        if (state.gameOver) return;
+        const qb = state.ballOwner, rc = state.targetPlayer;
+        
+        // QB Step
+        const qbX = qb === p1 ? 140 : 760;
+        const qbY = 150 + Math.random() * 100;
+        if (qb === p1) state.p1Target = {x: qbX, y: qbY}; else state.p2Target = {x: qbX, y: qbY};
+
+        setTimeout(() => {
+            const destX = rc === p1 ? 150 + Math.random()*200 : 550 + Math.random()*200;
+            const destY = 50 + Math.random()*300;
+
+            // THROW FIRST
+            ballFlight(destX + 30, destY + 30);
+
+            // RECEIVER RUNS SECOND
+            setTimeout(() => {
+                if (rc === p1) state.p1Target = {x: destX, y: destY};
+                else state.p2Target = {x: destX, y: destY};
+            }, 450);
+        }, 1000);
+    }
+
+    function ballFlight(dX, dY) {
+        state.isBallInAir = true;
+        ball.classList.add('spiral');
+        const startX = state.ballX, startY = state.ballY;
+        const duration = 1400, startTime = performance.now();
+
+        function fly(now) {
+            const p = Math.min((now - startTime) / duration, 1);
+            state.ballX = startX + (dX - startX) * p;
+            const linearY = startY + (dY - startY) * p;
+            state.ballY = linearY - Math.sin(p * Math.PI) * 200;
+
+            if (p < 1) {
+                requestAnimationFrame(fly);
+            } else {
+                state.isBallInAir = false;
+                state.catchCount++;
+                ball.classList.remove('spiral');
+                const prev = state.ballOwner;
+                state.ballOwner = state.targetPlayer;
+                state.targetPlayer = prev;
+                
+                if (state.catchCount % 3 === 0) {
+                    state.isRunning = true;
+                    state.runLuck = Math.random();
+                    if (state.ballOwner === p1) state.p2Pos = {x: 500, y: 50};
+                    else state.p1Pos = {x: 500, y: 450};
+                } else {
+                    setTimeout(startSequence, 1200);
+                }
+            }
+        }
+        requestAnimationFrame(fly);
+    }
+
+    function concludePlay(msg, scored) {
+        state.isRunning = false;
+        announce.innerText = msg;
+        announce.style.display = "block";
+        announce.style.color = scored ? "gold" : "white";
+        
+        if (scored) {
+            for(let i=0; i<3; i++) setTimeout(() => boom(400 + Math.random()*200, 150 + Math.random()*100), i*300);
+            if (state.ballOwner === p1) session.p1++; else session.p2++;
+            uiUpdate();
+        }
+
+        setTimeout(() => {
+            if (state.gameOver) return;
+            announce.style.display = "none";
+            state.p1Target = {x: 120, y: 200}; state.p2Target = {x: 780, y: 200};
+            setTimeout(startSequence, 1500);
+        }, 2500);
+    }
+
+    function uiUpdate() {
+        document.getElementById('score1').innerText = `P1: ${session.p1}`;
+        document.getElementById('score2').innerText = `P2: ${session.p2}`;
+        if (session.p1 >= 5 || session.p2 >= 5) finalVictory();
+    }
+
+    function finalVictory() {
+        state.gameOver = true;
+        const winName = session.p1 >= 5 ? "PLAYER 1" : "PLAYER 2";
+        if (session.p1 >= 5) series.p1++; else series.p2++;
+        
+        announce.innerText = `🏆 ${winName} CHAMPION! 🏆`;
+        announce.style.display = "block";
+        for(let i=0; i<15; i++) setTimeout(() => boom(Math.random()*800+100, Math.random()*300+50), i*400);
+
+        document.getElementById('p1-s').innerText = series.p1;
+        document.getElementById('p2-s').innerText = series.p2;
+
+        setTimeout(() => {
+            session = {p1:0, p2:0};
+            state.gameOver = false;
+            state.catchCount = 0;
+            announce.style.display = "none";
+            uiUpdate();
+            startSequence();
+        }, 8000);
+    }
+
+    function boom(x, y) {
+        const colors = ['#ff0', '#f0f', '#0ff', '#f00', '#fff'];
+        const color = colors[Math.floor(Math.random()*colors.length)];
+        for (let i = 0; i < 40; i++) {
+            const p = document.createElement('div');
+            p.className = 'firework';
+            p.style.backgroundColor = color;
+            p.style.left = x + 'px'; p.style.top = y + 'px';
+            field.appendChild(p);
+            const a = Math.random() * Math.PI * 2;
+            const v = 3 + Math.random() * 8;
+            let vx = Math.cos(a) * v, vy = Math.sin(a) * v, life = 1.0;
+            const move = () => {
+                life -= 0.02; vy += 0.15;
+                p.style.left = (parseFloat(p.style.left) + vx) + 'px';
+                p.style.top = (parseFloat(p.style.top) + vy) + 'px';
+                p.style.opacity = life;
+                if (life > 0) requestAnimationFrame(move); else p.remove();
+            };
+            requestAnimationFrame(move);
+        }
+    }
+
+    // Launch
+    requestAnimationFrame(engine);
+    setTimeout(startSequence, 500);
+</script>
+</body>
+</html>

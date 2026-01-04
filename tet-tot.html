@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Greg Seymour's Infinite Clown Fun</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(-55deg, #FF4081, #FFEB3B, #8BC34A, #29B6F6, #AB47BC, #FF5722);
+            background-size: 500% 500%;
+            animation: gradientBG 25s ease infinite;
+            font-family: 'Luckiest Guy', cursive;
+            touch-action: none;
+            color: #FFF;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Hide cursor during gameplay */
+        body.playing {
+            cursor: none;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas { display: block; }
+
+        .hud {
+            position: absolute;
+            top: 20px;
+            color: #FFF;
+            text-shadow: 3px 3px 0 #000;
+            font-size: 40px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #scoreBoard { left: 20px; }
+        #livesBoard { right: 20px; color: #FF1744; letter-spacing: 5px; }
+        #levelDisplay { 
+            position: absolute; top: 20px; width: 100%; text-align: center; 
+            font-size: 30px; text-shadow: 2px 2px 0 #000; pointer-events: none;
+        }
+        
+        #toast {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 60px; color: #76FF03; text-shadow: 3px 3px 0 #000;
+            opacity: 0; transition: opacity 0.5s; pointer-events: none; z-index: 50;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 20;
+            background: rgba(0,0,0,0.85);
+            transition: opacity 0.3s;
+        }
+
+        .screen.hidden { display: none !important; }
+
+        .title-text {
+            font-size: 80px;
+            line-height: 1.1;
+            color: #FFFFFF;
+            text-shadow: 5px 5px 0px #E91E63;
+            margin-bottom: 30px;
+            animation: floatText 3s ease-in-out infinite;
+        }
+
+        @keyframes floatText {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        button {
+            background: linear-gradient(to bottom, #76ff03, #64dd17);
+            border: 5px solid #fff;
+            color: #1b5e20;
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 45px;
+            padding: 20px 80px;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #33691e, 0 20px 20px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+            z-index: 30;
+            pointer-events: auto;
+        }
+        
+        button:hover { transform: scale(1.05) translateY(-5px); }
+        button:active { transform: scale(0.95) translateY(5px); box-shadow: 0 5px 0 #33691e; }
+
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="scoreBoard" class="hud hidden">Score: 0</div>
+        <div id="levelDisplay" class="hud hidden">Level 1</div>
+        <div id="livesBoard" class="hud hidden">❤❤❤❤❤</div>
+        <div id="toast"></div>
+
+        <!-- Title Screen -->
+        <div id="titleScreen" class="screen">
+            <h1 class="title-text">Greg Seymour's<br>Clown Teeter</h1>
+            <button id="btnStart">START GAME</button>
+            <p style="color:#FFF; margin-top:20px; font-size:20px;">(Controls: Mouse or Arrow Keys)</p>
+            <p style="color:#AAA; margin-top:5px; font-size:16px;">(Demo in 5 seconds...)</p>
+        </div>
+
+        <!-- Demo Overlay -->
+        <div id="demoOverlay" class="screen hidden" style="background: transparent; pointer-events: none;"></div>
+
+        <!-- Level Screen (For Player) -->
+        <div id="levelScreen" class="screen hidden" style="background: rgba(0,0,0,0.9);">
+            <h1 class="title-text" style="color: #FFEB3B" id="levelText">LEVEL 1</h1>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen hidden">
+            <h1 class="title-text" style="color:#FF4081;">GAME OVER</h1>
+            <p style="font-size:40px; color:#FFF; margin-bottom:20px;" id="finalScoreDisplay">Score: 0</p>
+            <button id="btnRestart">TRY AGAIN</button>
+            <p style="color:#DDD; margin-top:30px; font-size:18px;">(Auto-restart in 6s...)</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('scoreBoard');
+        const livesEl = document.getElementById('livesBoard');
+        const levelEl = document.getElementById('levelDisplay');
+        const toastEl = document.getElementById('toast');
+        
+        const titleScreen = document.getElementById('titleScreen');
+        const demoOverlay = document.getElementById('demoOverlay');
+        const levelScreen = document.getElementById('levelScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+
+        // Config
+        const CONFIG = {
+            gravity: 0.22,
+            maxFallSpeed: 14,
+            launchPower: -24,
+            boardWidth: 400, 
+            boardHeight: 25,
+            tolerance: 40
+        };
+
+        // Corrected Emoji List
+        const FACES = [
+            '🤡', '🤪', '🤢', '😎', '😮', '🙃', '🥸', '🐷', '💀', '🐸', 
+            '⚽', '⚾', '🏈', '🏐', '🏀', '🥎', '🍪', '🏵️', '🥵', '😡', 
+            '🐯', '👽', '🤖', '💩', '🥴', '🎱', '👻'
+        ];
+
+        const TEETER_COLORS = ['#4E342E', '#E65100', '#1B5E20', '#0D47A1', '#4A148C', '#B71C1C'];
+
+        // Game State
+        let state = {
+            mode: 'TITLE', 
+            width: window.innerWidth,
+            height: window.innerHeight,
+            score: 0,
+            lives: 5, // Start with 5 lives
+            level: 1,
+            mouseX: window.innerWidth / 2,
+            targetX: window.innerWidth / 2, // Interpolation target
+            keys: { left: false, right: false },
+            timer: null,
+            idleTimer: null
+        };
+
+        // --- Classes ---
+
+        class TeeterBoard {
+            constructor() {
+                this.x = state.width / 2;
+                this.y = state.height - 100;
+                this.angle = 0;
+                this.upSide = 'right'; 
+                this.color = TEETER_COLORS[0];
+                this.face = FACES[0];
+            }
+
+            update() {
+                // Determine target X based on input method
+                if (state.mode === 'DEMO') {
+                    // AI Logic (Wobbly)
+                    const flyer = clowns.find(c => c.role === 'flying');
+                    if(flyer) {
+                        const offset = CONFIG.boardWidth / 4;
+                        let baseTarget = (this.upSide === 'right') ? flyer.x - offset : flyer.x + offset;
+                        let wobble = Math.sin(Date.now() / 400) * 40; // Anti-loop wobble
+                        state.targetX = baseTarget + wobble;
+                    }
+                } else {
+                    // KEYBOARD OVERRIDE
+                    if (state.keys.left) state.targetX -= 15;
+                    if (state.keys.right) state.targetX += 15;
+                    
+                    // Mouse/Touch sets the target directly in handleMove
+                }
+
+                // Range Clamp (Allow edges off screen)
+                if(state.targetX < 0) state.targetX = 0;
+                if(state.targetX > state.width) state.targetX = state.width;
+
+                // Smooth Movement
+                let speed = (state.mode === 'DEMO') ? 0.35 : 0.2;
+                this.x += (state.targetX - this.x) * speed;
+
+                // Tilt Animation
+                let targetAngle = (this.upSide === 'right') ? -0.35 : 0.35;
+                this.angle += (targetAngle - this.angle) * 0.15;
+            }
+
+            getSurfaceY(atX) {
+                const relX = atX - this.x;
+                return this.y + (relX * Math.tan(this.angle));
+            }
+
+            draw(ctx) {
+                // Base
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - 30, state.height);
+                ctx.lineTo(this.x + 30, state.height);
+                ctx.fill();
+
+                // Board
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // Texture
+                let grd = ctx.createLinearGradient(0, -15, 0, 15);
+                grd.addColorStop(0, '#FFFFFF'); // Highlight
+                grd.addColorStop(0.2, this.color);
+                grd.addColorStop(1, '#000000'); // Shadow
+                ctx.fillStyle = grd;
+                
+                ctx.beginPath();
+                ctx.roundRect(-CONFIG.boardWidth/2, -CONFIG.boardHeight/2, CONFIG.boardWidth, CONFIG.boardHeight, 10);
+                ctx.fill();
+
+                // Indicators
+                ctx.fillStyle = (this.upSide === 'left') ? '#76FF03' : '#FF1744'; 
+                ctx.fillRect(-CONFIG.boardWidth/2 + 10, -10, 30, 20); 
+
+                ctx.fillStyle = (this.upSide === 'right') ? '#76FF03' : '#FF1744'; 
+                ctx.fillRect(CONFIG.boardWidth/2 - 40, -10, 30, 20); 
+                
+                ctx.restore();
+
+                // Pivot Face
+                ctx.font = "40px serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(this.face, this.x, this.y);
+            }
+        }
+
+        class Clown {
+            constructor() {
+                this.x = state.width / 2;
+                this.y = 100;
+                this.vx = 0;
+                this.vy = 0;
+                this.size = 25; 
+                this.face = FACES[Math.floor(Math.random()*FACES.length)];
+                this.role = 'flying'; 
+            }
+
+            update() {
+                if(this.role === 'flying') {
+                    this.vy += CONFIG.gravity;
+                    if(this.vy > CONFIG.maxFallSpeed) this.vy = CONFIG.maxFallSpeed;
+                    
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    // Wall Bounces
+                    if(this.x < this.size) { this.x = this.size; this.vx *= -1; }
+                    if(this.x > state.width - this.size) { this.x = state.width - this.size; this.vx *= -1; }
+                    if(this.y < 0) { this.y = 0; this.vy = Math.abs(this.vy); }
+
+                    // Death
+                    if(this.y > state.height + 50) {
+                        handleDeath();
+                    }
+                } else {
+                    const offset = CONFIG.boardWidth/2 - 40;
+                    const sideMultiplier = (board.upSide === 'right') ? -1 : 1; 
+                    const sitX = board.x + (sideMultiplier * offset * Math.cos(board.angle));
+                    const sitY = board.y + (sideMultiplier * offset * Math.sin(board.angle)) - 25;
+                    this.x = sitX;
+                    this.y = sitY;
+                }
+            }
+
+            draw(ctx) {
+                ctx.font = "50px serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if(this.role === 'flying') ctx.rotate(this.vx * 0.1);
+                else ctx.rotate(board.angle);
+                ctx.fillText(this.face, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        class Brick {
+            constructor(x, y, w, color) {
+                this.x = x; this.y = y; 
+                this.w = w; 
+                this.h = 25 + Math.random() * 10; // Varied height
+                this.color = color;
+                this.active = true;
+            }
+            draw(ctx) {
+                if(!this.active) return;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.w, this.h, 5);
+                ctx.fill();
+                
+                // 3D Bevel
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "rgba(255,255,255,0.4)";
+                ctx.stroke();
+            }
+        }
+
+        let board = new TeeterBoard();
+        let clowns = [];
+        let bricks = [];
+
+        // --- LEVEL GENERATION LOGIC ---
+        function generateBricks(lvl) {
+            bricks = [];
+            const rows = Math.min(9, 3 + Math.floor(lvl/2));
+            const startY = 60;
+            
+            // Themes based on level number
+            const type = lvl % 5; 
+            
+            for(let r=0; r<rows; r++) {
+                let currentX = 30;
+                let availableWidth = state.width - 60;
+                
+                // HSL Rainbow Color
+                let rowHue = (r * 30) + (lvl * 10);
+                
+                // Loop to fill row
+                while(currentX < state.width - 60) {
+                    let w = 0;
+                    let color = `hsl(${rowHue}, 80%, 50%)`;
+                    let gap = 5;
+
+                    if (type === 1) { // Checkers
+                        w = (availableWidth / 8) - 5;
+                        color = ((bricks.length + r) % 2 === 0) ? '#000' : '#FFF';
+                    } 
+                    else if (type === 2) { // Variable Sizes
+                        w = 30 + Math.random() * 60;
+                        color = `hsl(${Math.random()*360}, 70%, 50%)`;
+                    }
+                    else if (type === 3) { // Gaps
+                        w = (availableWidth / 8) - 5;
+                        gap = (Math.random() > 0.5) ? 60 : 5; // Large gaps
+                        color = `hsl(${rowHue}, 70%, 50%)`;
+                    }
+                    else { // Standard / Rainbow
+                        w = (availableWidth / 8) - 5;
+                    }
+
+                    // Fit check
+                    if(currentX + w > state.width - 30) w = (state.width - 30) - currentX;
+                    if(w < 20) break; // Too small
+
+                    bricks.push(new Brick(currentX, startY + r*35, w, color));
+                    currentX += w + gap;
+                }
+            }
+        }
+
+        function initLevel(lvl) {
+            // New Board Look
+            board.color = TEETER_COLORS[lvl % TEETER_COLORS.length];
+            board.face = FACES[lvl % FACES.length];
+            board.upSide = (Math.random() > 0.5) ? 'right' : 'left';
+
+            clowns = [new Clown(), new Clown()];
+            clowns[0].role = 'flying'; clowns[0].y = 150; clowns[0].x = state.width/2;
+            clowns[0].vx = (Math.random()-0.5) * 6;
+            clowns[1].role = 'sitting';
+
+            generateBricks(lvl);
+            
+            levelEl.innerText = (state.mode === 'DEMO' ? "DEMO - Level " : "Level ") + lvl;
+        }
+
+        function checkCollision() {
+            let flyer = clowns.find(c => c.role === 'flying');
+            let sitter = clowns.find(c => c.role === 'sitting');
+            if(!flyer) return;
+
+            // Bricks
+            bricks.forEach(b => {
+                if(b.active) {
+                    if(flyer.x > b.x && flyer.x < b.x + b.w &&
+                       flyer.y - 20 < b.y + b.h && flyer.y + 20 > b.y) {
+                        b.active = false;
+                        flyer.vy *= -1;
+                        flyer.vx += (Math.random()-0.5) * 2; // Chaos bounce
+
+                        if(state.mode === 'PLAYING') {
+                            state.score += 10;
+                            updateHUD();
+                        }
+                        if(bricks.every(br => !br.active)) levelUp();
+                    }
+                }
+            });
+
+            // Board
+            let relX = flyer.x - board.x; 
+            let onBoardHorizontally = Math.abs(relX) < CONFIG.boardWidth/2 + 10; 
+            let onCorrectSide = (board.upSide === 'right' && relX > 0) || (board.upSide === 'left' && relX < 0);
+
+            if(onBoardHorizontally && onCorrectSide && flyer.vy > 0) {
+                let surfaceY = board.getSurfaceY(flyer.x);
+                let dist = Math.abs((flyer.y + 25) - surfaceY);
+                
+                if(dist < CONFIG.tolerance) {
+                    flyer.role = 'sitting';
+                    sitter.role = 'flying';
+                    sitter.y = board.getSurfaceY(sitter.x) - 30; 
+                    sitter.vy = CONFIG.launchPower;
+                    
+                    let dir = (relX > 0) ? -1 : 1;
+                    let force = Math.abs(relX) / (CONFIG.boardWidth/2); 
+                    sitter.vx = dir * (4 + (force * 12)); 
+
+                    sitter.vx += (Math.random() - 0.5) * 2;
+                    sitter.vy += (Math.random() - 0.5) * 1.5;
+
+                    board.upSide = (board.upSide === 'right') ? 'left' : 'right';
+                }
+            }
+        }
+
+        function handleDeath() {
+            if(state.mode === 'DEMO') {
+                clowns = [new Clown(), new Clown()];
+                clowns[0].role = 'flying'; clowns[0].x = state.width/2; clowns[0].y = 120;
+                clowns[0].vx = (Math.random()-0.5)*5;
+                clowns[1].role = 'sitting';
+                return;
+            }
+
+            state.lives--;
+            updateHUD();
+
+            if(state.lives <= 0) {
+                state.mode = 'GAMEOVER';
+                document.body.classList.remove('playing'); // Show mouse
+                document.getElementById('finalScoreDisplay').innerText = "Score: " + state.score;
+                gameOverScreen.classList.remove('hidden');
+                scoreEl.classList.add('hidden');
+                livesEl.classList.add('hidden');
+
+                clearTimeout(state.idleTimer);
+                state.idleTimer = setTimeout(() => {
+                    startTitle(); 
+                }, 6000);
+
+            } else {
+                let flyer = clowns.find(c => c.role === 'flying');
+                flyer.y = 100;
+                flyer.x = state.width/2;
+                flyer.vy = 0;
+                flyer.vx = (Math.random()-0.5)*4;
+            }
+        }
+
+        function levelUp() {
+            state.level++;
+            
+            // EXTRA LIFE MECHANIC
+            if(state.mode === 'PLAYING' && state.level % 3 === 0) {
+                state.lives++;
+                updateHUD();
+                // Show Toast
+                toastEl.innerText = "+1 LIFE!";
+                toastEl.style.opacity = 1;
+                setTimeout(() => toastEl.style.opacity = 0, 2000);
+            }
+
+            if (state.mode === 'DEMO') {
+                initLevel(state.level);
+                return;
+            }
+
+            state.mode = 'LEVEL';
+            levelScreen.classList.remove('hidden');
+            document.getElementById('levelText').innerText = "LEVEL " + state.level;
+            
+            setTimeout(() => {
+                levelScreen.classList.add('hidden');
+                state.mode = 'PLAYING';
+                initLevel(state.level);
+            }, 1500);
+        }
+
+        function updateHUD() {
+            scoreEl.innerText = "Score: " + state.score;
+            livesEl.innerText = "❤".repeat(state.lives);
+        }
+
+        function loop() {
+            ctx.clearRect(0,0, state.width, state.height);
+            
+            if(state.mode !== 'GAMEOVER' && state.mode !== 'LEVEL') {
+                board.update();
+                clowns.forEach(c => c.update());
+                checkCollision();
+            }
+
+            bricks.forEach(b => b.draw(ctx));
+            board.draw(ctx);
+            clowns.forEach(c => c.draw(ctx));
+
+            requestAnimationFrame(loop);
+        }
+
+        function startTitle() {
+            clearTimeout(state.idleTimer);
+            state.mode = 'TITLE';
+            document.body.classList.remove('playing');
+            titleScreen.classList.remove('hidden');
+            demoOverlay.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            scoreEl.classList.add('hidden');
+            livesEl.classList.add('hidden');
+            levelEl.classList.add('hidden');
+            
+            initLevel(1); 
+            
+            clearTimeout(state.timer);
+            state.timer = setTimeout(() => {
+                if(state.mode === 'TITLE') {
+                    state.mode = 'DEMO';
+                    titleScreen.classList.add('hidden');
+                    demoOverlay.classList.remove('hidden');
+                    levelEl.classList.remove('hidden');
+                    state.level = 1;
+                    initLevel(1);
+                }
+            }, 5000);
+        }
+
+        function startGame() {
+            // Attempt Full Screen
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                }
+            } catch(e) { console.log("Fullscreen denied"); }
+
+            clearTimeout(state.timer);
+            clearTimeout(state.idleTimer);
+            
+            state.mode = 'PLAYING';
+            document.body.classList.add('playing'); // Hide cursor
+            
+            state.score = 0;
+            state.lives = 5; // 5 Lives start
+            state.level = 1;
+            
+            titleScreen.classList.add('hidden');
+            demoOverlay.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            scoreEl.classList.remove('hidden');
+            livesEl.classList.remove('hidden');
+            levelEl.classList.remove('hidden');
+            
+            updateHUD();
+            initLevel(1);
+        }
+
+        // Input
+        function handleMove(e) {
+            let cx = e.clientX;
+            if(e.touches && e.touches.length > 0) cx = e.touches[0].clientX;
+            if(cx) {
+                state.mouseX = cx;
+                if(state.mode !== 'DEMO') state.targetX = cx; // Mouse controls target
+            }
+        }
+
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive:false});
+
+        // Keyboard Logic
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'ArrowLeft') state.keys.left = true;
+            if(e.code === 'ArrowRight') state.keys.right = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if(e.code === 'ArrowLeft') state.keys.left = false;
+            if(e.code === 'ArrowRight') state.keys.right = false;
+        });
+
+        window.addEventListener('mousedown', () => { if(state.mode === 'DEMO') startTitle(); });
+        window.addEventListener('touchstart', () => { if(state.mode === 'DEMO') startTitle(); });
+
+        document.getElementById('btnStart').onclick = (e) => { e.stopPropagation(); startGame(); };
+        document.getElementById('btnRestart').onclick = (e) => { e.stopPropagation(); startGame(); };
+
+        window.onresize = () => {
+            state.width = window.innerWidth;
+            state.height = window.innerHeight;
+            canvas.width = state.width;
+            canvas.height = state.height;
+            board.y = state.height - 100;
+        };
+        window.onresize();
+
+        startTitle();
+        loop();
+
+    </script>
+</body>
+</html>

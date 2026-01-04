@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Clown Teeter: Definitive Fixed</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+        /* --- 1. Radiant Atmosphere --- */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #FF6B6B, #FFD93D, #6BCB77, #4D96FF, #9D4EDD);
+            background-size: 400% 400%;
+            animation: radiantSky 25s ease infinite;
+            font-family: 'Luckiest Guy', cursive;
+            touch-action: none;
+            user-select: none;
+            cursor: none; /* Immersive mode */
+        }
+
+        @keyframes radiantSky {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #gameContainer { position: relative; width: 100vw; height: 100vh; }
+        canvas { display: block; filter: drop-shadow(0 0 20px rgba(0,0,0,0.3)); }
+
+        /* --- 2. HUD & UI Layers --- */
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column;
+        }
+
+        .hud-bar {
+            display: flex; justify-content: space-between; padding: 20px 40px;
+            font-size: 40px; color: #FFF; text-shadow: 4px 4px 0 #000;
+            z-index: 10;
+        }
+
+        #livesDisplay { color: #FF1744; letter-spacing: 5px; }
+        #levelDisplay { position: absolute; width: 100%; text-align: center; top: 20px; }
+
+        /* --- 3. Screens (Title, GameOver) --- */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.85);
+            z-index: 20; transition: opacity 0.4s;
+            pointer-events: auto;
+        }
+
+        .hidden { opacity: 0; pointer-events: none; }
+
+        /* Rainbow Title Logic */
+        .rainbow-text {
+            font-size: 85px; line-height: 1.1; margin-bottom: 20px; text-align: center;
+            background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+            background-size: 200% auto;
+            color: #fff;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 5s linear infinite, float 3s ease-in-out infinite;
+            filter: drop-shadow(0px 5px 0px rgba(0,0,0,0.5));
+        }
+
+        @keyframes shine { to { background-position: 200% center; } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+
+        p { color: #EEE; font-size: 24px; margin: 10px; text-shadow: 2px 2px 0 #000; }
+
+        /* Action Button */
+        button {
+            background: linear-gradient(to bottom, #76ff03, #64dd17);
+            border: 6px solid #fff; color: #1b5e20;
+            font-family: 'Luckiest Guy', cursive; font-size: 40px;
+            padding: 20px 80px; border-radius: 60px;
+            cursor: pointer; box-shadow: 0 10px 0 #33691e;
+            transition: all 0.1s; margin-top: 20px;
+        }
+        button:hover { transform: scale(1.05) translateY(-5px); }
+        button:active { transform: scale(0.95) translateY(5px); box-shadow: 0 5px 0 #33691e; }
+
+        /* Demo Badge */
+        .demo-badge {
+            position: absolute; bottom: 40px;
+            background: #FFC107; color: #000;
+            padding: 10px 30px; border-radius: 20px;
+            border: 4px solid #FFF; font-size: 24px;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Heads Up Display -->
+        <div class="ui-layer">
+            <div class="hud-bar" id="hud">
+                <div id="scoreDisplay">0</div>
+                <div id="livesDisplay">❤❤❤❤❤</div>
+            </div>
+            <div id="levelDisplay" class="hud-bar" style="justify-content: center;">Level 1</div>
+        </div>
+
+        <!-- Screens -->
+        <div id="titleScreen" class="screen">
+            <h1 class="rainbow-text">CLOWN TEETER<br>EXTREME</h1>
+            <p>Catch on the HIGH side to Launch!</p>
+            <button id="btnStart">PLAY</button>
+            <p style="font-size: 18px; color: #AAA; margin-top: 30px;">(Auto-Demo in 5s...)</p>
+        </div>
+
+        <div id="demoOverlay" class="screen hidden" style="background: transparent; pointer-events: none;">
+            <div class="demo-badge">AI AUTO-PILOT</div>
+        </div>
+
+        <div id="levelScreen" class="screen hidden" style="background: rgba(0,0,0,0.95);">
+            <h1 class="rainbow-text" id="levelTitle">LEVEL 1</h1>
+        </div>
+
+        <div id="gameOverScreen" class="screen hidden">
+            <h1 class="rainbow-text" style="font-size: 100px;">GAME OVER</h1>
+            <p id="finalScore" style="font-size: 50px;">Score: 0</p>
+            <button id="btnRestart">RETRY</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Configuration ---
+        const CFG = {
+            gravity: 0.17,          // Low gravity = High jumps
+            maxFall: 15,
+            launchForce: -24,       // Strong launch
+            boardW: 360,
+            boardH: 25,
+            friction: 0.99,
+            tolerance: 50           // Catch height forgiveness
+        };
+
+        const EMOJIS = ['🤡','🤠','👽','🤖','🦄','🎃','👻','🐯','🐷','🐸','👾','💩'];
+        const PALETTES = [
+            ['#FF3D00', '#FFEA00', '#00E676', '#2979FF'], // Neon
+            ['#F50057', '#9C27B0', '#651FFF', '#3D5AFE'], // Deep Purple
+            ['#00C853', '#64DD17', '#AEEA00', '#FFD600'], // Toxic
+            ['#FF9100', '#FF3D00', '#D50000', '#C51162']  // Magma
+        ];
+
+        // --- Global State ---
+        const game = {
+            width: 0, height: 0,
+            mode: 'TITLE',
+            score: 0,
+            lives: 5,
+            level: 1,
+            mouseX: 0,
+            targetX: 0,
+            keys: { left: false, right: false },
+            shake: 0,
+            timers: {}
+        };
+
+        // --- Input Handling ---
+        function setInput(x) {
+            if (game.mode === 'DEMO') { resetToTitle(); return; }
+            game.targetX = x;
+            game.mouseX = x;
+        }
+        window.addEventListener('mousemove', e => setInput(e.clientX));
+        window.addEventListener('touchmove', e => { e.preventDefault(); setInput(e.touches[0].clientX); }, {passive: false});
+        
+        window.addEventListener('keydown', e => {
+            if(game.mode === 'DEMO') { resetToTitle(); return; }
+            if(e.code === 'ArrowLeft') game.keys.left = true;
+            if(e.code === 'ArrowRight') game.keys.right = true;
+        });
+        window.addEventListener('keyup', e => {
+            if(e.code === 'ArrowLeft') game.keys.left = false;
+            if(e.code === 'ArrowRight') game.keys.right = false;
+        });
+        
+        window.addEventListener('mousedown', () => { if(game.mode === 'DEMO') resetToTitle(); });
+        window.addEventListener('touchstart', () => { if(game.mode === 'DEMO') resetToTitle(); });
+
+
+        // --- ENTITIES ---
+
+        class Board {
+            constructor() {
+                this.x = game.width/2; 
+                this.y = game.height - 100;
+                this.angle = -0.3;
+                this.upSide = 'right'; 
+                this.face = '🤡';
+            }
+
+            update() {
+                // AI / Input Logic
+                if (game.mode === 'DEMO') {
+                    const flyer = entities.clowns.find(c => c.state === 'flying');
+                    if(flyer) {
+                        const offset = CFG.boardW / 3.2; 
+                        let idealX = (this.upSide === 'right') ? flyer.x - offset : flyer.x + offset;
+                        let wobble = Math.sin(Date.now() / 300) * 35;
+                        game.targetX = idealX + wobble;
+                    }
+                } else {
+                    if(game.keys.left) game.targetX -= 18;
+                    if(game.keys.right) game.targetX += 18;
+                }
+
+                // Physics Movement
+                let speed = (game.mode === 'DEMO') ? 0.3 : 0.2;
+                this.x += (game.targetX - this.x) * speed;
+
+                if(this.x < 0) this.x = 0; 
+                if(this.x > game.width) this.x = game.width;
+                this.y = game.height - 100;
+
+                // Tilt Animation
+                let targetAngle = (this.upSide === 'right') ? -0.35 : 0.35;
+                this.angle += (targetAngle - this.angle) * 0.15;
+            }
+
+            getSurfaceY(atX) {
+                let relX = atX - this.x;
+                return this.y + (relX * Math.tan(this.angle));
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = '#3E2723';
+                ctx.beginPath(); ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - 30, game.height); ctx.lineTo(this.x + 30, game.height);
+                ctx.fill();
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                let grad = ctx.createLinearGradient(0, -10, 0, 10);
+                grad.addColorStop(0, '#8D6E63'); grad.addColorStop(1, '#4E342E');
+                ctx.fillStyle = grad;
+                
+                ctx.beginPath(); 
+                ctx.roundRect(-CFG.boardW/2, -CFG.boardH/2, CFG.boardW, CFG.boardH, 8); 
+                ctx.fill();
+
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = (this.upSide === 'left') ? '#00E676' : '#D32F2F';
+                ctx.fillRect(-CFG.boardW/2 + 10, -10, CFG.boardW/2 - 20, 20);
+                
+                ctx.fillStyle = (this.upSide === 'right') ? '#00E676' : '#D32F2F';
+                ctx.fillRect(10, -10, CFG.boardW/2 - 20, 20);
+                ctx.globalAlpha = 1.0;
+
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.fillRect(-CFG.boardW/2 + 20, -10, 15, 20);
+                ctx.fillRect(CFG.boardW/2 - 35, -10, 15, 20);
+
+                ctx.restore();
+
+                ctx.font = "40px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.shadowBlur = 0;
+                ctx.fillText(this.face, this.x, this.y);
+            }
+        }
+
+        class Clown {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = game.width/2; this.y = 100;
+                this.vx = 0; this.vy = 0;
+                this.state = 'flying'; // flying, sitting
+                this.face = EMOJIS[0];
+                this.size = 26;
+            }
+
+            update() {
+                // *** FIX: Get board from global entities object ***
+                const board = entities.board;
+
+                if(this.state === 'flying') {
+                    this.vy += CFG.gravity;
+                    if(this.vy > CFG.maxFall) this.vy = CFG.maxFall;
+                    this.x += this.vx; this.y += this.vy;
+
+                    if(this.x < this.size) { this.x = this.size; this.vx *= -1; }
+                    if(this.x > game.width - this.size) { this.x = game.width - this.size; this.vx *= -1; }
+                    if(this.y < 0) { this.y = 0; this.vy = Math.abs(this.vy); }
+
+                    if(this.y > game.height + 50) handleDeath();
+
+                } else {
+                    // Sitting Logic: Lock to board end
+                    const offset = CFG.boardW/2 - 35;
+                    const dir = (board.upSide === 'right') ? -1 : 1; 
+                    this.x = board.x + (dir * offset * Math.cos(board.angle));
+                    this.y = board.y + (dir * offset * Math.sin(board.angle)) - 30;
+                }
+            }
+
+            draw(ctx) {
+                // *** FIX: Get board from global entities object ***
+                const board = entities.board;
+
+                ctx.font = "55px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                ctx.save(); ctx.translate(this.x, this.y);
+                
+                if(this.state === 'flying') ctx.rotate(this.vx * 0.1); 
+                else ctx.rotate(board.angle);
+
+                ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 4;
+                ctx.fillText(this.face, 0, 0);
+                ctx.shadowBlur = 0;
+                ctx.fillText(this.face, 0, 0);
+                
+                ctx.restore();
+            }
+        }
+
+        class Brick {
+            constructor(x, y, w, h, color, shape, pattern) {
+                this.x = x; this.y = y; this.w = w; this.h = h;
+                this.color = color; this.visible = true;
+                this.shape = shape;     
+                this.pattern = pattern; 
+                this.scale = 0;         
+            }
+            update() { if(this.scale < 1) this.scale += 0.1; }
+
+            draw(ctx) {
+                if(!this.visible) return;
+                const cx = this.x + this.w/2; const cy = this.y + this.h/2;
+                const size = Math.min(this.w, this.h)/2;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(this.scale, this.scale);
+
+                ctx.beginPath();
+                if(this.shape === 'rect') ctx.roundRect(-this.w/2, -this.h/2, this.w, this.h, 8);
+                else if(this.shape === 'circle') ctx.arc(0,0, size, 0, Math.PI*2);
+                else if(this.shape === 'hex') drawPolygon(ctx, 0,0, size, 6);
+                else if(this.shape === 'star') drawStar(ctx, 0,0, 5, size, size/2);
+                else if(this.shape === 'heart') drawHeart(ctx, 0, -5, size*1.2);
+
+                ctx.save();
+                ctx.clip();
+
+                ctx.fillStyle = this.color; ctx.fill();
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                if(this.pattern === 'stripes') {
+                    for(let i=-this.w; i<this.w; i+=10) ctx.fillRect(i, -this.h, 4, this.h*2);
+                } else if(this.pattern === 'dots') {
+                    for(let i=-this.w; i<this.w; i+=12) 
+                        for(let j=-this.h; j<this.h; j+=12) {
+                            ctx.beginPath(); ctx.arc(i, j, 2, 0, Math.PI*2); ctx.fill();
+                        }
+                }
+                ctx.restore(); 
+
+                ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,0.1)"; ctx.stroke();
+                ctx.fillStyle = "rgba(255,255,255,0.3)";
+                ctx.beginPath();
+                if(this.shape === 'rect') ctx.ellipse(0, -this.h/4, this.w/4, 5, 0,0,Math.PI*2);
+                else ctx.arc(-size/3, -size/3, size/4, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y; this.color = color;
+                this.vx = (Math.random()-0.5)*15; 
+                this.vy = (Math.random()-0.5)*15;
+                this.life = 1.0;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                this.vy += 0.5;
+                this.life -= 0.04;
+            }
+            draw(ctx) {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.rect(this.x, this.y, 8, 8); ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        // --- Helpers ---
+        function drawPolygon(ctx, x, y, r, sides) {
+            ctx.moveTo(x + r, y);
+            for(let i=1; i<sides; i++) 
+                ctx.lineTo(x + r*Math.cos(i*2*Math.PI/sides), y + r*Math.sin(i*2*Math.PI/sides));
+            ctx.closePath();
+        }
+        function drawStar(ctx, cx, cy, spikes, outer, inner) {
+            let rot=Math.PI/2*3; let x=cx; let y=cy; let step=Math.PI/spikes;
+            ctx.moveTo(cx, cy-outer);
+            for(let i=0; i<spikes; i++){
+                x=cx+Math.cos(rot)*outer; y=cy+Math.sin(rot)*outer; ctx.lineTo(x,y); rot+=step;
+                x=cx+Math.cos(rot)*inner; y=cy+Math.sin(rot)*inner; ctx.lineTo(x,y); rot+=step;
+            }
+            ctx.lineTo(cx, cy-outer); ctx.closePath();
+        }
+        function drawHeart(ctx, x, y, size) {
+            ctx.moveTo(x, y + size*0.3);
+            ctx.bezierCurveTo(x, y, x - size/2, y, x - size/2, y + size*0.3);
+            ctx.bezierCurveTo(x - size/2, y + size*0.6, x, y + size*0.8, x, y + size);
+            ctx.bezierCurveTo(x, y + size*0.8, x + size/2, y + size*0.6, x + size/2, y + size*0.3);
+            ctx.bezierCurveTo(x + size/2, y, x, y, x, y + size*0.3);
+            ctx.closePath();
+        }
+
+        // --- Main Object Structure ---
+        // Defined here so classes can see it
+        const entities = {
+            board: new Board(), // Board initialized here
+            clowns: [],
+            bricks: [],
+            particles: []
+        };
+
+        // --- Game Logic ---
+
+        function resetRound() {
+            entities.clowns = [new Clown(), new Clown()];
+            
+            // Flyer
+            entities.clowns[0].state = 'flying';
+            entities.clowns[0].x = game.width/2; entities.clowns[0].y = 150;
+            entities.clowns[0].vx = (Math.random()-0.5)*5;
+            entities.clowns[0].face = EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
+
+            // Sitter
+            entities.clowns[1].state = 'sitting';
+            entities.clowns[1].face = EMOJIS[Math.floor(Math.random()*EMOJIS.length)];
+
+            entities.board.upSide = (Math.random() > 0.5) ? 'right' : 'left';
+        }
+
+        function generateLevel(lvl) {
+            entities.bricks = [];
+            const rows = Math.min(8, 3 + Math.floor(lvl/2));
+            const cols = 8;
+            const w = (game.width - 60) / cols;
+            const h = 30;
+            const palette = PALETTES[(lvl-1) % PALETTES.length];
+            const patternIdx = (lvl-1) % 5;
+
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    let cx = 30 + c*w;
+                    let cy = 70 + r*35;
+                    let color = palette[(c+r)%palette.length];
+                    
+                    let shape = 'rect';
+                    let pattern = 'solid';
+                    let add = false;
+
+                    // Infinite Logic
+                    if(patternIdx === 0) { add=true; shape='rect'; pattern='stripes'; }
+                    else if(patternIdx === 1) { add=((c+r)%2===0); shape='circle'; pattern='dots'; }
+                    else if(patternIdx === 2) { add=true; shape='hex'; pattern='solid'; }
+                    else if(patternIdx === 3) { add=true; shape=(r%2===0)?'heart':'star'; color=(r%2===0)?'#E91E63':'#FFD600'; }
+                    else { add=true; shape=['rect','circle','hex'][Math.floor(Math.random()*3)]; }
+
+                    if(add) entities.bricks.push(new Brick(cx, cy, w-5, h, color, shape, pattern));
+                }
+            }
+        }
+
+        function checkCollisions() {
+            let flyer = entities.clowns.find(c => c.state === 'flying');
+            let sitter = entities.clowns.find(c => c.state === 'sitting');
+            if(!flyer) return;
+
+            // 1. Brick Collision
+            let hit = false;
+            entities.bricks.forEach(b => {
+                if(b.visible) {
+                    if(flyer.x > b.x && flyer.x < b.x+b.w &&
+                       flyer.y-20 < b.y+b.h && flyer.y+20 > b.y) {
+                        
+                        b.visible = false;
+                        flyer.vy *= -1;
+                        flyer.vx += (Math.random()-0.5)*2; 
+
+                        if(game.mode === 'PLAYING') {
+                            game.score += 10;
+                            updateHUD();
+                        }
+                        
+                        for(let i=0; i<8; i++) 
+                            entities.particles.push(new Particle(b.x+b.w/2, b.y+b.h/2, b.color));
+                        
+                        game.shake = 5;
+                        hit = true;
+                    }
+                }
+            });
+            if(hit && entities.bricks.every(b => !b.visible)) nextLevel();
+
+            // 2. Board Catch Collision
+            const board = entities.board;
+            let relX = flyer.x - board.x;
+            let onCorrectSide = (board.upSide === 'right' && relX > 0) || (board.upSide === 'left' && relX < 0);
+            let withinWidth = Math.abs(relX) < (CFG.boardW/2 + 20);
+
+            if(onCorrectSide && withinWidth && flyer.vy > 0) {
+                let surfaceY = board.getSurfaceY(flyer.x);
+                if(Math.abs((flyer.y + 25) - surfaceY) < CFG.tolerance) {
+                    // SWAP!
+                    flyer.state = 'sitting';
+                    sitter.state = 'flying';
+                    sitter.y = board.getSurfaceY(sitter.x) - 30; 
+
+                    let distPct = Math.abs(relX) / (CFG.boardW/2);
+                    let launchDir = (relX > 0) ? -1 : 1;
+
+                    sitter.vy = CFG.launchForce;
+                    sitter.vx = launchDir * (2 + (distPct * 14)); 
+
+                    if(sitter.x < 80) sitter.vx += 4;
+                    if(sitter.x > game.width - 80) sitter.vx -= 4;
+
+                    board.upSide = (board.upSide==='right')?'left':'right';
+                    game.shake = 12;
+                }
+            }
+        }
+
+        function handleDeath() {
+            if(game.mode === 'DEMO') { resetRound(); return; }
+            
+            game.lives--;
+            updateHUD();
+            game.shake = 25;
+
+            if(game.lives <= 0) {
+                game.mode = 'GAMEOVER';
+                document.getElementById('finalScore').innerText = "Score: " + game.score;
+                document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+                
+                clearTimeout(game.idleTimer);
+                game.idleTimer = setTimeout(resetToTitle, 6000);
+            } else {
+                resetRound();
+            }
+        }
+
+        function nextLevel() {
+            game.level++;
+            if(game.mode === 'PLAYING' && game.level % 3 === 0) {
+                game.lives++; updateHUD();
+            }
+
+            if(game.mode === 'DEMO') {
+                resetRound(); generateLevel(game.level); return;
+            }
+
+            game.mode = 'LEVEL_TRANSITION';
+            document.getElementById('levelTitle').innerText = "LEVEL " + game.level;
+            document.getElementById('levelScreen').classList.remove('hidden');
+            
+            setTimeout(() => {
+                document.getElementById('levelScreen').classList.add('hidden');
+                game.mode = 'PLAYING';
+                resetRound();
+                generateLevel(game.level);
+            }, 1500);
+        }
+
+        function update() {
+            if(game.shake > 0) game.shake *= 0.9;
+            if(game.shake < 0.5) game.shake = 0;
+
+            if(game.mode !== 'GAMEOVER' && game.mode !== 'LEVEL_TRANSITION') {
+                entities.board.update();
+                entities.clowns.forEach(c => c.update());
+                entities.bricks.forEach(b => b.update());
+                
+                for(let i=entities.particles.length-1; i>=0; i--) {
+                    let p = entities.particles[i];
+                    p.update();
+                    if(p.life <= 0) entities.particles.splice(i, 1);
+                }
+
+                checkCollisions();
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, game.width, game.height);
+            
+            ctx.save();
+            if(game.shake > 0) {
+                let s = game.shake;
+                ctx.translate(Math.random()*s - s/2, Math.random()*s - s/2);
+            }
+
+            entities.bricks.forEach(b => b.draw(ctx));
+            entities.particles.forEach(p => p.draw(ctx));
+            entities.board.draw(ctx);
+            entities.clowns.forEach(c => c.draw(ctx));
+
+            ctx.restore();
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function resetToTitle() {
+            clearTimeout(game.idleTimer);
+            game.mode = 'TITLE';
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            document.getElementById('titleScreen').classList.remove('hidden');
+            
+            resetRound();
+            generateLevel(1);
+
+            clearTimeout(game.timers.demo);
+            game.timers.demo = setTimeout(startDemo, 5000);
+        }
+
+        function startDemo() {
+            if(game.mode !== 'TITLE') return;
+            game.mode = 'DEMO';
+            document.getElementById('titleScreen').classList.add('hidden');
+            document.getElementById('demoOverlay').classList.remove('hidden');
+            resetRound();
+        }
+
+        function startGame() {
+            clearTimeout(game.timers.demo);
+            clearTimeout(game.idleTimer);
+            
+            game.mode = 'PLAYING';
+            game.score = 0;
+            game.lives = 5;
+            game.level = 1;
+            updateHUD();
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+            try { if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); } catch(e){}
+
+            resetRound();
+            generateLevel(1);
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreDisplay').innerText = game.score;
+            document.getElementById('livesDisplay').innerText = "❤".repeat(game.lives);
+            document.getElementById('levelDisplay').innerText = "Level " + game.level;
+        }
+
+        function resize() {
+            game.width = window.innerWidth;
+            game.height = window.innerHeight;
+            canvas.width = game.width;
+            canvas.height = game.height;
+        }
+
+        window.addEventListener('resize', resize);
+        document.getElementById('btnStart').onclick = startGame;
+        document.getElementById('btnRestart').onclick = startGame;
+
+        resize();
+        resetToTitle();
+        loop();
+
+    </script>
+</body>
+</html>

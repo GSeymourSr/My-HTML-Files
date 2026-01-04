@@ -1,0 +1,290 @@
+--- START OF FILE maze5.html ---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber-Snake Maze Solver</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #00ff99;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    #header {
+      text-align: center;
+      margin: 20px;
+      text-shadow: 0 0 10px #00ff99;
+    }
+    #stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+    #controls {
+      font-size: 0.8em;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    svg {
+      border: 3px solid #333;
+      background-color: #000;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    /* Maze walls */
+    .wall {
+      stroke: #552288;
+      stroke-width: 2;
+      stroke-linecap: round;
+    }
+    /* The trial path (dead ends) */
+    .dead-end-path {
+      stroke: #333;
+      stroke-width: 2;
+      fill: none;
+      stroke-dasharray: 4;
+    }
+    /* The active snake path */
+    .snake-body {
+      stroke: #00ff99;
+      stroke-width: 4;
+      fill: none;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 5px #00ff99);
+    }
+    .snake-head {
+      fill: #fff;
+      filter: drop-shadow(0 0 8px #fff);
+    }
+    .start-marker { fill: #00ff99; }
+    .end-marker { 
+      fill: #ff0055; 
+      filter: drop-shadow(0 0 5px #ff0055);
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <h1>CYBER-SNAKE v2.0</h1>
+    <div id="stats">
+      <div id="timer">Time: 0s</div>
+      <div id="speed-display">Speed: Normal</div>
+    </div>
+    <div id="controls">Use ↑/↓ Arrow Keys to adjust speed</div>
+  </div>
+
+  <svg id="maze" width="500" height="500"></svg>
+
+  <script>
+    const svg = document.getElementById("maze");
+    const timerDiv = document.getElementById("timer");
+    const speedDiv = document.getElementById("speed-display");
+    const width = svg.clientWidth;
+    const height = svg.clientHeight;
+    const cols = 20;
+    const rows = 20;
+    const cellSize = width / cols;
+    
+    let speed = 100; // ms
+    let grid = [];
+    let snakeStack = [];
+    let snakeCurrent = null;
+    let timerInterval;
+    let startTime;
+
+    // --- Keyboard Controls ---
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp") speed = Math.max(20, speed - 20);
+      if (e.key === "ArrowDown") speed = Math.min(400, speed + 20);
+      updateSpeedDisplay();
+    });
+
+    function updateSpeedDisplay() {
+      let label = "Normal";
+      if (speed < 60) label = "Hyper";
+      if (speed > 200) label = "Slow";
+      speedDiv.textContent = `Speed: ${label}`;
+    }
+
+    class Cell {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.walls = { top: true, right: true, bottom: true, left: true };
+        this.visited = false; 
+        this.explored = false;
+      }
+    }
+
+    function index(x, y) {
+      if (x < 0 || y < 0 || x >= cols || y >= rows) return -1;
+      return x + y * cols;
+    }
+
+    function generateMaze() {
+      grid = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) grid.push(new Cell(x, y));
+      }
+
+      let current = grid[0];
+      let stack = [];
+      current.visited = true;
+
+      while (true) {
+        let neighbors = [];
+        let {x, y} = current;
+        let top = grid[index(x, y - 1)];
+        let right = grid[index(x + 1, y)];
+        let bottom = grid[index(x, y + 1)];
+        let left = grid[index(x - 1, y)];
+
+        if (top && !top.visited) neighbors.push(top);
+        if (right && !right.visited) neighbors.push(right);
+        if (bottom && !bottom.visited) neighbors.push(bottom);
+        if (left && !left.visited) neighbors.push(left);
+
+        if (neighbors.length > 0) {
+          let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+          removeWalls(current, next);
+          stack.push(current);
+          current = next;
+          current.visited = true;
+        } else if (stack.length > 0) {
+          current = stack.pop();
+        } else {
+          break;
+        }
+      }
+    }
+
+    function removeWalls(a, b) {
+      const dx = a.x - b.x;
+      if (dx === 1) { a.walls.left = false; b.walls.right = false; }
+      else if (dx === -1) { a.walls.right = false; b.walls.left = false; }
+      const dy = a.y - b.y;
+      if (dy === 1) { a.walls.top = false; b.walls.bottom = false; }
+      else if (dy === -1) { a.walls.bottom = false; b.walls.top = false; }
+    }
+
+    function drawMaze() {
+      svg.innerHTML = '';
+      grid.forEach(cell => {
+        const x = cell.x * cellSize;
+        const y = cell.y * cellSize;
+        if (cell.walls.top) svg.appendChild(createLine(x, y, x + cellSize, y));
+        if (cell.walls.right) svg.appendChild(createLine(x + cellSize, y, x + cellSize, y + cellSize));
+        if (cell.walls.bottom) svg.appendChild(createLine(x, y + cellSize, x + cellSize, y + cellSize));
+        if (cell.walls.left) svg.appendChild(createLine(x, y, x, y + cellSize));
+      });
+    }
+
+    function createLine(x1, y1, x2, y2, cls = "wall") {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", x1); line.setAttribute("y1", y1);
+      line.setAttribute("x2", x2); line.setAttribute("y2", y2);
+      line.setAttribute("class", cls);
+      return line;
+    }
+
+    // --- Snake Exploration Logic ---
+    let snakeBodyPath = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    snakeBodyPath.setAttribute("class", "snake-body");
+    
+    let snakeHead = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    snakeHead.setAttribute("r", cellSize/4);
+    snakeHead.setAttribute("class", "snake-head");
+
+    function updateSnakeVisuals() {
+      // Update body
+      let points = snakeStack.concat(snakeCurrent).map(c => 
+        `${c.x * cellSize + cellSize/2},${c.y * cellSize + cellSize/2}`
+      ).join(" ");
+      snakeBodyPath.setAttribute("points", points);
+      
+      // Update head
+      snakeHead.setAttribute("cx", snakeCurrent.x * cellSize + cellSize/2);
+      snakeHead.setAttribute("cy", snakeCurrent.y * cellSize + cellSize/2);
+    }
+
+    function moveSnake() {
+      if (snakeCurrent.x === cols - 1 && snakeCurrent.y === rows - 1) {
+        clearInterval(timerInterval);
+        setTimeout(initGame, 3000);
+        return;
+      }
+
+      let neighbors = [];
+      let {x, y, walls} = snakeCurrent;
+      if (!walls.top) neighbors.push(grid[index(x, y - 1)]);
+      if (!walls.right) neighbors.push(grid[index(x + 1, y)]);
+      if (!walls.bottom) neighbors.push(grid[index(x, y + 1)]);
+      if (!walls.left) neighbors.push(grid[index(x - 1, y)]);
+
+      let unvisited = neighbors.filter(n => !n.explored);
+
+      if (unvisited.length > 0) {
+        let next = unvisited[Math.floor(Math.random() * unvisited.length)];
+        snakeStack.push(snakeCurrent);
+        snakeCurrent = next;
+        snakeCurrent.explored = true;
+      } else if (snakeStack.length > 0) {
+        // Backtracking: Leave a breadcrumb of where we were
+        let prev = snakeCurrent;
+        snakeCurrent = snakeStack.pop();
+        svg.insertBefore(
+          createLine(
+            prev.x * cellSize + cellSize/2, prev.y * cellSize + cellSize/2,
+            snakeCurrent.x * cellSize + cellSize/2, snakeCurrent.y * cellSize + cellSize/2,
+            "dead-end-path"
+          ), 
+          snakeBodyPath
+        );
+      }
+
+      updateSnakeVisuals();
+      setTimeout(moveSnake, speed);
+    }
+
+    function drawMarkers() {
+      const end = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      end.setAttribute("cx", (cols-1) * cellSize + cellSize/2);
+      end.setAttribute("cy", (rows-1) * cellSize + cellSize/2);
+      end.setAttribute("r", cellSize/3);
+      end.setAttribute("class", "end-marker");
+      svg.appendChild(end);
+    }
+
+    function initGame() {
+      generateMaze();
+      drawMaze();
+      drawMarkers();
+      
+      snakeCurrent = grid[0];
+      snakeCurrent.explored = true;
+      snakeStack = [];
+      
+      svg.appendChild(snakeBodyPath);
+      svg.appendChild(snakeHead);
+      
+      startTime = Date.now();
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timerDiv.textContent = `Time: ${Math.floor((Date.now() - startTime)/1000)}s`;
+      }, 1000);
+
+      moveSnake();
+    }
+
+    updateSpeedDisplay();
+    initGame();
+  </script>
+</body>
+</html>

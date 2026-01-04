@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>HD Flag Accumulation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #050505;
+            font-family: 'Arial', sans-serif;
+            touch-action: none; /* Prevent zooming on mobile */
+        }
+        #instruction {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 14px;
+            pointer-events: none;
+            user-select: none;
+            z-index: 10;
+        }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+
+<div id="instruction">Tap screen to restart immediately</div>
+<canvas id="canvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width, height;
+
+    // --- Config ---
+    const FLAG_W = 80;   // Larger for better detail
+    const FLAG_H = 50;
+    const FLOAT_SPEED = 1.2;
+
+    // --- Colors ---
+    const C = {
+        R: '#CE1126', W: '#FFFFFF', B: '#002868', // USA/UK/France
+        LB: '#6CACE4', // Argentina/UN
+        K: '#181818', // Black
+        G: '#C09300', // Gold (Egypt eagle)
+        Gr: '#009739', // Brazil Green
+        Y: '#FFD700', // Yellow
+        Or: '#FF9933', // India/Ireland Orange
+        Teal: '#00574B', 
+        D_Red: '#8B0000', 
+        Navy: '#000080',
+        Blue_Sky: '#00A6EF' // Kaz/Somalia
+    };
+
+    // --- The 50 Nations ---
+    const FLAGS = [
+        "USA", "Egypt", "Japan", "United Kingdom", "Canada", 
+        "Brazil", "Germany", "France", "Italy", "India", 
+        "South Korea", "China", "Australia", "Mexico", "Spain", 
+        "Russia", "Ukraine", "Argentina", "South Africa", "Turkey", 
+        "Greece", "Sweden", "Norway", "Denmark", "Finland", 
+        "Poland", "Indonesia", "Vietnam", "Thailand", "Philippines", 
+        "Saudi Arabia", "Israel", "Pakistan", "Bangladesh", "Nigeria", 
+        "Kenya", "Morocco", "Ghana", "Jamaica", "Cuba", 
+        "Chile", "Colombia", "Peru", "Venezuela", "Portugal", 
+        "Belgium", "Netherlands", "Austria", "Hungary", "Ireland"
+    ];
+
+    // --- State ---
+    let sprites = {}; // Cache for flag images
+    let state = 'launch'; 
+    let flagIndex = 0;
+    let timer = 0;
+    let rocket = null;
+    let particles = [];
+    let floatingFlags = [];
+    let stars = [];
+
+    // --- Setup ---
+    function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function fullReset() {
+        flagIndex = 0;
+        floatingFlags = [];
+        particles = [];
+        rocket = null;
+        state = 'launch';
+        timer = 0;
+    }
+    window.addEventListener('mousedown', fullReset);
+    window.addEventListener('touchstart', (e) => { e.preventDefault(); fullReset(); }, {passive: false});
+
+    // --- HD Flag Drawer (Vector Logic) ---
+    // This draws shapes onto a canvas, ensuring crisp details
+    function drawFlagOnCanvas(ctx, w, h, name) {
+        // Default background white
+        ctx.fillStyle = C.W;
+        ctx.fillRect(0,0,w,h);
+
+        // Helper: Horizontal Stripes
+        function drawHStripes(colors) {
+            const sh = h / colors.length;
+            colors.forEach((c, i) => {
+                ctx.fillStyle = c;
+                ctx.fillRect(0, i*sh, w, sh);
+            });
+        }
+        // Helper: Vertical Stripes
+        function drawVStripes(colors) {
+            const sw = w / colors.length;
+            colors.forEach((c, i) => {
+                ctx.fillStyle = c;
+                ctx.fillRect(i*sw, 0, sw, h);
+            });
+        }
+
+        switch (name) {
+            case "USA":
+                // 13 Stripes
+                drawHStripes([C.R,C.W,C.R,C.W,C.R,C.W,C.R,C.W,C.R,C.W,C.R,C.W,C.R]);
+                // Canton
+                ctx.fillStyle = C.B;
+                ctx.fillRect(0, 0, w*0.4, h*(7/13));
+                // Stars (Draw 20 dots to simulate the field)
+                ctx.fillStyle = C.W;
+                for(let y=0; y<5; y++) {
+                    for(let x=0; x<6; x++) {
+                        ctx.beginPath();
+                        ctx.arc(3 + x*(w*0.06), 3 + y*(h*0.09), 1, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+                break;
+
+            case "Egypt":
+                drawHStripes([C.R, C.W, C.K]);
+                // Eagle (Gold block)
+                ctx.fillStyle = C.G;
+                ctx.fillRect(w/2 - 6, h/2 - 5, 12, 10);
+                break;
+
+            case "Germany": drawHStripes([C.K, C.R, C.Y]); break;
+            case "Russia": drawHStripes([C.W, C.B, C.R]); break;
+            case "Netherlands": drawHStripes([C.R, C.W, C.B]); break;
+            case "Austria": drawHStripes([C.R, C.W, C.R]); break;
+            case "Hungary": drawHStripes([C.R, C.W, C.Gr]); break;
+            
+            case "France": drawVStripes([C.B, C.W, C.R]); break;
+            case "Italy": drawVStripes([C.Gr, C.W, C.R]); break;
+            case "Ireland": drawVStripes([C.Gr, C.W, C.Or]); break;
+            case "Belgium": drawVStripes([C.K, C.Y, C.R]); break;
+            case "Nigeria": drawVStripes([C.Gr, C.W, C.Gr]); break;
+            case "Peru": drawVStripes([C.R, C.W, C.R]); break;
+
+            case "Japan":
+                ctx.fillStyle = C.W; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.R; ctx.beginPath(); ctx.arc(w/2, h/2, h*0.3, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "Bangladesh":
+                ctx.fillStyle = '#006a4e'; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.R; ctx.beginPath(); ctx.arc(w*0.45, h/2, h*0.3, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "United Kingdom":
+                ctx.fillStyle = C.B; ctx.fillRect(0,0,w,h);
+                // White diagonals
+                ctx.strokeStyle = C.W; ctx.lineWidth = 8;
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(0,h); ctx.stroke();
+                // Red diagonals
+                ctx.strokeStyle = C.R; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(0,h); ctx.stroke();
+                // White Cross
+                ctx.fillStyle = C.W; ctx.fillRect(w/2-6, 0, 12, h); ctx.fillRect(0, h/2-6, w, 12);
+                // Red Cross
+                ctx.fillStyle = C.R; ctx.fillRect(w/2-3, 0, 6, h); ctx.fillRect(0, h/2-3, w, 6);
+                break;
+
+            case "Canada":
+                drawVStripes([C.R, C.W, C.R]);
+                // Leaf (Simple Red Diamond)
+                ctx.fillStyle = C.R;
+                ctx.beginPath(); ctx.moveTo(w/2, h*0.2); ctx.lineTo(w*0.6, h/2); ctx.lineTo(w/2, h*0.8); ctx.lineTo(w*0.4, h/2); ctx.fill();
+                break;
+
+            case "Brazil":
+                ctx.fillStyle = C.Gr; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.Y; ctx.beginPath(); ctx.moveTo(w/2, 5); ctx.lineTo(w-5, h/2); ctx.lineTo(w/2, h-5); ctx.lineTo(5, h/2); ctx.fill();
+                ctx.fillStyle = '#002776'; ctx.beginPath(); ctx.arc(w/2, h/2, h*0.25, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "India":
+                drawHStripes([C.Or, C.W, C.Gr]);
+                ctx.fillStyle = C.Navy; ctx.beginPath(); ctx.arc(w/2, h/2, h*0.15, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "South Korea":
+                ctx.fillStyle = C.W; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.R; ctx.beginPath(); ctx.arc(w/2, h/2, h*0.25, Math.PI, 0); ctx.fill();
+                ctx.fillStyle = C.B; ctx.beginPath(); ctx.arc(w/2, h/2, h*0.25, 0, Math.PI); ctx.fill();
+                // Trigrams
+                ctx.fillStyle = C.K; 
+                ctx.fillRect(5, 5, 8, 2); ctx.fillRect(w-13, h-7, 8, 2);
+                break;
+
+            case "China":
+                ctx.fillStyle = C.R; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.Y; ctx.font = "14px Arial"; ctx.fillText("★", 5, 15);
+                break;
+
+            case "Australia":
+                ctx.fillStyle = C.B; ctx.fillRect(0,0,w,h);
+                // Union Jack corner
+                ctx.fillStyle = C.R; ctx.fillRect(w/4-1, 0, 2, h/2); ctx.fillRect(0, h/4-1, w/2, 2);
+                // Stars
+                ctx.fillStyle = C.W; ctx.beginPath(); ctx.arc(w*0.75, h*0.5, 2, 0, Math.PI*2); ctx.fill();
+                break;
+            
+            case "Mexico":
+                drawVStripes(['#006847', C.W, C.R]);
+                ctx.fillStyle = '#691C32'; ctx.beginPath(); ctx.arc(w/2, h/2, 5, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "Spain":
+                ctx.fillStyle = C.R; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.Y; ctx.fillRect(0, h*0.25, w, h*0.5);
+                break;
+
+            case "Ukraine": drawHStripes(['#0057B8', C.Y]); break;
+            case "Poland": drawHStripes([C.W, C.R]); break;
+            case "Indonesia": drawHStripes([C.R, C.W]); break;
+
+            case "Argentina":
+                drawHStripes([C.LB, C.W, C.LB]);
+                ctx.fillStyle = C.Y; ctx.beginPath(); ctx.arc(w/2, h/2, 4, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "South Africa":
+                ctx.fillStyle = C.W; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.R; ctx.fillRect(0,0,w,h/2);
+                ctx.fillStyle = C.B; ctx.fillRect(0,h/2,w,h/2);
+                // Green Y
+                ctx.fillStyle = C.Gr; 
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w*0.3, h/2); ctx.lineTo(0, h); ctx.lineTo(w*0.1, h); ctx.lineTo(w*0.4, h/2 + 5); ctx.lineTo(w, h/2+5); ctx.lineTo(w, h/2-5); ctx.lineTo(w*0.4, h/2 - 5); ctx.lineTo(w*0.1, 0); ctx.fill();
+                // Black Triangle
+                ctx.fillStyle = C.K;
+                ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w*0.2, h/2); ctx.lineTo(0, h); ctx.fill();
+                break;
+            
+            case "Turkey":
+                ctx.fillStyle = C.R; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.W; 
+                ctx.beginPath(); ctx.arc(w*0.4, h/2, 8, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = C.R; 
+                ctx.beginPath(); ctx.arc(w*0.43, h/2, 6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = C.W; 
+                ctx.beginPath(); ctx.arc(w*0.55, h/2, 2, 0, Math.PI*2); ctx.fill();
+                break;
+            
+            case "Pakistan":
+                ctx.fillStyle = '#00401A'; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.W; ctx.fillRect(0,0,10,h);
+                ctx.beginPath(); ctx.arc(w/2, h/2, 8, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#00401A'; ctx.beginPath(); ctx.arc(w/2+3, h/2-1, 7, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = C.W; ctx.beginPath(); ctx.arc(w/2+5, h/2-5, 2, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "Greece":
+                ctx.fillStyle = '#0D5EAF'; ctx.fillRect(0,0,w,h);
+                drawHStripes(['#0D5EAF',C.W,'#0D5EAF',C.W,'#0D5EAF',C.W,'#0D5EAF',C.W,'#0D5EAF']);
+                ctx.fillStyle = '#0D5EAF'; ctx.fillRect(0,0,w*0.4, h*0.5);
+                ctx.fillStyle = C.W; ctx.fillRect(w*0.18, 0, 5, h*0.5); ctx.fillRect(0, h*0.22, w*0.4, 5);
+                break;
+
+            case "Sweden":
+                ctx.fillStyle = '#006AA7'; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.Y; ctx.fillRect(w*0.3, 0, 8, h); ctx.fillRect(0, h*0.45, w, 8);
+                break;
+            case "Finland":
+                ctx.fillStyle = C.W; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = '#003580'; ctx.fillRect(w*0.3, 0, 8, h); ctx.fillRect(0, h*0.45, w, 8);
+                break;
+            case "Denmark":
+                ctx.fillStyle = C.R; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.W; ctx.fillRect(w*0.3, 0, 8, h); ctx.fillRect(0, h*0.45, w, 8);
+                break;
+            case "Norway":
+                ctx.fillStyle = C.R; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.W; ctx.fillRect(w*0.3-2, 0, 12, h); ctx.fillRect(0, h*0.45-2, w, 12);
+                ctx.fillStyle = C.B; ctx.fillRect(w*0.3, 0, 8, h); ctx.fillRect(0, h*0.45, w, 8);
+                break;
+
+            case "Vietnam":
+                ctx.fillStyle = C.R; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.Y; ctx.font = "20px Arial"; ctx.fillText("★", w/2-10, h/2+7);
+                break;
+            case "Morocco":
+                ctx.fillStyle = C.D_Red; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = '#006233'; ctx.font = "20px Arial"; ctx.fillText("★", w/2-10, h/2+7);
+                break;
+
+            case "Thailand":
+                drawHStripes([C.R, C.W, '#2D2A4A', '#2D2A4A', C.W, C.R]);
+                break;
+            case "Philippines":
+                drawHStripes(['#0038A8', C.R]);
+                ctx.fillStyle = C.W; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w*0.4, h/2); ctx.lineTo(0, h); ctx.fill();
+                ctx.fillStyle = C.Y; ctx.beginPath(); ctx.arc(10, h/2, 4, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "Saudi Arabia":
+                ctx.fillStyle = '#006C35'; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.W; ctx.fillRect(w*0.2, h*0.6, w*0.6, 2); // Sword
+                break;
+
+            case "Israel":
+                ctx.fillStyle = C.W; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = '#0038b8'; ctx.fillRect(0, 0, w, h*0.2); ctx.fillRect(0, h*0.8, w, h*0.2);
+                ctx.beginPath(); ctx.arc(w/2, h/2, 5, 0, Math.PI*2); ctx.fill();
+                break;
+
+            case "Kenya":
+                drawHStripes([C.K, C.W, '#006600', C.W, '#006600', C.W, C.K]); // Rough approx
+                ctx.fillStyle = C.R; ctx.beginPath(); ctx.ellipse(w/2, h/2, 5, 12, 0, 0, Math.PI*2); ctx.fill();
+                break;
+            
+            case "Ghana": drawHStripes([C.R, C.Y, '#006B3F']); ctx.fillStyle=C.K; ctx.fillText("★", w/2-5, h/2+5); break;
+            
+            case "Jamaica":
+                ctx.fillStyle = C.Gr; ctx.fillRect(0,0,w,h); // Top/Bot Green
+                ctx.fillStyle = C.K; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w/2, h/2); ctx.lineTo(0,h); ctx.fill(); ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(w/2, h/2); ctx.lineTo(w,h); ctx.fill();
+                // Gold Cross
+                ctx.strokeStyle = C.Y; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w,h); ctx.stroke(); ctx.beginPath(); ctx.moveTo(w,0); ctx.lineTo(0,h); ctx.stroke();
+                break;
+
+            case "Cuba":
+                drawHStripes(['#002a8f', C.W, '#002a8f', C.W, '#002a8f']);
+                ctx.fillStyle = C.R; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(w*0.4, h/2); ctx.lineTo(0,h); ctx.fill();
+                ctx.fillStyle = C.W; ctx.fillText("★", 5, h/2+5);
+                break;
+
+            case "Chile":
+                drawHStripes([C.W, C.R]);
+                ctx.fillStyle = '#0039a6'; ctx.fillRect(0,0,w*0.35, h/2);
+                ctx.fillStyle = C.W; ctx.fillText("★", 5, h*0.35);
+                break;
+            
+            case "Colombia": ctx.fillStyle = C.Y; ctx.fillRect(0,0,w,h/2); ctx.fillStyle = '#003893'; ctx.fillRect(0,h/2,w,h/4); ctx.fillStyle = C.R; ctx.fillRect(0,h*0.75,w,h/4); break;
+            case "Venezuela": drawHStripes([C.Y, '#00247D', C.R]); break;
+            case "Portugal": ctx.fillStyle = C.Gr; ctx.fillRect(0,0,w*0.4,h); ctx.fillStyle = C.R; ctx.fillRect(w*0.4,0,w*0.6,h); break;
+
+            default:
+                // Fallback White Flag with Name
+                ctx.fillStyle = C.W; ctx.fillRect(0,0,w,h);
+                ctx.fillStyle = C.K; ctx.font="8px Arial"; ctx.fillText("?", w/2-2, h/2);
+        }
+        
+        // Add subtle border
+        ctx.strokeStyle = "rgba(0,0,0,0.2)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0,0,w,h);
+    }
+
+    // --- Pre-Render All Flags ---
+    function initSprites() {
+        FLAGS.forEach(name => {
+            const c = document.createElement('canvas');
+            c.width = FLAG_W; c.height = FLAG_H;
+            const cx = c.getContext('2d');
+            drawFlagOnCanvas(cx, FLAG_W, FLAG_H, name);
+            sprites[name] = c;
+        });
+    }
+    initSprites();
+
+    // --- Classes ---
+
+    class Rocket {
+        constructor(name) {
+            this.name = name;
+            this.x = width / 2;
+            this.y = height;
+            // Target: Random position in the top 70% of screen
+            this.tx = Math.random() * (width - FLAG_W - 20) + 10;
+            this.ty = Math.random() * (height - FLAG_H - 100) + 50;
+            this.speed = 12 + Math.random() * 5;
+            this.dead = false;
+        }
+
+        update() {
+            const dx = this.tx - this.x;
+            const dy = this.ty - this.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            this.x += (dx/dist) * this.speed;
+            this.y += (dy/dist) * this.speed;
+
+            // Trail
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillRect(this.x + (Math.random()-0.5)*5, this.y + (Math.random())*10, 2, 2);
+
+            if (dist < this.speed) {
+                this.dead = true;
+                return { x: this.tx, y: this.ty };
+            }
+            return null;
+        }
+        draw() {
+            ctx.fillStyle = "#FFF";
+            ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    class Particle {
+        constructor(x, y) {
+            this.x = x; this.y = y;
+            this.vx = (Math.random()-0.5)*6;
+            this.vy = (Math.random()-0.5)*6;
+            this.life = 1;
+            this.color = `hsl(${Math.random()*360}, 100%, 50%)`;
+        }
+        update() {
+            this.x+=this.vx; this.y+=this.vy; this.life-=0.05;
+        }
+        draw() {
+            ctx.globalAlpha = Math.max(0, this.life);
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, 3, 3);
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    class FloatingFlag {
+        constructor(name, x, y) {
+            this.name = name;
+            this.img = sprites[name];
+            this.x = x; this.y = y;
+            this.vx = (Math.random()-0.5)*FLOAT_SPEED;
+            this.vy = (Math.random()-0.5)*FLOAT_SPEED;
+            this.wave = Math.random()*100;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            this.wave += 0.1;
+            // Bounce off walls
+            if(this.x < 0 || this.x > width-FLAG_W) this.vx *= -1;
+            if(this.y < 0 || this.y > height-FLAG_H) this.vy *= -1;
+        }
+        draw() {
+            const bob = Math.sin(this.wave)*3;
+            // Draw Shadow
+            ctx.fillStyle = "rgba(0,0,0,0.5)";
+            ctx.fillRect(this.x+5, this.y+bob+5, FLAG_W, FLAG_H);
+            
+            // Draw Image
+            ctx.drawImage(this.img, this.x, this.y+bob);
+            
+            // Draw Name
+            ctx.font = "bold 11px Arial";
+            ctx.fillStyle = "#FFF";
+            ctx.textAlign = "center";
+            ctx.shadowColor="black"; ctx.shadowBlur=4;
+            ctx.fillText(this.name, this.x + FLAG_W/2, this.y + FLAG_H + 14 + bob);
+            ctx.shadowBlur=0;
+        }
+    }
+
+    // --- Main Loop ---
+
+    function animate() {
+        ctx.clearRect(0,0,width,height);
+
+        // Logic
+        if (state === 'launch') {
+            if (!rocket && flagIndex < FLAGS.length) {
+                rocket = new Rocket(FLAGS[flagIndex]);
+            }
+            if (rocket) {
+                const boom = rocket.update();
+                rocket.draw();
+                if (boom) {
+                    rocket = null;
+                    // Explosion particles
+                    for(let i=0; i<15; i++) particles.push(new Particle(boom.x + FLAG_W/2, boom.y + FLAG_H/2));
+                    // Add Flag
+                    floatingFlags.push(new FloatingFlag(FLAGS[flagIndex], boom.x, boom.y));
+                    flagIndex++;
+                    state = 'wait'; // Brief pause between rockets
+                    timer = 0;
+                }
+            } else if (flagIndex >= FLAGS.length) {
+                state = 'done';
+            }
+        }
+
+        if (state === 'wait') {
+            timer++;
+            if(timer > 10) { // Fast cadence
+                state = 'launch'; 
+            }
+        }
+
+        if (state === 'done') {
+            timer++;
+            // Draw timer bar
+            ctx.fillStyle = C.R;
+            ctx.fillRect(0, height-4, (timer/600)*width, 4);
+            if (timer > 600) fullReset();
+        }
+
+        // Updates & Drawing
+        floatingFlags.forEach(f => { f.update(); f.draw(); });
+        
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            particles[i].draw();
+            if(particles[i].life <= 0) particles.splice(i,1);
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+
+</script>
+</body>
+</html>

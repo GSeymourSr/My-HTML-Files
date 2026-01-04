@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Butterfly Garden Player</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* The container for the animations */
+        #viewport {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        /* The Title Overlay */
+        #title-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            pointer-events: none; /* Let clicks pass through to the canvas */
+            z-index: 1000;
+            text-shadow: 0 2px 4px rgba(0,0,0,1);
+            transition: opacity 0.5s;
+        }
+
+        /* Progress bar to show 15s timing */
+        #progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: #ffdb1e;
+            width: 0%;
+            z-index: 1001;
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="progress-bar"></div>
+    <div id="title-overlay">Loading Garden...</div>
+    <iframe id="viewport" sandbox="allow-scripts allow-same-origin"></iframe>
+
+    <!-- 
+      ========================================
+      DATA STORAGE
+      The specific files are stored in <template> tags 
+      to preserve their code exactly as provided.
+      ========================================
+    -->
+
+<template id="ai_studio_code (7).html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greg Seymour AI Butterfly Garden</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: linear-gradient(45deg, #f7d4d4, #c9f7d4, #d4f0f7, #f7e8d4); background-size: 400% 400%; animation: gradientBG 20s ease infinite; cursor: pointer; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        canvas { display: block; position: absolute; top: 0; left: 0; }
+        h1 { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-family: 'Garamond', 'Times New Roman', serif; font-weight: 300; font-size: 2.5em; color: rgba(0, 0, 0, 0.7); text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.5); margin: 0; pointer-events: none; text-align: center; }
+        #info { position: absolute; bottom: 10px; left: 10px; font-family: 'Garamond', sans-serif; color: rgba(0,0,0,0.5); font-size: 0.9em; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <h1>Greg Seymour AI Butterfly Garden</h1>
+    <canvas id="gardenCanvas"></canvas>
+    <div id="info">Click to add a temporary flower</div>
+    <script>
+        const canvas = document.getElementById('gardenCanvas'); const ctx = canvas.getContext('2d');
+        let butterflies = []; let flowers = []; const BUTTERFLY_COUNT = 25; const MAX_FLOWERS = 25; const FLOWER_LIFESPAN = 800;
+        function getRandom(min, max) { return Math.random() * (max - min) + min; }
+        function getRandomHSLA(alpha = 1) { const hue = Math.random() * 360; const saturation = getRandom(70, 100); const lightness = getRandom(60, 80); return `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`; }
+        function setup() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; butterflies = []; flowers = []; for (let i = 0; i < BUTTERFLY_COUNT; i++) { butterflies.push(createButterfly()); } }
+        function createButterfly(x, y) { const side = Math.floor(Math.random() * 4); const margin = 100; if (x === undefined || y === undefined) { switch (side) { case 0: x = getRandom(0, canvas.width); y = -margin; break; case 1: x = canvas.width + margin; y = getRandom(0, canvas.height); break; case 2: x = getRandom(0, canvas.width); y = canvas.height + margin; break; case 3: x = -margin; y = getRandom(0, canvas.height); break; } } const size = getRandom(6, 15); const frontWingColor = getRandomHSLA(); const backWingColor = getRandomHSLA(); const spots = []; for(let i = 0; i < 3; i++) { spots.push({ x: getRandom(-0.8, 0.8), y: getRandom(0.1, 0.8), radius: getRandom(0.05, 0.2), color: getRandomHSLA() }); } return { x, y, size, speed: getRandom(0.8, 2.5), wingFlapSpeed: getRandom(0.1, 0.55), wingAngle: Math.random() * Math.PI * 2, angle: Math.random() * Math.PI * 2, target: { x: getRandom(0, canvas.width), y: getRandom(0, canvas.height) }, frontWingColor, backWingColor, spotColor1: getRandomHSLA(), spotColor2: getRandomHSLA(), patterns: spots, turnSpeed: 0.05 }; }
+        function createFlower(x, y) { if (flowers.length >= MAX_FLOWERS) return; const newFlower = { x, y, size: getRandom(20, 40), petalColor: getRandomHSLA(0.8), centerColor: getRandomHSLA(), lifespan: FLOWER_LIFESPAN, maxLifespan: FLOWER_LIFESPAN }; flowers.push(newFlower); let closestButterfly = null; let minDistance = Infinity; butterflies.forEach(b => { const dx = b.x - x; const dy = b.y - y; const distance = dx * dx + dy * dy; if (distance < minDistance) { minDistance = distance; closestButterfly = b; } }); if (closestButterfly) { closestButterfly.target = {x: x, y: y - newFlower.size}; } }
+        function findNewTarget(b) { if (flowers.length > 0 && Math.random() < 0.3) { const targetFlower = flowers[Math.floor(Math.random() * flowers.length)]; b.target = { x: targetFlower.x, y: targetFlower.y - targetFlower.size }; } else { b.target = { x: getRandom(50, canvas.width - 50), y: getRandom(50, canvas.height - 50) }; } }
+        function updateButterfly(b, index) { b.wingAngle += b.wingFlapSpeed; const dx = b.target.x - b.x; const dy = b.target.y - b.y; const distance = Math.sqrt(dx * dx + dy * dy); if (distance < 20) { findNewTarget(b); } const targetAngle = Math.atan2(dy, dx); let angleDiff = targetAngle - b.angle; while (angleDiff < -Math.PI) angleDiff += Math.PI * 2; while (angleDiff > Math.PI) angleDiff -= Math.PI * 2; b.angle += angleDiff * b.turnSpeed; b.x += Math.cos(b.angle) * b.speed; b.y += Math.sin(b.angle) * b.speed; const margin = 120; if (b.x < -margin || b.x > canvas.width + margin || b.y < -margin || b.y > canvas.height + margin) { butterflies[index] = createButterfly(); } }
+        function drawFlower(f) { const currentAlpha = f.lifespan / f.maxLifespan; ctx.globalAlpha = Math.sin(currentAlpha * Math.PI); ctx.strokeStyle = `rgba(40, 92, 45, ${currentAlpha * 0.8})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(f.x, canvas.height); ctx.quadraticCurveTo(f.x + getRandom(-20, 20), (canvas.height + f.y) / 2, f.x, f.y); ctx.stroke(); ctx.fillStyle = f.petalColor; for (let i = 0; i < 5; i++) { const angle = (Math.PI * 2 / 5) * i; ctx.beginPath(); ctx.ellipse(f.x + Math.cos(angle) * f.size * 0.7, f.y + Math.sin(angle) * f.size * 0.7, f.size, f.size * 0.5, angle, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = f.centerColor; ctx.beginPath(); ctx.arc(f.x, f.y, f.size * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+        function drawButterfly(b) { ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.angle + Math.PI / 2); const flap = Math.sin(b.wingAngle); const backFlap = flap * (Math.PI / 15); const frontFlap = flap * (Math.PI / 17); ctx.fillStyle = b.backWingColor; const backWingY = b.size * 0.9; ctx.beginPath(); ctx.moveTo(0, backWingY); ctx.rotate(backFlap); ctx.bezierCurveTo(b.size * 4, b.size * 1.5, b.size * 2.5, -b.size * 0.5, 0, backWingY); ctx.fill(); ctx.rotate(-backFlap); ctx.beginPath(); ctx.moveTo(0, backWingY); ctx.rotate(-backFlap); ctx.bezierCurveTo(-b.size * 4, b.size * 1.5, -b.size * 2.5, -b.size * 0.5, 0, backWingY); ctx.fill(); ctx.rotate(backFlap); ctx.fillStyle = b.frontWingColor; const frontWingY = -b.size * 0.2; ctx.beginPath(); ctx.moveTo(0, frontWingY); ctx.rotate(frontFlap); ctx.bezierCurveTo(b.size * 3.5, -b.size * 3, b.size * 3, b.size * 2.5, 0, frontWingY); ctx.fill(); b.patterns.forEach(p => { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x * b.size * 2.5, p.y * b.size * 2, p.radius * b.size, 0, Math.PI * 2); ctx.fill(); }); ctx.rotate(-frontFlap); ctx.beginPath(); ctx.moveTo(0, frontWingY); ctx.rotate(-frontFlap); ctx.bezierCurveTo(-b.size * 3.5, -b.size * 3, -b.size * 3, b.size * 2.5, 0, frontWingY); ctx.fill(); b.patterns.forEach(p => { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(-p.x * b.size * 2.5, p.y * b.size * 2, p.radius * b.size, 0, Math.PI * 2); ctx.fill(); }); ctx.rotate(frontFlap); ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(0, b.size * 0.5, b.size * 0.25, b.size * 1.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#222'; ctx.lineWidth = 1; const antennaStartY = -b.size * 0.6; ctx.beginPath(); ctx.moveTo(0, antennaStartY); ctx.quadraticCurveTo(-b.size, -b.size * 1.5, -b.size * 0.8, -b.size * 1.8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, antennaStartY); ctx.quadraticCurveTo(b.size, -b.size * 1.5, b.size * 0.8, -b.size * 1.8); ctx.stroke(); ctx.restore(); }
+        function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); flowers.forEach(drawFlower); flowers.forEach(f => f.lifespan--); flowers = flowers.filter(f => f.lifespan > 0); if (Math.random() < 0.005 && flowers.length < MAX_FLOWERS) { createFlower(getRandom(100, canvas.width - 100), getRandom(canvas.height * 0.6, canvas.height - 100)); } butterflies.forEach((b, i) => { updateButterfly(b, i); drawButterfly(b); }); requestAnimationFrame(animate); }
+        window.addEventListener('resize', setup); canvas.addEventListener('click', (e) => { createFlower(e.clientX, e.clientY); }); setup(); animate();
+    </script>
+</body>
+</html>
+</template>
+
+<template id="ai_studio_code (5).html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate AI Butterfly Garden</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #111; font-family: 'Garamond', 'Times New Roman', serif; user-select: none; }
+        #sky { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(45deg, #f7d4d4, #c9f7d4, #d4f0f7, #f7e8d4); background-size: 400% 400%; animation: gradientBG 20s ease infinite; transition: filter 3s ease; z-index: -1; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        canvas { display: block; position: absolute; top: 0; left: 0; }
+        h1 { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-weight: 300; font-size: 2.5em; color: rgba(0, 0, 0, 0.6); text-shadow: 1px 1px 2px rgba(255,255,255,0.8); margin: 0; pointer-events: none; transition: color 3s ease, text-shadow 3s ease; white-space: nowrap; z-index: 10; }
+        #controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(0,0,0,0.5); background: rgba(255,255,255,0.4); padding: 10px 20px; border-radius: 30px; font-family: sans-serif; font-size: 0.9em; pointer-events: none; transition: color 3s ease, background 3s ease; backdrop-filter: blur(5px); z-index: 10; }
+        body.night #sky { filter: brightness(0.15) saturate(1.2) hue-rotate(240deg); }
+        body.night h1 { color: rgba(255, 255, 255, 0.5); text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        body.night #controls { color: rgba(255,255,255,0.6); background: rgba(0,0,0,0.4); }
+    </style>
+</head>
+<body>
+    <div id="sky"></div> <canvas id="gardenCanvas"></canvas> <h1>The Living Butterfly Garden</h1> <div id="controls">Click to Plant Flower • Spacebar to Toggle Day/Night</div>
+    <script>
+        const canvas = document.getElementById('gardenCanvas'); const ctx = canvas.getContext('2d'); const body = document.body;
+        const SETTINGS = { butterflyCount: 20, bugCount: 30, initialFlowers: 8, flowerLifespan: 1200 };
+        let butterflies = []; let flowers = []; let lightningBugs = []; let isNight = false;
+        function getRandom(min, max) { return Math.random() * (max - min) + min; }
+        function getRainbowHSLA(alpha = 1) { return `hsla(${Math.random() * 360}, ${getRandom(70, 100)}%, ${getRandom(60, 80)}%, ${alpha})`; }
+        class Flower { constructor(x, y, isTemporary = false) { this.x = x; this.y = y; this.size = getRandom(15, 30); this.stemHeight = getRandom(60, 150); this.petalColor = getRainbowHSLA(); this.centerColor = '#ffdb1e'; this.isTemporary = isTemporary; this.life = SETTINGS.flowerLifespan; this.opacity = 0; } update() { if (this.opacity < 1 && this.life > 100) this.opacity += 0.05; if (this.isTemporary) { this.life--; if (this.life < 50) this.opacity -= 0.02; } } draw() { if (this.opacity <= 0) return; ctx.save(); ctx.globalAlpha = Math.max(0, this.opacity); ctx.strokeStyle = `rgba(45, 90, 39, ${this.opacity})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.quadraticCurveTo(this.x + 15, this.y + this.stemHeight / 2, this.x + 5, this.y + this.stemHeight); ctx.stroke(); ctx.fillStyle = this.petalColor; for (let i = 0; i < 6; i++) { const angle = (Math.PI * 2 / 6) * i; ctx.beginPath(); ctx.ellipse( this.x + Math.cos(angle) * (this.size/1.5), this.y + Math.sin(angle) * (this.size/1.5), this.size/1.5, this.size/3, angle, 0, Math.PI * 2 ); ctx.fill(); } ctx.fillStyle = this.centerColor; ctx.beginPath(); ctx.arc(this.x, this.y, this.size / 4, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
+        class Butterfly { constructor() { this.reset(); } reset(x, y) { if (x === undefined) { this.x = getRandom(0, canvas.width); this.y = getRandom(0, canvas.height); } else { this.x = x; this.y = y; } this.size = getRandom(10, 20); this.speed = getRandom(1.5, 3); this.angle = Math.random() * Math.PI * 2; this.wingAngle = 0; this.wingFlapSpeed = getRandom(0.1, 0.3); this.frontWingColor = getRainbowHSLA(); this.backWingColor = getRainbowHSLA(); this.patterns = []; for(let i = 0; i < 3; i++) { this.patterns.push({ x: getRandom(-0.8, 0.8), y: getRandom(0.1, 0.8), radius: getRandom(0.05, 0.2), color: getRainbowHSLA() }); } this.state = 'flying'; this.target = null; this.timer = 0; } update() { this.wingAngle += this.wingFlapSpeed; if (this.state === 'flying') { this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed; if (Math.random() < 0.05) this.angle += getRandom(-0.5, 0.5); if (flowers.length > 0 && Math.random() < 0.02) { const f = flowers[Math.floor(Math.random() * flowers.length)]; if (f.opacity > 0.5) { this.target = f; this.state = 'seeking'; } } const margin = 50; if (this.x < -margin) this.x = canvas.width + margin; if (this.x > canvas.width + margin) this.x = -margin; if (this.y < -margin) this.y = canvas.height + margin; if (this.y > canvas.height + margin) this.y = -margin; } else if (this.state === 'seeking') { if (!this.target || this.target.opacity <= 0) { this.state = 'flying'; return; } const dx = this.target.x - this.x; const dy = (this.target.y - 15) - this.y; const dist = Math.sqrt(dx*dx + dy*dy); const targetAngle = Math.atan2(dy, dx); let diff = targetAngle - this.angle; while (diff < -Math.PI) diff += Math.PI * 2; while (diff > Math.PI) diff -= Math.PI * 2; this.angle += diff * 0.08; this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed; if (dist < 15) { this.state = 'landed'; this.timer = getRandom(120, 300); this.wingFlapSpeed = 0.02; } } else if (this.state === 'landed') { this.timer--; if (this.target) { this.x = this.target.x; this.y = this.target.y - 15; } if (this.timer <= 0 || (this.target && this.target.opacity <= 0)) { this.state = 'flying'; this.wingFlapSpeed = getRandom(0.1, 0.3); this.target = null; this.angle = Math.random() * Math.PI * 2; } } } draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle + Math.PI/2); const flap = Math.sin(this.wingAngle); const backFlap = flap * (Math.PI / 15); const frontFlap = flap * (Math.PI / 10); ctx.fillStyle = this.backWingColor; const backWingY = this.size * 0.9; ctx.beginPath(); ctx.moveTo(0, backWingY); ctx.rotate(backFlap); ctx.bezierCurveTo(this.size * 4, this.size * 1.5, this.size * 2.5, -this.size * 0.5, 0, backWingY); ctx.fill(); ctx.rotate(-backFlap); ctx.beginPath(); ctx.moveTo(0, backWingY); ctx.rotate(-backFlap); ctx.bezierCurveTo(-this.size * 4, this.size * 1.5, -this.size * 2.5, -this.size * 0.5, 0, backWingY); ctx.fill(); ctx.rotate(backFlap); ctx.fillStyle = this.frontWingColor; const frontWingY = -this.size * 0.2; ctx.beginPath(); ctx.moveTo(0, frontWingY); ctx.rotate(frontFlap); ctx.bezierCurveTo(this.size * 3.5, -this.size * 3, this.size * 3, this.size * 2.5, 0, frontWingY); ctx.fill(); this.patterns.forEach(p => { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x * this.size * 2.5, p.y * this.size * 2, p.radius * this.size, 0, Math.PI * 2); ctx.fill(); }); ctx.rotate(-frontFlap); ctx.beginPath(); ctx.moveTo(0, frontWingY); ctx.rotate(-frontFlap); ctx.bezierCurveTo(-this.size * 3.5, -this.size * 3, -this.size * 3, this.size * 2.5, 0, frontWingY); ctx.fill(); this.patterns.forEach(p => { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(-p.x * this.size * 2.5, p.y * this.size * 2, p.radius * this.size, 0, Math.PI * 2); ctx.fill(); }); ctx.rotate(frontFlap); ctx.fillStyle = '#222'; ctx.beginPath(); ctx.ellipse(0, this.size * 0.5, this.size * 0.25, this.size * 1.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#222'; ctx.lineWidth = 1.5; const antennaY = -this.size * 0.6; ctx.beginPath(); ctx.moveTo(0, antennaY); ctx.quadraticCurveTo(-this.size, -this.size * 1.5, -this.size * 0.8, -this.size * 1.8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, antennaY); ctx.quadraticCurveTo(this.size, -this.size * 1.5, this.size * 0.8, -this.size * 1.8); ctx.stroke(); ctx.restore(); } }
+        class LightningBug { constructor() { this.x = getRandom(0, canvas.width); this.y = getRandom(0, canvas.height); this.vx = getRandom(-0.5, 0.5); this.vy = getRandom(-0.5, 0.5); this.offset = Math.random() * 100; } update() { this.x += this.vx; this.y += this.vy; if(this.x < 0 || this.x > canvas.width) this.vx *= -1; if(this.y < 0 || this.y > canvas.height) this.vy *= -1; } draw() { if (!isNight) return; const time = Date.now() / 500; const alpha = (Math.sin(time + this.offset) + 1) / 2; ctx.save(); ctx.translate(this.x, this.y); ctx.shadowBlur = 15; ctx.shadowColor = `rgba(255, 255, 0, ${alpha})`; ctx.fillStyle = `rgba(255, 255, 150, ${alpha})`; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
+        function init() { resize(); for(let i=0; i<SETTINGS.initialFlowers; i++) { flowers.push(new Flower( getRandom(50, canvas.width-50), getRandom(canvas.height * 0.6, canvas.height - 50) )); } for(let i=0; i<SETTINGS.butterflyCount; i++) { butterflies.push(new Butterfly()); } for(let i=0; i<SETTINGS.bugCount; i++) { lightningBugs.push(new LightningBug()); } }
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); flowers.forEach(f => { f.update(); f.draw(); }); flowers = flowers.filter(f => !f.isTemporary || f.opacity > 0); lightningBugs.forEach(bug => { bug.update(); bug.draw(); }); butterflies.forEach(b => { b.update(); b.draw(); }); requestAnimationFrame(animate); }
+        window.addEventListener('resize', resize); window.addEventListener('mousedown', (e) => { const f = new Flower(e.clientX, e.clientY, true); f.stemHeight = getRandom(40, 90); flowers.push(f); }); window.addEventListener('keydown', (e) => { if (e.code === 'Space') { isNight = !isNight; if(isNight) body.classList.add('night'); else body.classList.remove('night'); } });
+        init(); animate();
+    </script>
+</body>
+</html>
+</template>
+
+<template id="ai_studio_code (6).html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Living Garden Ecosystem</title>
+    <style> body { margin: 0; padding: 0; overflow: hidden; background-color: #000; } canvas { display: block; } #instructions { position: absolute; bottom: 10px; left: 10px; color: rgba(255, 255, 255, 0.6); font-family: sans-serif; font-size: 14px; pointer-events: none; text-shadow: 1px 1px 2px black; } </style>
+</head>
+<body>
+<canvas id="gardenCanvas"></canvas> <div id="instructions">Watch the weather cycle: Sunny -> Rain -> Night -> Morning</div>
+<script>
+    const canvas = document.getElementById('gardenCanvas'); const ctx = canvas.getContext('2d');
+    let width, height; const BUTTERFLY_COUNT = 15; const FLOWER_COUNT = 12; const CLOUD_COUNT = 5; const RAIN_COUNT = 100; const STAR_COUNT = 50;
+    let dayCycle = 0; let cycleSpeed = 0.0005; let weatherState = 'clear'; let rainIntensity = 0;
+    const butterflies = []; const flowers = []; const clouds = []; const rainDrops = []; const stars = [];
+    function random(min, max) { return Math.random() * (max - min) + min; }
+    function randomHSL() { return `hsl(${Math.floor(random(0, 360))}, ${Math.floor(random(70, 100))}%, ${Math.floor(random(50, 70))}%)`; }
+    function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; initFlowers(); } window.addEventListener('resize', resize);
+    class Star { constructor() { this.x = random(0, width); this.y = random(0, height * 0.6); this.size = random(0.5, 2); this.twinkleOffset = random(0, 100); } draw(opacity) { ctx.fillStyle = `rgba(255, 255, 255, ${opacity * (0.5 + Math.sin(dayCycle * 100 + this.twinkleOffset) * 0.5)})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } }
+    class Cloud { constructor() { this.x = random(0, width); this.y = random(50, 150); this.speed = random(0.2, 0.5); this.scale = random(0.8, 1.5); this.puffs = []; for(let i=0; i<5; i++) { this.puffs.push({ x: random(-30, 30), y: random(-10, 10), r: random(20, 40) }); } } update() { this.x += this.speed; if (this.x > width + 100) this.x = -100; } draw(brightness) { ctx.fillStyle = `rgba(${255*brightness}, ${255*brightness}, ${255*brightness}, 0.8)`; ctx.save(); ctx.translate(this.x, this.y); ctx.scale(this.scale, this.scale); this.puffs.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill(); }); ctx.restore(); } }
+    class RainDrop { constructor() { this.reset(); } reset() { this.x = random(0, width); this.y = random(-height, 0); this.speed = random(5, 10); this.len = random(10, 20); } update() { this.y += this.speed; if (this.y > height) this.reset(); } draw() { ctx.strokeStyle = 'rgba(200, 200, 255, 0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x, this.y + this.len); ctx.stroke(); } }
+    class Flower { constructor() { this.x = random(50, width - 50); this.stemHeight = random(50, 150); this.y = height; this.size = random(15, 25); this.color = randomHSL(); this.centerColor = '#FFD700'; this.type = Math.floor(random(0, 3)); this.swayOffset = random(0, Math.PI * 2); } draw() { const sway = Math.sin(dayCycle * 100 + this.swayOffset) * 5; ctx.strokeStyle = '#228B22'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.quadraticCurveTo(this.x + sway, this.y - this.stemHeight / 2, this.x + sway, this.y - this.stemHeight); ctx.stroke(); const headX = this.x + sway; const headY = this.y - this.stemHeight; ctx.fillStyle = this.color; ctx.save(); ctx.translate(headX, headY); const petals = this.type === 0 ? 5 : (this.type === 1 ? 8 : 12); for (let i = 0; i < petals; i++) { ctx.rotate((Math.PI * 2) / petals); ctx.beginPath(); if(this.type === 0) ctx.ellipse(0, -this.size/1.5, this.size/3, this.size, 0, 0, Math.PI*2); else if (this.type === 1) ctx.ellipse(0, -this.size/1.2, this.size/4, this.size, 0, 0, Math.PI*2); else ctx.arc(0, -this.size/1.5, this.size/2, 0, Math.PI*2); ctx.fill(); } ctx.fillStyle = this.centerColor; ctx.beginPath(); ctx.arc(0, 0, this.size / 3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
+    class Butterfly { constructor() { this.init(); } init() { this.x = random(0, width); this.y = random(0, height * 0.7); this.size = random(8, 14); this.speed = random(1, 2.5); this.angle = random(0, Math.PI * 2); this.wingFlap = 0; this.flapSpeed = random(0.2, 0.4); this.color1 = randomHSL(); this.color2 = randomHSL(); this.color3 = randomHSL(); this.turnSpeed = random(0.02, 0.05); this.targetY = random(0, height/2); } update() { this.wingFlap += this.flapSpeed; this.angle += Math.sin(this.wingFlap * 0.5) * 0.05; if(Math.random() < 0.02) this.angle += random(-0.5, 0.5); this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed; const margin = 50; if (this.x < -margin) this.x = width + margin; if (this.x > width + margin) this.x = -margin; if (this.y < -margin) this.y = height + margin; if (this.y > height - 50) this.y = height - 50; } draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); const flap = Math.sin(this.wingFlap); const wingWidth = Math.abs(flap * this.size * 2); ctx.fillStyle = this.color1; ctx.save(); ctx.scale(1, Math.abs(Math.sin(this.wingFlap))); ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(-this.size, -this.size*3, this.size*2, -this.size*3, this.size/2, 0); ctx.fill(); ctx.fillStyle = this.color2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo(-this.size, this.size*3, this.size*2, this.size*3, this.size/2, 0); ctx.fill(); ctx.restore(); ctx.fillStyle = '#222'; ctx.beginPath(); ctx.ellipse(0, 0, this.size, this.size/3, 0, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(this.size, 0, this.size/2.5, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(this.size, 0); ctx.quadraticCurveTo(this.size + 10, -5, this.size + 15, -10); ctx.moveTo(this.size, 0); ctx.quadraticCurveTo(this.size + 10, 5, this.size + 15, 10); ctx.stroke(); if (isNight()) { ctx.fillStyle = `rgba(200, 255, 100, ${Math.abs(Math.sin(Date.now() * 0.005)) * 0.5})`; ctx.beginPath(); ctx.arc(-this.size/2, 0, this.size, 0, Math.PI*2); ctx.fill(); } ctx.restore(); } }
+    function init() { resize(); for(let i=0; i<BUTTERFLY_COUNT; i++) butterflies.push(new Butterfly()); for(let i=0; i<CLOUD_COUNT; i++) clouds.push(new Cloud()); for(let i=0; i<RAIN_COUNT; i++) rainDrops.push(new RainDrop()); for(let i=0; i<STAR_COUNT; i++) stars.push(new Star()); initFlowers(); }
+    function initFlowers() { flowers.length = 0; for(let i=0; i<FLOWER_COUNT; i++) flowers.push(new Flower()); }
+    function isNight() { return dayCycle > 0.75 || dayCycle < 0.2; } function isRaining() { return dayCycle > 0.45 && dayCycle < 0.65; }
+    function getSkyColor() { if (dayCycle < 0.2) return ['#05051a', '#443355']; if (dayCycle < 0.45) return ['#87CEEB', '#E0F7FA']; if (dayCycle < 0.65) return ['#4a5052', '#758082']; if (dayCycle < 0.8) return ['#4a2a45', '#ff9a76']; return ['#000005', '#08081a']; }
+    function drawSky() { const colors = getSkyColor(); const grad = ctx.createLinearGradient(0, 0, 0, height); grad.addColorStop(0, colors[0]); grad.addColorStop(1, colors[1]); ctx.fillStyle = grad; ctx.fillRect(0, 0, width, height); const cx = width / 2; const cy = height; const radius = height * 0.8; const angle = (dayCycle * Math.PI * 2) - Math.PI / 2; const celestialX = cx + Math.cos(angle) * radius; const celestialY = cy + Math.sin(angle) * radius; if (isNight()) { ctx.fillStyle = '#fffcdd'; ctx.shadowBlur = 20; ctx.shadowColor = 'white'; ctx.beginPath(); ctx.arc(celestialX, celestialY, 40, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; stars.forEach(s => s.draw(1)); } else if (!isRaining()) { ctx.fillStyle = '#FFD700'; ctx.shadowBlur = 50; ctx.shadowColor = 'orange'; ctx.beginPath(); ctx.arc(celestialX, celestialY, 60, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0; } }
+    function drawGround() { const brightness = isNight() ? 0.3 : (isRaining() ? 0.6 : 1); ctx.fillStyle = `rgb(${50*brightness}, ${150*brightness}, ${50*brightness})`; ctx.fillRect(0, height - 20, width, 20); ctx.beginPath(); ctx.moveTo(0, height); ctx.quadraticCurveTo(width/2, height - 80, width, height); ctx.fillStyle = `rgb(${40*brightness}, ${120*brightness}, ${40*brightness})`; ctx.fill(); }
+    function animate() { ctx.clearRect(0, 0, width, height); dayCycle += cycleSpeed; if (dayCycle > 1) dayCycle = 0; drawSky(); const cloudBrightness = isNight() ? 0.2 : (isRaining() ? 0.5 : 1); clouds.forEach(c => { c.update(); c.draw(cloudBrightness); }); drawGround(); flowers.forEach(f => f.draw()); if (isRaining()) { rainDrops.forEach(r => { r.update(); r.draw(); }); } butterflies.forEach(b => { b.update(); b.draw(); }); if (isNight()) { ctx.fillStyle = 'rgba(0,0,10,0.3)'; ctx.fillRect(0,0,width,height); } requestAnimationFrame(animate); }
+    init(); animate();
+</script>
+</body>
+</html>
+</template>
+
+<template id="ai_studio_code (4).html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slow Fluttering Garden</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: linear-gradient(to bottom, #a1e4ff 0%, #dcf8ff 100%); }
+        #garden { position: relative; width: 100vw; height: 100vh; perspective: 1200px; }
+        .flower { position: absolute; z-index: 1; transform-origin: center bottom; }
+        .petal { position: absolute; border-radius: 50%; transform-origin: center bottom; }
+        .flower-center { position: absolute; border-radius: 50%; z-index: 2; background: #ffdb1e; box-shadow: inset 0 0 5px rgba(0,0,0,0.2); }
+        .butterfly { position: absolute; width: 50px; height: 50px; transform-style: preserve-3d; transition: transform 0.2s ease-out; pointer-events: none; z-index: 10; }
+        .body { position: absolute; top: 20px; left: 23px; width: 4px; height: 18px; background: #1a1a1a; border-radius: 5px; z-index: 5; }
+        .wing { position: absolute; width: 30px; height: 40px; top: 0; opacity: 0.95; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
+        .wing-left { left: -5px; border-radius: 70% 30% 60% 40%; transform-origin: right center; animation: flap-left 0.4s infinite ease-in-out; }
+        .wing-right { left: 25px; border-radius: 30% 70% 40% 60%; transform-origin: left center; animation: flap-right 0.4s infinite ease-in-out; }
+        @keyframes flap-left { 0%, 100% { transform: rotateY(0deg); } 50% { transform: rotateY(75deg); } }
+        @keyframes flap-right { 0%, 100% { transform: rotateY(0deg); } 50% { transform: rotateY(-75deg); } }
+        .grass { position: fixed; bottom: 0; width: 100%; height: 20px; background: #4caf50; z-index: 0; }
+    </style>
+</head>
+<body>
+<div id="garden"></div> <div class="grass"></div>
+<script>
+    const garden = document.getElementById('garden'); const butterflies = []; const flowers = []; const butterflyCount = 12; const flowerCount = 8;
+    function getRandom(min, max) { return Math.random() * (max - min) + min; }
+    function getRandomColor() { const h = Math.floor(Math.random() * 360); return `hsl(${h}, 90%, 60%)`; }
+    function createFlowers() { for (let i = 0; i < flowerCount; i++) { const flower = document.createElement('div'); flower.className = 'flower'; const x = getRandom(50, window.innerWidth - 100); const y = getRandom(100, window.innerHeight - 100); const type = Math.floor(Math.random() * 3); const color = getRandomColor(); const petalCount = type === 0 ? 5 : (type === 1 ? 8 : 6); for (let p = 0; p < petalCount; p++) { const petal = document.createElement('div'); petal.className = 'petal'; petal.style.background = color; if (type === 0) { petal.style.width = '20px'; petal.style.height = '35px'; petal.style.left = '10px'; } else if (type === 1) { petal.style.width = '10px'; petal.style.height = '40px'; petal.style.left = '15px'; petal.style.borderRadius = '100% 100% 0 0'; } else { petal.style.width = '25px'; petal.style.height = '30px'; petal.style.left = '8px'; petal.style.borderRadius = '50% 50% 10% 10%'; } petal.style.transform = `rotate(${p * (360/petalCount)}deg)`; flower.appendChild(petal); } const center = document.createElement('div'); center.className = 'flower-center'; center.style.width = '16px'; center.style.height = '16px'; center.style.left = '12px'; center.style.top = '12px'; flower.appendChild(center); flower.style.left = x + 'px'; flower.style.top = y + 'px'; garden.appendChild(flower); flowers.push({ x: x + 20, y: y + 20 }); } }
+    class Butterfly { constructor() { this.el = document.createElement('div'); this.el.className = 'butterfly'; const wingL = document.createElement('div'); wingL.className = 'wing wing-left'; const wingR = document.createElement('div'); wingR.className = 'wing wing-right'; const c1 = getRandomColor(); const c2 = getRandomColor(); const c3 = getRandomColor(); const gradient = `linear-gradient(45deg, ${c1} 0%, ${c2} 50%, ${c3} 100%)`; wingL.style.background = gradient; wingR.style.background = gradient; const body = document.createElement('div'); body.className = 'body'; this.el.appendChild(wingL); this.el.appendChild(wingR); this.el.appendChild(body); garden.appendChild(this.el); this.reset(); } reset() { const scale = getRandom(0.6, 1.1); this.el.style.scale = scale; this.x = getRandom(0, window.innerWidth); this.y = getRandom(0, window.innerHeight); this.velocity = getRandom(0.8, 1.8); this.angle = getRandom(0, Math.PI * 2); this.rotation = 0; this.state = 'flying'; this.flutterSearch = 0; this.noiseOffset = Math.random() * 1000; } update() { if (this.state === 'flying') { this.angle += Math.sin(Date.now() * 0.001 + this.noiseOffset) * 0.05; this.x += Math.cos(this.angle) * this.velocity; this.y += Math.sin(this.angle) * this.velocity; this.x += (Math.random() - 0.5) * 0.5; this.y += (Math.random() - 0.5) * 0.5; this.rotation = this.angle * (180 / Math.PI) + 90; if (Math.random() < 0.003) { this.targetFlower = flowers[Math.floor(Math.random() * flowers.length)]; this.state = 'approaching'; } } else if (this.state === 'approaching') { const dx = this.targetFlower.x - this.x; const dy = this.targetFlower.y - this.y; const dist = Math.sqrt(dx * dx + dy * dy); this.angle = Math.atan2(dy, dx); this.x += Math.cos(this.angle) * (this.velocity * 0.8); this.y += Math.sin(this.angle) * (this.velocity * 0.8); this.rotation = this.angle * (180 / Math.PI) + 90; if (dist < 10) { this.state = 'resting'; this.landTimer = getRandom(150, 300); this.el.querySelectorAll('.wing').forEach(w => w.style.animationDuration = '1.5s'); } } else if (this.state === 'resting') { this.landTimer--; if (this.landTimer <= 0) { this.state = 'flying'; this.el.querySelectorAll('.wing').forEach(w => w.style.animationDuration = '0.4s'); this.angle += Math.PI; } } const margin = 100; if (this.x < -margin || this.x > window.innerWidth + margin || this.y < -margin || this.y > window.innerHeight + margin) { this.reset(); } this.draw(); } draw() { this.el.style.transform = `translate3d(${this.x}px, ${this.y}px, 0) rotateZ(${this.rotation}deg)`; } }
+    createFlowers(); for (let i = 0; i < butterflyCount; i++) { butterflies.push(new Butterfly()); }
+    function animate() { butterflies.forEach(b => b.update()); requestAnimationFrame(animate); } animate();
+    window.addEventListener('resize', () => { document.querySelectorAll('.flower').forEach(f => f.remove()); flowers.length = 0; createFlowers(); });
+</script>
+</body>
+</html>
+</template>
+
+<template id="ai_studio_code (3).html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Living Garden Ecosystem</title>
+    <style>
+        :root { --sky-color: #a1e4ff; --ground-color: #4caf50; --night-overlay: rgba(0, 0, 20, 0); }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; transition: background 3s ease; }
+        #world { position: relative; width: 100vw; height: 100vh; background: var(--sky-color); transition: background 5s ease; overflow: hidden; }
+        #night-overlay { position: absolute; inset: 0; background: #05051a; opacity: 0; pointer-events: none; z-index: 20; transition: opacity 5s ease; }
+        #rain-container { position: absolute; inset: 0; z-index: 15; pointer-events: none; display: none; }
+        .drop { position: absolute; width: 1px; height: 15px; background: rgba(255, 255, 255, 0.4); animation: fall linear infinite; }
+        @keyframes fall { to { transform: translateY(100vh); } }
+        .sun-moon { position: absolute; top: 50px; right: 100px; width: 80px; height: 80px; border-radius: 50%; background: #ffdb1e; box-shadow: 0 0 50px #ffdb1e; transition: all 5s ease; }
+        .cloud { position: absolute; width: 120px; height: 40px; background: #fff; border-radius: 50px; opacity: 0.8; z-index: 2; transition: transform 1s linear, opacity 3s; }
+        .cloud::after, .cloud::before { content: ''; position: absolute; background: #fff; border-radius: 50%; }
+        .cloud::after { width: 50px; height: 50px; top: -25px; left: 15px; } .cloud::before { width: 70px; height: 70px; top: -35px; left: 35px; }
+        #ground { position: absolute; bottom: 0; width: 100%; height: 40px; background: var(--ground-color); z-index: 5; }
+        .flower-container { position: absolute; bottom: 35px; display: flex; flex-direction: column; align-items: center; z-index: 6; }
+        .stem { width: 4px; height: 60px; background: #2e7d32; }
+        .flower-head { position: relative; width: 40px; height: 40px; margin-bottom: -10px; }
+        .butterfly { position: absolute; width: 40px; height: 40px; transform-style: preserve-3d; z-index: 10; }
+        .body { position: absolute; top: 10px; left: 18px; width: 4px; height: 20px; background: #1a1a1a; border-radius: 5px; }
+        .head { position: absolute; top: -5px; left: -1px; width: 6px; height: 6px; background: #1a1a1a; border-radius: 50%; }
+        .head::before, .head::after { content: ''; position: absolute; width: 1px; height: 8px; background: #1a1a1a; top: -6px; }
+        .head::before { left: 1px; transform: rotate(-20deg); } .head::after { left: 4px; transform: rotate(20deg); }
+        .wing { position: absolute; width: 25px; height: 35px; top: -5px; opacity: 0.9; }
+        .wing-left { left: -7px; border-radius: 70% 30% 60% 40%; transform-origin: right center; animation: flap-left 0.3s infinite ease-in-out; }
+        .wing-right { left: 22px; border-radius: 30% 70% 40% 60%; transform-origin: left center; animation: flap-right 0.3s infinite ease-in-out; }
+        @keyframes flap-left { 0%, 100% { transform: rotateY(0deg); } 50% { transform: rotateY(75deg); } }
+        @keyframes flap-right { 0%, 100% { transform: rotateY(0deg); } 50% { transform: rotateY(-75deg); } }
+    </style>
+</head>
+<body>
+<div id="world"> <div id="night-overlay"></div> <div id="rain-container"></div> <div class="sun-moon" id="sun-moon"></div> <div id="ground"></div> </div>
+<script>
+    const world = document.getElementById('world'); const rainContainer = document.getElementById('rain-container'); const sunMoon = document.getElementById('sun-moon'); const nightOverlay = document.getElementById('night-overlay');
+    const butterflies = []; const flowers = [];
+    let weatherStates = ['sunny', 'cloudy', 'rainy', 'night']; let currentState = 0;
+    function updateWeather() { const state = weatherStates[currentState]; rainContainer.style.display = 'none'; nightOverlay.style.opacity = '0'; world.style.background = '#a1e4ff'; sunMoon.style.background = '#ffdb1e'; sunMoon.style.boxShadow = '0 0 50px #ffdb1e'; if(state === 'cloudy') { world.style.background = '#cbdce2'; spawnClouds(); } else if(state === 'rainy') { world.style.background = '#8da1a8'; rainContainer.style.display = 'block'; } else if(state === 'night') { world.style.background = '#020211'; nightOverlay.style.opacity = '0.7'; sunMoon.style.background = '#f0f0f0'; sunMoon.style.boxShadow = '0 0 30px #f0f0f0'; } currentState = (currentState + 1) % weatherStates.length; }
+    function spawnClouds() { for(let i=0; i<5; i++) { const c = document.createElement('div'); c.className = 'cloud'; c.style.top = (Math.random() * 30) + '%'; c.style.left = '-150px'; world.appendChild(c); let pos = -150; const interval = setInterval(() => { pos += 1; c.style.left = pos + 'px'; if(pos > window.innerWidth) { clearInterval(interval); c.remove(); } }, 30); } }
+    for(let i=0; i<100; i++) { const drop = document.createElement('div'); drop.className = 'drop'; drop.style.left = Math.random() * 100 + '%'; drop.style.animationDuration = (Math.random() * 0.5 + 0.5) + 's'; drop.style.animationDelay = Math.random() * 2 + 's'; rainContainer.appendChild(drop); }
+    setInterval(updateWeather, 15000);
+    function createFlowers() { const flowerCount = 8; for(let i=0; i < flowerCount; i++) { const container = document.createElement('div'); container.className = 'flower-container'; container.style.left = (10 + (i * 12)) + '%'; const head = document.createElement('div'); head.className = 'flower-head'; const color = `hsl(${Math.random() * 360}, 80%, 60%)`; for(let p=0; p<6; p++) { const petal = document.createElement('div'); petal.style.cssText = `position:absolute; width:15px; height:25px; background:${color}; border-radius:50%; left:12px; transform-origin:center bottom; transform:rotate(${p*60}deg);`; head.appendChild(petal); } const center = document.createElement('div'); center.style.cssText = `position:absolute; width:12px; height:12px; background:#ffdb1e; border-radius:50%; top:14px; left:14px; z-index:2;`; head.appendChild(center); const stem = document.createElement('div'); stem.className = 'stem'; stem.style.height = (40 + Math.random() * 40) + 'px'; container.appendChild(head); container.appendChild(stem); world.appendChild(container); setTimeout(() => { const rect = head.getBoundingClientRect(); flowers.push({ x: rect.left + 20, y: rect.top + 20 }); }, 100); } }
+    class Butterfly { constructor() { this.el = document.createElement('div'); this.el.className = 'butterfly'; const body = document.createElement('div'); body.className = 'body'; const head = document.createElement('div'); head.className = 'head'; body.appendChild(head); const wingL = document.createElement('div'); wingL.className = 'wing wing-left'; const wingR = document.createElement('div'); wingR.className = 'wing wing-right'; const c1 = `hsl(${Math.random()*360}, 100%, 50%)`; const c2 = `hsl(${Math.random()*360}, 100%, 50%)`; wingL.style.background = `linear-gradient(${c1}, ${c2})`; wingR.style.background = `linear-gradient(${c1}, ${c2})`; this.el.appendChild(wingL); this.el.appendChild(wingR); this.el.appendChild(body); world.appendChild(this.el); this.reset(); } reset() { this.x = Math.random() * window.innerWidth; this.y = Math.random() * window.innerHeight; this.velocity = 0.5 + Math.random() * 1; this.angle = Math.random() * Math.PI * 2; this.state = 'flying'; this.landTimer = 0; } update() { if (this.state === 'flying') { this.angle += Math.sin(Date.now() * 0.002) * 0.05; this.x += Math.cos(this.angle) * this.velocity; this.y += Math.sin(this.angle) * this.velocity; this.rotation = this.angle * (180 / Math.PI) + 90; if (Math.random() < 0.002 && flowers.length > 0) { this.target = flowers[Math.floor(Math.random() * flowers.length)]; this.state = 'landing'; } } else if (this.state === 'landing') { const dx = this.target.x - this.x; const dy = this.target.y - this.y; const dist = Math.sqrt(dx*dx + dy*dy); this.angle = Math.atan2(dy, dx); this.x += Math.cos(this.angle) * this.velocity; this.y += Math.sin(this.angle) * this.velocity; this.rotation = this.angle * (180 / Math.PI) + 90; if (dist < 5) { this.state = 'resting'; this.landTimer = 200; this.el.querySelectorAll('.wing').forEach(w => w.style.animationDuration = '1.2s'); } } else if (this.state === 'resting') { this.landTimer--; if (this.landTimer <= 0) { this.state = 'flying'; this.el.querySelectorAll('.wing').forEach(w => w.style.animationDuration = '0.3s'); } } if (this.x < -50) this.x = window.innerWidth + 50; if (this.x > window.innerWidth + 50) this.x = -50; if (this.y < -50) this.y = window.innerHeight + 50; if (this.y > window.innerHeight + 50) this.y = -50; this.el.style.transform = `translate3d(${this.x}px, ${this.y}px, 0) rotateZ(${this.rotation}deg)`; } }
+    createFlowers(); for (let i = 0; i < 15; i++) butterflies.push(new Butterfly());
+    function loop() { butterflies.forEach(b => b.update()); requestAnimationFrame(loop); } loop();
+</script>
+</body>
+</html>
+</template>
+
+<template id="ai_studio_code (1).html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beautiful Butterfly Garden</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%); font-family: sans-serif; }
+        #garden { position: relative; width: 100vw; height: 100vh; perspective: 1000px; }
+        .flower { position: absolute; width: 40px; height: 40px; z-index: 1; }
+        .petal { position: absolute; width: 20px; height: 35px; background: #ff69b4; border-radius: 50%; left: 10px; transform-origin: center bottom; }
+        .center { position: absolute; width: 15px; height: 15px; background: #ffd700; border-radius: 50%; top: 12px; left: 12px; z-index: 2; }
+        .butterfly { position: absolute; width: 40px; height: 40px; transform-style: preserve-3d; transition: transform 0.1s linear; pointer-events: none; z-index: 10; }
+        .body { position: absolute; top: 15px; left: 18px; width: 4px; height: 15px; background: #333; border-radius: 5px; z-index: 5; }
+        .wing { position: absolute; width: 25px; height: 35px; top: 0; border-radius: 50% 50% 20% 50%; opacity: 0.9; transform-origin: right center; }
+        .wing-left { left: -7px; animation: flap-left 0.2s infinite ease-in-out; }
+        .wing-right { left: 22px; border-radius: 50% 50% 50% 20%; transform-origin: left center; animation: flap-right 0.2s infinite ease-in-out; }
+        @keyframes flap-left { 0%, 100% { transform: rotateY(0deg); } 50% { transform: rotateY(70deg); } }
+        @keyframes flap-right { 0%, 100% { transform: rotateY(0deg); } 50% { transform: rotateY(-70deg); } }
+        .instructions { position: fixed; bottom: 20px; left: 20px; color: #555; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; pointer-events: none; }
+    </style>
+</head>
+<body>
+<div id="garden"></div> <div class="instructions">Butterflies are exploring the garden...</div>
+<script>
+    const garden = document.getElementById('garden'); const butterflies = []; const flowers = []; const butterflyCount = 15; const flowerCount = 6;
+    function getRandomColor() { const h = Math.floor(Math.random() * 360); const s = 80 + Math.random() * 20; const l = 50 + Math.random() * 20; return `hsl(${h}, ${s}%, ${l}%)`; }
+    for (let i = 0; i < flowerCount; i++) { const flower = document.createElement('div'); flower.className = 'flower'; const x = Math.random() * (window.innerWidth - 100) + 50; const y = Math.random() * (window.innerHeight - 100) + 50; flower.style.left = x + 'px'; flower.style.top = y + 'px'; const center = document.createElement('div'); center.className = 'center'; flower.appendChild(center); const petalColor = getRandomColor(); for (let p = 0; p < 5; p++) { const petal = document.createElement('div'); petal.className = 'petal'; petal.style.transform = `rotate(${p * 72}deg)`; petal.style.background = petalColor; flower.appendChild(petal); } garden.appendChild(flower); flowers.push({ x, y }); }
+    class Butterfly { constructor() { this.el = document.createElement('div'); this.el.className = 'butterfly'; const body = document.createElement('div'); body.className = 'body'; const wingL = document.createElement('div'); wingL.className = 'wing wing-left'; const wingR = document.createElement('div'); wingR.className = 'wing wing-right'; const color1 = getRandomColor(); const color2 = getRandomColor(); const gradient = `radial-gradient(circle, ${color1} 20%, ${color2} 100%)`; wingL.style.background = gradient; wingR.style.background = gradient; this.el.appendChild(wingL); this.el.appendChild(wingR); this.el.appendChild(body); garden.appendChild(this.el); this.reset(); } reset() { const side = Math.floor(Math.random() * 4); if (side === 0) { this.x = Math.random() * window.innerWidth; this.y = -50; } else if (side === 1) { this.x = window.innerWidth + 50; this.y = Math.random() * window.innerHeight; } else if (side === 2) { this.x = Math.random() * window.innerWidth; this.y = window.innerHeight + 50; } else { this.x = -50; this.y = Math.random() * window.innerHeight; } this.angle = Math.random() * Math.PI * 2; this.velocity = 2 + Math.random() * 2; this.rotation = 0; this.state = 'flying'; this.targetFlower = null; this.landTimer = 0; this.phase = Math.random() * Math.PI * 2; } update() { if (this.state === 'flying') { if (Math.random() < 0.005 && flowers.length > 0) { this.targetFlower = flowers[Math.floor(Math.random() * flowers.length)]; this.state = 'approaching'; } this.phase += 0.05; this.angle += Math.sin(this.phase) * 0.1; this.x += Math.cos(this.angle) * this.velocity; this.y += Math.sin(this.angle) * this.velocity; this.rotation = this.angle * (180 / Math.PI) + 90; } else if (this.state === 'approaching') { const dx = this.targetFlower.x - this.x; const dy = this.targetFlower.y - this.y; const dist = Math.sqrt(dx * dx + dy * dy); this.angle = Math.atan2(dy, dx); this.x += Math.cos(this.angle) * (this.velocity * 1.2); this.y += Math.sin(this.angle) * (this.velocity * 1.2); this.rotation = this.angle * (180 / Math.PI) + 90; if (dist < 5) { this.state = 'resting'; this.landTimer = 100 + Math.random() * 100; this.el.querySelectorAll('.wing').forEach(w => w.style.animationDuration = '1s'); } } else if (this.state === 'resting') { this.landTimer--; if (this.landTimer <= 0) { this.state = 'flying'; this.el.querySelectorAll('.wing').forEach(w => w.style.animationDuration = '0.2s'); this.angle += Math.PI; } } if (this.x < -100 || this.x > window.innerWidth + 100 || this.y < -100 || this.y > window.innerHeight + 100) { this.reset(); } this.draw(); } draw() { this.el.style.transform = `translate3d(${this.x}px, ${this.y}px, 0) rotateZ(${this.rotation}deg)`; } }
+    for (let i = 0; i < butterflyCount; i++) { butterflies.push(new Butterfly()); }
+    function animate() { butterflies.forEach(b => b.update()); requestAnimationFrame(animate); } animate();
+    window.addEventListener('resize', () => { });
+</script>
+</body>
+</html>
+</template>
+
+<template id="buttr.html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greg Seymour AI Butterfly Garden</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: linear-gradient(45deg, #f7d4d4, #c9f7d4, #d4f0f7, #f7e8d4); background-size: 400% 400%; animation: gradientBG 20s ease infinite; }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        canvas { display: block; position: absolute; top: 0; left: 0; }
+        h1 { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-family: 'Garamond', 'Times New Roman', serif; font-weight: 300; font-size: 2.5em; color: rgba(0, 0, 0, 0.7); text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.5); margin: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <h1>Greg Seymour AI Butterfly Garden</h1> <canvas id="gardenCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gardenCanvas'); const ctx = canvas.getContext('2d');
+        let butterflies = []; let flowers = []; const BUTTERFLY_COUNT = 15; const FLOWER_COUNT = 10;
+        function getRandom(min, max) { return Math.random() * (max - min) + min; }
+        function getRandomBrightColor() { const hue = Math.random() * 360; return `hsl(${hue}, 100%, 70%)`; }
+        function setup() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; flowers = []; for (let i = 0; i < FLOWER_COUNT; i++) { flowers.push({ x: getRandom(50, canvas.width - 50), y: getRandom(canvas.height * 0.6, canvas.height - 50), size: getRandom(10, 40), petalColor: getRandomBrightColor(), centerColor: 'yellow', stemLength: getRandom(50, 200) }); } butterflies = []; for (let i = 0; i < BUTTERFLY_COUNT; i++) { let frontColor = getRandomBrightColor(); let backColor = getRandomBrightColor(); while (backColor === frontColor) { backColor = getRandomBrightColor(); } const butterfly = { x: getRandom(0, canvas.width), y: getRandom(0, canvas.height / 2), size: getRandom(12, 40), wingFlapSpeed: getRandom(0.05, 0.25), wingAngle: 0, speed: getRandom(0.5, 2), frontWingColor: frontColor, backWingColor: backColor, state: 'flying', targetFlower: null, landedTimer: 0 }; findNewTarget(butterfly); butterflies.push(butterfly); } }
+        function findNewTarget(butterfly) { butterfly.targetFlower = flowers[Math.floor(Math.random() * flowers.length)]; butterfly.state = 'flying'; }
+        function updateButterfly(b) { b.wingAngle += b.wingFlapSpeed; if (b.state === 'flying') { const targetX = b.targetFlower.x; const targetY = b.targetFlower.y - b.targetFlower.size - b.size; const dx = targetX - b.x; const dy = targetY - b.y; const distance = Math.sqrt(dx * dx + dy * dy); if (distance < b.speed) { b.state = 'landed'; b.x = targetX; b.y = targetY; b.landedTimer = getRandom(60, 240); } else { const angle = Math.atan2(dy, dx); b.x += Math.cos(angle) * b.speed; b.y += Math.sin(angle) * b.speed; } } else if (b.state === 'landed') { b.landedTimer--; if (b.landedTimer <= 0) { findNewTarget(b); } } }
+        function drawFlower(f) { ctx.strokeStyle = '#285c2d'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(f.x, f.y + f.stemLength); ctx.lineTo(f.x, f.y); ctx.stroke(); ctx.fillStyle = f.petalColor; for (let i = 0; i < 5; i++) { const angle = (Math.PI * 2 / 5) * i; ctx.beginPath(); ctx.ellipse(f.x + Math.cos(angle) * f.size, f.y + Math.sin(angle) * f.size, f.size * 0.8, f.size * 0.8, 0, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = f.centerColor; ctx.beginPath(); ctx.arc(f.x, f.y, f.size * 0.6, 0, Math.PI * 2); ctx.fill(); }
+        function drawButterfly(b) { ctx.save(); ctx.translate(b.x, b.y); const backFlap = Math.sin(b.wingAngle) * (Math.PI / 8); const frontFlap = Math.sin(b.wingAngle + 0.5) * (Math.PI / 6); ctx.fillStyle = b.backWingColor; const backWingAnchorY = b.size * 0.3; ctx.rotate(backFlap); ctx.beginPath(); ctx.moveTo(0, backWingAnchorY); ctx.bezierCurveTo(b.size * 2.8, -b.size, b.size * 2.8, b.size * 2, 0, backWingAnchorY); ctx.fill(); ctx.rotate(-backFlap); ctx.rotate(-backFlap); ctx.beginPath(); ctx.moveTo(0, backWingAnchorY); ctx.bezierCurveTo(-b.size * 2.8, -b.size, -b.size * 2.8, b.size * 2, 0, backWingAnchorY); ctx.fill(); ctx.rotate(backFlap); ctx.fillStyle = b.frontWingColor; const frontWingAnchorY = -b.size * 0.2; ctx.rotate(frontFlap); ctx.beginPath(); ctx.moveTo(0, frontWingAnchorY); ctx.bezierCurveTo(b.size * 4.5, -b.size * 4.5, b.size * 3.2, b.size * 3, 0, frontWingAnchorY); ctx.fill(); ctx.rotate(-frontFlap); ctx.rotate(-frontFlap); ctx.beginPath(); ctx.moveTo(0, frontWingAnchorY); ctx.bezierCurveTo(-b.size * 4.5, -b.size * 4.5, -b.size * 3.2, b.size * 3, 0, frontWingAnchorY); ctx.fill(); ctx.rotate(frontFlap); ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(0, b.size * 0.5, b.size / 2.5, b.size * 1.8, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#222'; ctx.lineWidth = 1; const antennaStartY = -b.size * 1.1; ctx.beginPath(); ctx.moveTo(0, antennaStartY); ctx.quadraticCurveTo(-b.size, -b.size * 2, -b.size * 0.8, -b.size * 2.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, antennaStartY); ctx.quadraticCurveTo(b.size, -b.size * 2, b.size * 0.8, -b.size * 2.2); ctx.stroke(); ctx.restore(); }
+        function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); flowers.forEach(drawFlower); butterflies.forEach(b => { updateButterfly(b); drawButterfly(b); }); requestAnimationFrame(animate); }
+        window.addEventListener('resize', setup); setup(); animate();
+    </script>
+</body>
+</html>
+</template>
+
+<template id="butterfly-garden-animation.html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Butterfly Garden Animation</title>
+    <style> body, html { margin: 0; padding: 0; overflow: hidden; } canvas { display: block; } </style>
+</head>
+<body>
+    <canvas id="gardenCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gardenCanvas'); const ctx = canvas.getContext('2d'); canvas.width = window.innerWidth; canvas.height = window.innerHeight; const butterflies = []; const flowers = [];
+        class Butterfly { constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 10 + 5; this.wingSpan = this.size * 2; this.color = `hsl(${Math.random() * 360}, 100%, 50%)`; this.speed = Math.random() * 2 + 1; this.angle = Math.random() * Math.PI * 2; this.wingAngle = 0; this.wingSpeed = 0.1 + Math.random() * 0.1; } update() { this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed; this.wingAngle += this.wingSpeed; if (this.x < 0) this.x = canvas.width; if (this.x > canvas.width) this.x = 0; if (this.y < 0) this.y = canvas.height; if (this.y > canvas.height) this.y = 0; if (Math.random() < 0.02) { this.angle += (Math.random() - 0.5) * Math.PI / 2; } } draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle = this.color; ctx.beginPath(); ctx.moveTo(0, 0); ctx.bezierCurveTo( -this.wingSpan / 2, -this.size / 2, -this.wingSpan / 2, -this.size * 2, 0, -this.size * Math.cos(this.wingAngle) ); ctx.bezierCurveTo( this.wingSpan / 2, -this.size * 2, this.wingSpan / 2, -this.size / 2, 0, 0 ); ctx.fill(); ctx.fillStyle = 'black'; ctx.fillRect(-this.size / 8, -this.size / 2, this.size / 4, this.size); ctx.restore(); } }
+        class Flower { constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 20 + 10; this.petalColor = `hsl(${Math.random() * 60 + 300}, 100%, 50%)`; this.centerColor = `hsl(${Math.random() * 60}, 100%, 50%)`; this.petalCount = Math.floor(Math.random() * 5) + 5; } draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.fillStyle = this.petalColor; for (let i = 0; i < this.petalCount; i++) { ctx.beginPath(); ctx.ellipse(0, 0, this.size / 2, this.size / 4, (i / this.petalCount) * Math.PI * 2, 0, Math.PI * 2); ctx.fill(); } ctx.fillStyle = this.centerColor; ctx.beginPath(); ctx.arc(0, 0, this.size / 4, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } }
+        for (let i = 0; i < 20; i++) { butterflies.push(new Butterfly()); } for (let i = 0; i < 10; i++) { flowers.push(new Flower()); }
+        function animate() { ctx.fillStyle = 'rgba(173, 216, 230, 0.1)'; ctx.fillRect(0, 0, canvas.width, canvas.height); flowers.forEach(flower => flower.draw()); butterflies.forEach(butterfly => { butterfly.update(); butterfly.draw(); }); requestAnimationFrame(animate); } animate();
+        document.addEventListener('click', () => { if (document.exitFullscreen) { document.exitFullscreen(); } else if (document.mozCancelFullScreen) { document.mozCancelFullScreen(); } else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); } else if (document.msExitFullscreen) { document.msExitFullscreen(); } }); window.addEventListener('load', () => { if (document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen(); } else if (document.documentElement.mozRequestFullScreen) { document.documentElement.mozRequestFullScreen(); } else if (document.documentElement.webkitRequestFullscreen) { document.documentElement.webkitRequestFullscreen(); } else if (document.documentElement.msRequestFullscreen) { document.documentElement.msRequestFullscreen(); } });
+    </script>
+</body>
+</html>
+</template>
+
+    <script>
+        // 1. Gather all Templates (Files)
+        const templates = document.querySelectorAll('template');
+        const files = Array.from(templates).map(t => ({
+            id: t.id,
+            content: t.innerHTML
+        }));
+
+        // 2. State Management
+        let queue = [];
+        const displayDuration = 15000; // 15 seconds
+        const progressBar = document.getElementById('progress-bar');
+        const titleOverlay = document.getElementById('title-overlay');
+        const viewport = document.getElementById('viewport');
+
+        // 3. Shuffle Logic (Fisher-Yates)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 4. Get Next File (Deck Logic)
+        function getNextFile() {
+            if (queue.length === 0) {
+                console.log("Deck empty. Reshuffling...");
+                queue = shuffle([...files]); // Clone and shuffle
+            }
+            return queue.pop();
+        }
+
+        // 5. Load File into Iframe
+        function loadNext() {
+            const fileObj = getNextFile();
+            
+            // Update Title
+            titleOverlay.style.opacity = 0;
+            setTimeout(() => {
+                titleOverlay.innerText = `Currently Playing: ${fileObj.id}`;
+                titleOverlay.style.opacity = 1;
+            }, 500);
+
+            // Create Blob and load into Iframe
+            const blob = new Blob([fileObj.content], { type: 'text/html' });
+            viewport.src = URL.createObjectURL(blob);
+
+            // Reset Animation Bar
+            progressBar.style.transition = 'none';
+            progressBar.style.width = '0%';
+            
+            // Force reflow
+            void progressBar.offsetWidth;
+
+            // Start Animation Bar
+            progressBar.style.transition = `width ${displayDuration}ms linear`;
+            progressBar.style.width = '100%';
+        }
+
+        // 6. Start Loop
+        loadNext();
+        setInterval(loadNext, displayDuration);
+
+    </script>
+</body>
+</html>

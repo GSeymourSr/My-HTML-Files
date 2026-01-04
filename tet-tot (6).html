@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Greg Seymour's Ultimate Clown Fun</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* Radiant Animated Background */
+            background: linear-gradient(-45deg, #FF3D00, #FFEA00, #00E676, #2979FF, #D500F9);
+            background-size: 400% 400%;
+            animation: gradientBG 20s ease infinite;
+            font-family: 'Luckiest Guy', cursive;
+            touch-action: none;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas { display: block; }
+
+        /* HUD */
+        .hud {
+            position: absolute;
+            top: 20px;
+            color: #FFF;
+            text-shadow: 3px 3px 0 #000;
+            font-size: 40px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #scoreBoard { left: 20px; }
+        #livesBoard { right: 20px; color: #FF1744; letter-spacing: 5px; }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 20;
+            transition: opacity 0.5s;
+        }
+
+        .title-text {
+            font-size: 70px;
+            line-height: 1.1;
+            color: #FFFFFF;
+            text-shadow: 5px 5px 0px #000;
+            margin-bottom: 30px;
+            animation: floatText 3s ease-in-out infinite;
+        }
+
+        @keyframes floatText {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .demo-badge {
+            position: absolute;
+            top: 100px;
+            background: rgba(0,0,0,0.6);
+            color: #FFEB3B;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-size: 24px;
+            border: 2px solid #FFF;
+            pointer-events: none;
+        }
+
+        button {
+            background: linear-gradient(to bottom, #76ff03, #64dd17);
+            border: 5px solid #fff;
+            color: #1b5e20;
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 40px;
+            padding: 20px 80px;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #33691e, 0 20px 20px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+            z-index: 30;
+        }
+        
+        button:hover { transform: scale(1.05) translateY(-5px); }
+        button:active { transform: scale(0.95) translateY(5px); box-shadow: 0 5px 0 #33691e; }
+
+        .hidden { display: none !important; }
+
+    </style>
+</head>
+<body>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="scoreBoard" class="hud hidden">Score: 0</div>
+        <div id="livesBoard" class="hud hidden">❤❤❤</div>
+
+        <!-- Title Screen -->
+        <div id="titleScreen" class="screen">
+            <h1 class="title-text">Greg Seymour's<br>AI Clown Fun</h1>
+            <button id="btnStart">START GAME</button>
+            <p style="color:white; margin-top:20px; font-size: 22px; text-shadow:1px 1px 0 #000;">(Demo in 7 seconds...)</p>
+        </div>
+
+        <!-- Demo Overlay -->
+        <div id="demoOverlay" class="screen hidden" style="background: transparent;">
+            <div class="demo-badge">AI DEMO MODE - TAP TO START</div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen hidden" style="background: rgba(0,0,0,0.85);">
+            <h1 class="title-text" style="color:#FF4081;">GAME OVER</h1>
+            <p style="font-size:40px; color:#FFF; text-shadow:2px 2px 0 #000;" id="finalScoreDisplay">Score: 0</p>
+            <button id="btnRestart">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('scoreBoard');
+        const livesEl = document.getElementById('livesBoard');
+        const titleScreen = document.getElementById('titleScreen');
+        const demoOverlay = document.getElementById('demoOverlay');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+
+        // --- Configuration ---
+        const PALETTES = {
+            retro: ['#F44336', '#9C27B0', '#3F51B5', '#03A9F4', '#009688', '#FFEB3B', '#FF9800'],
+            neon: ['#FF00CC', '#3333FF', '#00FF00', '#FFFF00', '#FF3300', '#00FFFF'],
+            ocean: ['#01579B', '#0277BD', '#0288D1', '#039BE5', '#29B6F6', '#4FC3F7']
+        };
+        
+        const FACES = ['🤡', '🤪', '🤠', '👽', '🤖', '🦄', '😎', '🥴', '🎃', '🐯'];
+
+        const config = {
+            gravity: 0.22,
+            launchPower: -23,
+            boardWidth: 340
+        };
+
+        // --- State ---
+        let state = {
+            mode: 'TITLE', 
+            width: window.innerWidth,
+            height: window.innerHeight,
+            score: 0,
+            lives: 3,
+            mouseX: window.innerWidth / 2,
+            demoTimer: null,
+            currentPalette: PALETTES.retro
+        };
+
+        // --- Decor Clowns (Background) ---
+        class DecorClown {
+            constructor() {
+                this.x = Math.random() * state.width;
+                this.y = Math.random() * state.height;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.size = 20 + Math.random() * 40;
+                this.icon = FACES[Math.floor(Math.random()*FACES.length)];
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if(this.x<0 || this.x>state.width) this.vx*=-1;
+                if(this.y<0 || this.y>state.height) this.vy*=-1;
+            }
+            draw(ctx) {
+                ctx.font = this.size + "px serif";
+                ctx.fillText(this.icon, this.x, this.y);
+            }
+        }
+
+        // --- Game Classes ---
+
+        class TeeterBoard {
+            constructor() {
+                this.width = 340; 
+                this.height = 25;
+                this.x = state.width / 2;
+                this.y = state.height - 100;
+                this.upSide = 'right'; 
+                this.angle = -0.3; 
+            }
+
+            update() {
+                let targetX = state.mouseX;
+
+                // --- SMART AI AIMING ---
+                if (state.mode === 'DEMO') {
+                    let flyer = clowns.find(c => c.role === 'flying');
+                    if (flyer) {
+                        // AI Strategy: Don't put the pivot (face) under the ball.
+                        // Put the "UP" wing under the ball.
+                        const offset = this.width / 3.5; 
+                        
+                        if (this.upSide === 'right') {
+                            // Right side is UP. We want Right side under ball.
+                            // So we move the board LEFT relative to the ball.
+                            targetX = flyer.x - offset;
+                        } else {
+                            // Left side is UP. We want Left side under ball.
+                            // So we move the board RIGHT relative to the ball.
+                            targetX = flyer.x + offset;
+                        }
+
+                        // Add human wobble
+                        targetX += Math.sin(Date.now()/300) * 20;
+                    }
+                }
+
+                // Movement Speed
+                // Demo is fast/responsive (0.3), Player is smoother (0.15)
+                let speed = (state.mode === 'DEMO') ? 0.3 : 0.15;
+                this.x += (targetX - this.x) * speed;
+
+                if (this.x < 0) this.x = 0;
+                if (this.x > state.width) this.x = state.width;
+                this.y = state.height - 100;
+
+                // Tilt Animation
+                let targetAngle = (this.upSide === 'right') ? -0.35 : 0.35;
+                this.angle += (targetAngle - this.angle) * 0.15;
+            }
+
+            // Physics Helper
+            getSurfaceY(screenX) {
+                let relX = screenX - this.x;
+                return this.y + (relX * Math.tan(this.angle));
+            }
+
+            getTips() {
+                const cos = Math.cos(this.angle);
+                const sin = Math.sin(this.angle);
+                const halfW = this.width / 2;
+                return {
+                    left: { x: this.x - halfW * cos, y: this.y - halfW * sin },
+                    right: { x: this.x + halfW * cos, y: this.y + halfW * sin }
+                };
+            }
+
+            draw(ctx) {
+                // Base
+                ctx.fillStyle = '#3E2723';
+                ctx.beginPath();
+                ctx.moveTo(this.x - 30, state.height);
+                ctx.lineTo(this.x + 30, state.height);
+                ctx.lineTo(this.x, this.y);
+                ctx.fill();
+
+                // Plank
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // Detailed Wood Texture
+                let grd = ctx.createLinearGradient(0, -12, 0, 12);
+                grd.addColorStop(0, '#8D6E63');
+                grd.addColorStop(1, '#5D4037');
+                ctx.fillStyle = grd;
+                
+                ctx.beginPath();
+                ctx.roundRect(-this.width/2, -this.height/2, this.width, this.height, 10);
+                ctx.fill();
+
+                // Stripes on Ends
+                ctx.fillStyle = '#D84315';
+                ctx.fillRect(-this.width/2 + 15, -this.height/2, 25, this.height);
+                ctx.fillRect(this.width/2 - 40, -this.height/2, 25, this.height);
+
+                // Center Marker
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.fillRect(-2, -this.height/2, 4, this.height);
+                
+                ctx.restore();
+
+                // Face Pivot
+                ctx.fillStyle = '#FFEB3B';
+                ctx.beginPath(); ctx.arc(this.x, this.y, 28, 0, Math.PI*2); ctx.fill();
+                ctx.lineWidth=3; ctx.strokeStyle='#F57F17'; ctx.stroke();
+                
+                // Eyes follow ball
+                let lookTarget = (state.mode === 'DEMO' && clowns.length>0) 
+                                ? clowns.find(c=>c.role==='flying').x 
+                                : state.mouseX;
+                let off = (lookTarget - this.x) * 0.04;
+                if(off > 7) off = 7; if(off < -7) off = -7;
+
+                ctx.fillStyle='white';
+                ctx.beginPath(); ctx.arc(this.x-10+off, this.y-5, 8, 0, Math.PI*2);
+                ctx.arc(this.x+10+off, this.y-5, 8, 0, Math.PI*2); ctx.fill();
+                
+                ctx.fillStyle='black';
+                ctx.beginPath(); ctx.arc(this.x-10+off, this.y-5, 3, 0, Math.PI*2);
+                ctx.arc(this.x+10+off, this.y-5, 3, 0, Math.PI*2); ctx.fill();
+                
+                // Smile
+                ctx.lineWidth=2; ctx.strokeStyle='black';
+                ctx.beginPath(); ctx.arc(this.x, this.y+5, 10, 0, Math.PI, false); ctx.stroke();
+            }
+        }
+
+        class Clown {
+            constructor() {
+                this.x = 0; this.y = 0; this.vx = 0; this.vy = 0;
+                this.size = 22; // Radius
+                this.role = 'flying'; 
+                this.face = FACES[0];
+            }
+            
+            randomizeFace() {
+                this.face = FACES[Math.floor(Math.random() * FACES.length)];
+            }
+
+            update() {
+                if (this.role === 'flying') {
+                    this.vy += config.gravity;
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    // Walls
+                    if (this.x < this.size) { this.x = this.size; this.vx *= -1; }
+                    if (this.x > state.width - this.size) { this.x = state.width - this.size; this.vx *= -1; }
+                    // Ceiling
+                    if (this.y < this.size) { this.y = this.size; this.vy *= -0.5; }
+
+                    // Death
+                    if (this.y > state.height + 60) {
+                        handleMiss();
+                    }
+                }
+            }
+            draw(ctx) {
+                ctx.font = '50px serif';
+                ctx.textAlign = 'center'; ctx.textBaseline='middle';
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if(this.role==='flying') ctx.rotate(this.vx * 0.1);
+                else ctx.rotate(board.angle);
+                ctx.fillText(this.face, 0, 4);
+                ctx.restore();
+            }
+        }
+
+        class Brick {
+            constructor(x, y, w, h, color, style) {
+                this.x = x; this.y = y; this.w = w; this.h = h;
+                this.color = color;
+                this.active = true;
+                this.style = style; // 'solid', 'stripes', 'dots'
+            }
+            draw(ctx) {
+                if(!this.active) return;
+                
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.w, this.h, 6);
+                ctx.clip(); // Clip pattern to round rect
+
+                // Base Color
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+
+                // Patterns
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                if (this.style === 'stripes') {
+                    for(let i=0; i<this.w; i+=10) {
+                        ctx.fillRect(this.x + i, this.y, 5, this.h);
+                    }
+                } else if (this.style === 'dots') {
+                    for(let i=5; i<this.w; i+=15) {
+                        for(let j=5; j<this.h; j+=15) {
+                            ctx.beginPath();
+                            ctx.arc(this.x + i, this.y + j, 3, 0, Math.PI*2);
+                            ctx.fill();
+                        }
+                    }
+                }
+
+                // 3D Bevel
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                ctx.strokeRect(this.x, this.y, this.w, this.h);
+                
+                // Shine
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.fillRect(this.x, this.y, this.w, this.h/2);
+
+                ctx.restore();
+            }
+        }
+
+        // --- Logic ---
+        const board = new TeeterBoard();
+        let clowns = [];
+        let bricks = [];
+        let decorClowns = [];
+
+        function resetRound() {
+            clowns = [new Clown(), new Clown()];
+            clowns[0].role = 'flying';
+            clowns[0].x = state.width / 2;
+            clowns[0].y = 120;
+            clowns[0].vy = -3; 
+            clowns[0].vx = (Math.random()-0.5) * 4;
+            clowns[0].randomizeFace();
+
+            clowns[1].role = 'sitting';
+            clowns[1].randomizeFace();
+            board.upSide = 'right';
+        }
+
+        function resetGame() {
+            state.score = 0;
+            state.lives = 3;
+            updateUI();
+            
+            // Pick Random Palette
+            const pKeys = Object.keys(PALETTES);
+            state.currentPalette = PALETTES[pKeys[Math.floor(Math.random() * pKeys.length)]];
+
+            bricks = [];
+            const cols = 8; const rows = 6;
+            const w = (state.width - 60)/cols;
+            const h = 28;
+            
+            for(let r=0; r<rows; r++) {
+                // Determine row style
+                let style = 'solid';
+                if(r % 3 === 1) style = 'stripes';
+                if(r % 3 === 2) style = 'dots';
+
+                for(let c=0; c<cols; c++) {
+                    let color = state.currentPalette[c % state.currentPalette.length];
+                    bricks.push(new Brick(30+c*w, 60+r*35, w-8, h, color, style));
+                }
+            }
+            resetRound();
+        }
+
+        function handleMiss() {
+            if (state.mode === 'DEMO') {
+                resetRound();
+                return;
+            }
+            state.lives--;
+            updateUI();
+            if (state.lives <= 0) gameOver();
+            else resetRound();
+        }
+
+        function gameOver() {
+            state.mode = 'GAMEOVER';
+            document.getElementById('finalScoreDisplay').innerText = "Score: " + state.score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function victory() {
+            state.mode = 'GAMEOVER';
+            document.getElementById('finalScoreDisplay').innerText = "YOU WIN! Score: " + state.score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function updateUI() {
+            scoreEl.innerText = "Score: " + state.score;
+            let h = ""; for(let i=0; i<state.lives; i++) h+="❤";
+            livesEl.innerText = h;
+        }
+
+        function update() {
+            if (state.mode === 'TITLE') {
+                decorClowns.forEach(c => c.update());
+                return;
+            }
+
+            board.update();
+            clowns.forEach(c => c.update());
+            
+            let flyingClown = clowns.find(c => c.role === 'flying');
+            let sittingClown = clowns.find(c => c.role === 'sitting');
+
+            // Position Sitting Clown
+            const tips = board.getTips();
+            if (board.upSide === 'right') {
+                sittingClown.x = tips.left.x;
+                sittingClown.y = tips.left.y - 30;
+            } else {
+                sittingClown.x = tips.right.x;
+                sittingClown.y = tips.right.y - 30;
+            }
+
+            // --- STRICT CONTACT & DIRECTIONAL LAUNCH ---
+            let boardY = board.getSurfaceY(flyingClown.x);
+            let dist = Math.abs((flyingClown.y + 15) - boardY);
+            let relX = flyingClown.x - board.x; // Distance from center
+            let halfW = board.width / 2;
+            let onBoard = Math.abs(relX) < halfW;
+            let correctSide = (board.upSide === 'right' && relX > 0) || (board.upSide === 'left' && relX < 0);
+
+            if (onBoard && correctSide && dist < 25 && flyingClown.vy > 0) {
+                // FLIP!
+                flyingClown.role = 'sitting';
+                sittingClown.role = 'flying';
+                sittingClown.randomizeFace(); 
+                sittingClown.vy = config.launchPower;
+
+                // DIRECTION LOGIC:
+                // Hit near center = Straight Up.
+                // Hit near tip = Wide Angle.
+                
+                // Normalize hit position (-1 to 1)
+                let hitPct = relX / halfW; 
+                
+                // Calculate Launch Velocity
+                let launchDir = (board.upSide === 'right') ? -1 : 1; 
+                
+                // The further out you catch it, the more horizontal speed you get
+                let aimPower = Math.abs(hitPct) * 12; 
+                
+                sittingClown.vx = (launchDir * aimPower);
+                
+                // Add tiny randomness
+                sittingClown.vx += (Math.random()-0.5);
+
+                board.upSide = (board.upSide === 'right') ? 'left' : 'right';
+            }
+
+            // Bricks
+            bricks.forEach(b => {
+                if(b.active) {
+                    if(flyingClown.x > b.x && flyingClown.x < b.x+b.w &&
+                       flyingClown.y-20 < b.y+b.h && flyingClown.y+20 > b.y) {
+                        b.active = false;
+                        flyingClown.vy *= -1; 
+                        if(state.mode === 'PLAYING') {
+                            state.score += 10;
+                            updateUI();
+                        }
+                        if(bricks.every(br => !br.active)) victory();
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, state.width, state.height);
+            if (state.mode === 'TITLE') {
+                decorClowns.forEach(c => c.draw(ctx));
+                return;
+            }
+            bricks.forEach(b => b.draw(ctx));
+            board.draw(ctx);
+            clowns.forEach(c => c.draw(ctx));
+        }
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+        function initTitle() {
+            state.mode = 'TITLE';
+            titleScreen.classList.remove('hidden');
+            scoreEl.classList.add('hidden');
+            livesEl.classList.add('hidden');
+            demoOverlay.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            decorClowns = [];
+            for(let i=0; i<20; i++) decorClowns.push(new DecorClown());
+            
+            clearTimeout(state.demoTimer);
+            state.demoTimer = setTimeout(startDemo, 7000);
+        }
+
+        function startDemo() {
+            if(state.mode !== 'TITLE') return;
+            state.mode = 'DEMO';
+            titleScreen.classList.add('hidden');
+            demoOverlay.classList.remove('hidden');
+            resetGame();
+        }
+
+        function startRealGame() {
+            clearTimeout(state.demoTimer);
+            state.mode = 'PLAYING';
+            titleScreen.classList.add('hidden');
+            demoOverlay.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            scoreEl.classList.remove('hidden');
+            livesEl.classList.remove('hidden');
+            resetGame();
+        }
+
+        function resize() {
+            state.width = window.innerWidth;
+            state.height = window.innerHeight;
+            canvas.width = state.width;
+            canvas.height = state.height;
+        }
+
+        window.addEventListener('resize', resize);
+        
+        function handleInput(e) {
+            let cx = e.clientX || e.touches[0].clientX;
+            state.mouseX = cx;
+            if (state.mode === 'DEMO') initTitle();
+        }
+
+        window.addEventListener('mousemove', handleInput);
+        window.addEventListener('touchstart', handleInput);
+        window.addEventListener('click', () => { if(state.mode==='DEMO') initTitle(); });
+
+        document.getElementById('btnStart').addEventListener('click', startRealGame);
+        document.getElementById('btnRestart').addEventListener('click', startRealGame);
+
+        resize();
+        initTitle();
+        loop();
+
+    </script>
+</body>
+</html>

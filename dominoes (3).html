@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whimsical Domino World</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Fredoka One', cursive; }
+        canvas { display: block; }
+        
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            padding: 20px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.2);
+            color: white;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-width: 250px;
+        }
+
+        .section { margin-bottom: 5px; }
+        .label { font-size: 12px; color: #0ff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        button {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #555;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: 0.2s;
+        }
+        button:hover { background: #0ff; color: black; transform: scale(1.05); }
+        button.active { background: #0ff; color: black; border-color: white; }
+
+        #follow-card {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 255, 255, 0.2);
+            padding: 10px 30px;
+            border-radius: 50px;
+            border: 1px solid #0ff;
+            color: #0ff;
+            pointer-events: none;
+            display: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="section">
+            <div class="label">Camera Mode</div>
+            <div class="btn-grid">
+                <button id="camFree" class="active" onclick="window.setFollow(false)">Free Orbit</button>
+                <button id="camFollow" onclick="window.setFollow(true)">Follow Lead</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="label">Choose Design</div>
+            <div class="btn-grid">
+                <button onclick="window.layout('infinity')">Infinity</button>
+                <button onclick="window.layout('clover')">Clover</button>
+                <button onclick="window.layout('star')">Starburst</button>
+                <button onclick="window.layout('spiral')">Spiral</button>
+                <button onclick="window.layout('megaWave')">Mega Wave</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="label">Atmosphere</div>
+            <div class="btn-grid">
+                <button onclick="window.setTheme('neon')">Neon</button>
+                <button onclick="window.setTheme('candy')">Candy</button>
+            </div>
+        </div>
+
+        <button onclick="window.reset()" style="background: #ff0055; border: none; margin-top: 10px; font-weight: bold;">RESET SCENE</button>
+    </div>
+
+    <div id="follow-card">🎥 CAMERA TRACKING LEAD DOMINO</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Config ---
+        const D_COUNT = 800;
+        const D_DIM = { w: 0.15, h: 1.0, d: 0.5 }; // w=side, h=height, d=long-way
+        const D_SPACING = 0.42; // Distance between centers (must be < h)
+
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let dominoes = [];
+        let leadDomino = null;
+        let isFollowMode = false;
+        let startMarker;
+        let currentLayout = 'infinity';
+
+        const palettes = {
+            neon: [0x00ffff, 0xff00ff, 0x00ff00, 0xffff00],
+            candy: [0xff9ff3, 0xfeca57, 0xff6b6b, 0x48dbfb]
+        };
+        let activePalette = palettes.neon;
+
+        class Domino {
+            constructor(index) {
+                this.index = index;
+                // Important: Setup pivot at the bottom front edge
+                const geo = new THREE.BoxGeometry(D_DIM.w, D_DIM.h, D_DIM.d);
+                geo.translate(0, D_DIM.h / 2, 0); // Lift so bottom is at Y=0
+                
+                this.material = new THREE.MeshStandardMaterial({ 
+                    metalness: 0.6, roughness: 0.1, emissiveIntensity: 0.5 
+                });
+                
+                this.mesh = new THREE.Mesh(geo, this.material);
+                this.mesh.castShadow = true;
+                
+                this.reset();
+                scene.add(this.mesh);
+            }
+
+            reset() {
+                this.state = 'standing';
+                this.angle = 0;
+                this.velocity = 0;
+                this.mesh.rotation.set(0, 0, 0);
+                this.updateColor();
+            }
+
+            updateColor() {
+                const col = (this.index === 0) ? 0x00ff00 : activePalette[this.index % activePalette.length];
+                this.material.color.setHex(col);
+                this.material.emissive.setHex(col);
+                this.material.emissiveIntensity = (this.index === 0) ? 1.0 : 0.2;
+            }
+
+            place(x, z, rotY) {
+                this.mesh.position.set(x, 0, z);
+                this.mesh.rotation.y = rotY;
+                this.rotY = rotY;
+                this.reset();
+                this.mesh.visible = true;
+            }
+
+            update(dt) {
+                if (this.state === 'falling') {
+                    this.velocity += 15 * dt; 
+                    this.angle += this.velocity * dt;
+
+                    if (this.angle >= 1.45) {
+                        this.angle = 1.45;
+                        this.state = 'down';
+                    }
+
+                    // Pivot Physics: Ensure they fall FORWARD relative to their orientation
+                    this.mesh.rotation.set(0, this.rotY, 0);
+                    this.mesh.rotateX(-this.angle);
+
+                    this.checkTrigger();
+                    leadDomino = this;
+                }
+            }
+
+            checkTrigger() {
+                if (this.angle < 0.25) return; // Wait until leaned over enough
+                
+                // Optimized check: Look at next few dominoes
+                for (let i = 1; i < 4; i++) {
+                    let next = dominoes[this.index + i];
+                    if (next && next.mesh.visible && next.state === 'standing') {
+                        const dist = this.mesh.position.distanceTo(next.mesh.position);
+                        if (dist < 0.8) {
+                            next.state = 'falling';
+                        }
+                    }
+                }
+            }
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510);
+            scene.fog = new THREE.FogExp2(0x050510, 0.03);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 1000);
+            camera.position.set(20, 15, 20);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.minDistance = 0.5;
+
+            const sun = new THREE.DirectionalLight(0xffffff, 2);
+            sun.position.set(20, 40, 10);
+            sun.castShadow = true;
+            scene.add(sun);
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+            // Grid Floor
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(500, 500),
+                new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.5 })
+            );
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Start Marker Arrow
+            const arrowGeo = new THREE.ConeGeometry(0.3, 0.6, 4);
+            const arrowMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            startMarker = new THREE.Mesh(arrowGeo, arrowMat);
+            startMarker.rotation.x = Math.PI;
+            scene.add(startMarker);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            for(let i=0; i < D_COUNT; i++) dominoes.push(new Domino(i));
+            
+            window.layout('infinity');
+
+            window.addEventListener('mousedown', onMouseDown);
+            window.addEventListener('resize', onResize);
+        }
+
+        window.layout = function(type) {
+            currentLayout = type;
+            dominoes.forEach(d => d.mesh.visible = false);
+            leadDomino = null;
+
+            if (type === 'infinity') {
+                for (let i = 0; i < D_COUNT; i++) {
+                    const t = (i / D_COUNT) * Math.PI * 4;
+                    const x = 12 * Math.sin(t);
+                    const z = 12 * Math.sin(t) * Math.cos(t);
+                    const angle = Math.atan2(12 * Math.cos(t), 12 * (Math.cos(2*t)));
+                    dominoes[i].place(x, z, angle + Math.PI/2);
+                }
+            } else if (type === 'clover') {
+                for (let i = 0; i < D_COUNT; i++) {
+                    const t = (i / D_COUNT) * Math.PI * 2;
+                    const r = 15 * Math.sin(2 * t);
+                    const x = r * Math.cos(t);
+                    const z = r * Math.sin(t);
+                    const rot = -t + Math.PI/2;
+                    dominoes[i].place(x, z, rot);
+                }
+            } else if (type === 'star') {
+                const arms = 5;
+                const perArm = D_COUNT / arms;
+                for (let i = 0; i < D_COUNT; i++) {
+                    const arm = Math.floor(i / perArm);
+                    const step = i % perArm;
+                    const angle = (arm / arms) * Math.PI * 2;
+                    const r = step * 0.45 + 1;
+                    dominoes[i].place(Math.cos(angle)*r, Math.sin(angle)*r, -angle + Math.PI/2);
+                }
+            } else if (type === 'spiral') {
+                for (let i = 0; i < D_COUNT; i++) {
+                    const a = 0.1 * i;
+                    const r = 0.08 * i;
+                    dominoes[i].place(r * Math.cos(a), r * Math.sin(a), -a + Math.PI/2);
+                }
+            } else if (type === 'megaWave') {
+                for (let i = 0; i < D_COUNT; i++) {
+                    const x = (i * 0.4) - (D_COUNT * 0.2);
+                    const z = Math.sin(i * 0.1) * 10;
+                    const rot = -Math.cos(i * 0.1) * 0.8;
+                    dominoes[i].place(x, z, rot);
+                }
+            }
+            
+            // Move marker to first domino
+            startMarker.position.set(dominoes[0].mesh.position.x, 2, dominoes[0].mesh.position.z);
+        };
+
+        window.setFollow = function(val) {
+            isFollowMode = val;
+            document.getElementById('camFree').className = !val ? 'active' : '';
+            document.getElementById('camFollow').className = val ? 'active' : '';
+            document.getElementById('follow-card').style.display = (val && leadDomino) ? 'block' : 'none';
+        };
+
+        window.setTheme = function(t) {
+            activePalette = palettes[t];
+            dominoes.forEach(d => d.updateColor());
+        };
+
+        window.reset = function() {
+            window.layout(currentLayout);
+        };
+
+        function onMouseDown(e) {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(dominoes.filter(d => d.mesh.visible).map(d => d.mesh));
+            if (intersects.length > 0) {
+                const clicked = dominoes.find(d => d.mesh === intersects[0].object);
+                clicked.state = 'falling';
+                startMarker.visible = false;
+            }
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const dt = 0.016;
+
+            dominoes.forEach(d => { if(d.mesh.visible) d.update(dt); });
+
+            // Marker Animation
+            startMarker.position.y = 2 + Math.sin(Date.now() * 0.005) * 0.5;
+
+            // Follow Mode Logic
+            if (isFollowMode && leadDomino && leadDomino.state !== 'standing') {
+                const targetPos = new THREE.Vector3();
+                // Position camera behind lead domino based on its rotation
+                targetPos.x = leadDomino.mesh.position.x - Math.sin(leadDomino.rotY) * 6;
+                targetPos.z = leadDomino.mesh.position.z - Math.cos(leadDomino.rotY) * 6;
+                targetPos.y = 4;
+
+                camera.position.lerp(targetPos, 0.05);
+                controls.target.lerp(leadDomino.mesh.position, 0.1);
+                document.getElementById('follow-card').style.display = 'block';
+            } else {
+                document.getElementById('follow-card').style.display = 'none';
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        init();
+        animate();
+
+    </script>
+</body>
+</html>
