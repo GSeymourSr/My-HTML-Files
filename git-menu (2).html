@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greg Seymour AI - Project Hub</title>
+    <style>
+        :root {
+            --bg-dark: #0f0c29;
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #0f0c29);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            font-family: var(--font-main);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        header {
+            margin: 50px 0;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 4rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            background: linear-gradient(to right, #ff00cc, #3333ff, #00ffcc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+            animation: titlePulse 3s infinite alternate;
+        }
+
+        @keyframes titlePulse {
+            from { transform: scale(1); filter: brightness(1) drop-shadow(0 5px 15px rgba(0,0,0,0.5)); }
+            to { transform: scale(1.05); filter: brightness(1.2) drop-shadow(0 10px 25px rgba(0,255,204,0.4)); }
+        }
+
+        .menu-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            width: 90%;
+            max-width: 1200px;
+            padding-bottom: 100px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 20px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 1. Neon Square - TETTTER */
+        .btn-1 {
+            background: #222;
+            border: 2px solid #00f2fe;
+            box-shadow: 0 0 5px #00f2fe;
+        }
+        .btn-1:hover {
+            box-shadow: 0 0 20px #00f2fe, 0 0 40px #00f2fe;
+            background: #00f2fe;
+            color: #000;
+        }
+
+        /* 2. Glass Oval - Tic Tac Toe */
+        .btn-2 {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn-2:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-10px);
+        }
+
+        /* 3. Gradient Round - Tunnels Android */
+        .btn-3 {
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 30px;
+        }
+        .btn-3:hover {
+            filter: hue-rotate(90deg);
+            border-radius: 5px;
+        }
+
+        /* 4. Retro Border - Tunnels Menu */
+        .btn-4 {
+            border: 4px double #fff;
+            background: #000;
+        }
+        .btn-4:hover {
+            background: #fff;
+            color: #000;
+            border-style: solid;
+        }
+
+        /* 5. Gold Rectangle - Santa Slots */
+        .btn-5 {
+            background: linear-gradient(to bottom, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+            color: #5d4037;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+        }
+        .btn-5:hover {
+            transform: scale(0.9);
+            letter-spacing: 2px;
+        }
+
+        /* 6. Soft Pill - Memory Deluxe */
+        .btn-6 {
+            background: #667eea;
+            border-radius: 100px;
+        }
+        .btn-6:hover {
+            box-shadow: 0 15px 20px rgba(102, 126, 234, 0.4);
+            transform: rotate(-3deg);
+        }
+
+        /* 7. Liquid Inversion - Inversions GSAI */
+        .btn-7 {
+            background: #000;
+            color: #00ff00;
+            border-radius: 20% 70% 50% 40% / 30% 30% 70% 70%;
+            border: 2px solid #00ff00;
+        }
+        .btn-7:hover {
+            border-radius: 0;
+            background: #00ff00;
+            color: #000;
+        }
+
+        /* 8. 3D Block - Gregout */
+        .btn-8 {
+            background: #e91e63;
+            box-shadow: 0 9px #ad1457;
+        }
+        .btn-8:hover {
+            box-shadow: 0 5px #ad1457;
+            transform: translateY(4px);
+        }
+
+        /* 9. Floating Circle - Inversions 5 */
+        .btn-9 {
+            height: 120px;
+            width: 120px;
+            border-radius: 50%;
+            background: #8e44ad;
+            margin: auto;
+        }
+        .btn-9:hover {
+            transform: scale(1.2) rotate(360deg);
+        }
+
+        /* 10. Cyber Slant - Shaders & Spirals */
+        .btn-10 {
+            background: #2980b9;
+            clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%);
+        }
+        .btn-10:hover {
+            background: #3498db;
+            clip-path: polygon(0% 0%, 90% 0%, 100% 100%, 10% 100%);
+        }
+
+        /* 11. Pulse Square - 5in1 */
+        .btn-11 {
+            background: #27ae60;
+        }
+        .btn-11::after {
+            content: '';
+            position: absolute;
+            width: 100%; height: 100%;
+            border: 2px solid #27ae60;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        /* 12. Casino Dark - Casino Menu */
+        .btn-12 {
+            background: #d35400;
+            border-left: 10px solid #a04000;
+        }
+        .btn-12:hover {
+            border-left: 40px solid #a04000;
+        }
+
+        /* 13. Hearts Shape - Hrts 5 */
+        .btn-13 {
+            background: #c0392b;
+            border-radius: 10px 50px;
+        }
+        .btn-13:hover {
+            border-radius: 50px 10px;
+        }
+
+        /* 14. Ghost Button - Hrts 2 */
+        .btn-14 {
+            background: transparent;
+            border: 2px solid white;
+        }
+        .btn-14:hover {
+            background: white;
+            color: black;
+        }
+
+        /* 15. Shady Wave - Shadies */
+        .btn-15 {
+            background: #34495e;
+            border-radius: 0 0 50px 50px;
+        }
+        .btn-15:hover {
+            background: #1abc9c;
+            border-radius: 50px 50px 0 0;
+        }
+
+        /* 16. Cosmic Glow - Cosmic Collision */
+        .btn-16 {
+            background: radial-gradient(circle, #4b0082, #000000);
+            border: 1px solid #9932cc;
+        }
+        .btn-16:hover {
+            box-shadow: 0 0 30px #9932cc;
+            transform: scale(1.1);
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 20px;
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Greg Seymour AI</h1>
+        <p>Dynamic Interactive Project Menu</p>
+    </header>
+
+    <div class="menu-container">
+        <!-- 1 -->
+        <a href="TETTTER-GSAI.html" class="btn btn-1">TETTTER GSAI</a>
+        <!-- 2 -->
+        <a href="Tic-Tac-Toe.html" class="btn btn-2">TIC-TAC-TOE</a>
+        <!-- 3 -->
+        <a href="tunnels-android.html" class="btn btn-3">TUNNELS ANDROID</a>
+        <!-- 4 -->
+        <a href="TUNNELS----MENU.html" class="btn btn-4">TUNNELS MENU</a>
+        <!-- 5 -->
+        <a href="SANTASLOTS3x3.html" class="btn btn-5">SANTA SLOTS</a>
+        <!-- 6 -->
+        <a href="MEMORY-DELUXE.html" class="btn btn-6">MEMORY DELUXE</a>
+        <!-- 7 -->
+        <a href="INVERSIONS-GSAI.html" class="btn btn-7">INVERSIONS GSAI</a>
+        <!-- 8 -->
+        <a href="gregout.html" class="btn btn-8">GREGOUT</a>
+        <!-- 9 -->
+        <a href="inversions5.html" class="btn btn-9">INVERSIONS 5</a>
+        <!-- 10 -->
+        <a href="shaders-and-spirals-gsai.html" class="btn btn-10">SHADERS & SPIRALS</a>
+        <!-- 11 -->
+        <a href="5in1 (1).html" class="btn btn-11">5-IN-1 GAMES</a>
+        <!-- 12 -->
+        <a href="casino_menu.html" class="btn btn-12">CASINO MENU</a>
+        <!-- 13 -->
+        <a href="hrts (5).html" class="btn btn-13">HEARTS (V5)</a>
+        <!-- 14 -->
+        <a href="hrts (2).html" class="btn btn-14">HEARTS (V2)</a>
+        <!-- 15 -->
+        <a href="shadies-012.html" class="btn btn-15">SHADIES 012</a>
+        <!-- 16 -->
+        <a href="cosmic-collision (1).html" class="btn btn-16">COSMIC COLLISION</a>
+    </div>
+
+    <footer>
+        &copy; 2023 Greg Seymour AI - Portfolio Directory
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,397 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Floating Hearts Screensaver – Mixed Animations</title>
+  <style>
+    body {
+      /* Remove default margin */
+      margin: 0;
+      /* Hide scrollbars if canvas slightly exceeds viewport */
+      overflow: hidden;
+      /* Set background color */
+      background: #000;
+      /* Hide the mouse cursor */
+      cursor: none;
+    }
+    canvas {
+      /* Ensure canvas takes up space */
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // --- Canvas Resizing ---
+    function resize() {
+      // Set canvas dimensions to match the window size
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    // Call resize initially
+    resize();
+    // Add event listener to resize canvas when window size changes
+    window.addEventListener("resize", resize);
+
+    // --- Heart Drawing Function ---
+    /**
+     * Draws a heart shape using two Bézier curves.
+     * The heart is drawn such that if you pass (x, y - size/4) for the
+     * center arguments, it will appear visually centered around (x, y).
+     *
+     * @param {CanvasRenderingContext2D} ctx - The drawing context.
+     * @param {number} x - Horizontal center for drawing calculations.
+     * @param {number} y - Vertical baseline for drawing calculations.
+     * @param {number} size - Overall size scale of the heart.
+     */
+    function drawHeart(ctx, x, y, size) {
+      ctx.beginPath();
+      // Start at the top center notch of the heart.
+      ctx.moveTo(x, y);
+      // Left half of the heart (curve out, then in to the bottom tip).
+      ctx.bezierCurveTo(
+        x - size / 2, y - size / 2,  // Control point 1 (top-left curve)
+        x - size,     y + size / 3,  // Control point 2 (bottom-left curve inward)
+        x,            y + size       // Bottom tip
+      );
+      // Right half of the heart (curve in from bottom tip, then out to top).
+      ctx.bezierCurveTo(
+        x + size,     y + size / 3,  // Control point 1 (bottom-right curve inward)
+        x + size / 2, y - size / 2,  // Control point 2 (top-right curve)
+        x,            y              // Back to the top center notch
+      );
+      ctx.closePath(); // Close the path to ensure fill works correctly.
+      ctx.fill();      // Fill the shape.
+    }
+
+    // --- Heart Class ---
+    /**
+     * The Heart class manages the state and behavior of a single heart,
+     * including its position, size, color, movement mode, pulsing, and drawing.
+     */
+    class Heart {
+      constructor() {
+        // Initialize the heart with random properties, potentially starting inside the canvas.
+        this.reset(true);
+      }
+
+      /**
+       * Resets the heart's properties to random values and assigns a new
+       * movement mode. Can optionally start the heart off-screen.
+       * @param {boolean} [startInside=false] - If true, initializes the heart
+       *   at a random position within the canvas boundaries (for drift mode).
+       *   Otherwise, initializes it off-screen based on its movement mode.
+       */
+      reset(startInside = false) {
+        // Define the available movement modes.
+        const modes = ['drift', 'rain', 'horizontal', 'diagonal', 'burst'];
+        // Randomly select a mode for this heart.
+        this.mode = modes[Math.floor(Math.random() * modes.length)];
+
+        // --- Common Randomized Properties ---
+        // Speed of the size pulsing effect.
+        this.pulseSpeed = 0.08 + Math.random() * 0.15;
+        // Initial phase of the pulse sine wave (randomizes starting size).
+        this.pulsePhase = Math.random() * Math.PI * 2;
+        // Intensity of the glow effect (affects shadowBlur).
+        this.glowIntensity = 0.7 + Math.random() * 0.8;
+        // Base color (hue is randomized, saturation and lightness are fixed).
+        this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+
+        // --- Mode-Specific Initialization ---
+        const baseRadius = 20 + Math.random() * 50; // Base size before pulsing
+
+        switch (this.mode) {
+          case 'drift':
+            // Original floating behavior.
+            this.radius = baseRadius;
+            if (startInside) {
+              // Start anywhere on screen.
+              this.x = Math.random() * canvas.width;
+              this.y = Math.random() * canvas.height;
+            } else {
+              // Start from a random edge.
+              const side = Math.floor(Math.random() * 4);
+              const buffer = 50; // Distance off-screen to start
+              if (side === 0) { // Left
+                this.x = -buffer; this.y = Math.random() * canvas.height;
+              } else if (side === 1) { // Right
+                this.x = canvas.width + buffer; this.y = Math.random() * canvas.height;
+              } else if (side === 2) { // Top
+                this.x = Math.random() * canvas.width; this.y = -buffer;
+              } else { // Bottom
+                this.x = Math.random() * canvas.width; this.y = canvas.height + buffer;
+              }
+            }
+            // Random direction and speed.
+            this.dx = (Math.random() - 0.5) * 2; // Range: -1 to 1
+            this.dy = (Math.random() - 0.5) * 2; // Range: -1 to 1
+            break;
+
+          case 'rain':
+            // Falling from the top.
+            this.radius = baseRadius;
+            this.x = Math.random() * canvas.width;
+            this.y = -50; // Start above the screen
+            this.dx = (Math.random() - 0.5) * 0.5; // Slight horizontal drift
+            this.dy = 2 + Math.random() * 3;      // Downward speed
+            break;
+
+          case 'horizontal':
+            // Gliding across the screen.
+            this.radius = baseRadius;
+            this.y = Math.random() * canvas.height; // Random vertical position
+            if (Math.random() < 0.5) {
+              // Left to right
+              this.x = -50; // Start left
+              this.dx = 2 + Math.random() * 3;
+            } else {
+              // Right to left
+              this.x = canvas.width + 50; // Start right
+              this.dx = -(2 + Math.random() * 3);
+            }
+            this.dy = (Math.random() - 0.5) * 1; // Minor vertical drift
+            break;
+
+          case 'diagonal':
+            // Coming in from a corner.
+            this.radius = baseRadius;
+            const corner = Math.floor(Math.random() * 4);
+            const speed = 2 + Math.random() * 2;
+            const buffer = 50;
+            if (corner === 0) { // Top-left
+              this.x = -buffer; this.y = -buffer;
+              this.dx = speed; this.dy = speed;
+            } else if (corner === 1) { // Top-right
+              this.x = canvas.width + buffer; this.y = -buffer;
+              this.dx = -speed; this.dy = speed;
+            } else if (corner === 2) { // Bottom-left
+              this.x = -buffer; this.y = canvas.height + buffer;
+              this.dx = speed; this.dy = -speed;
+            } else { // Bottom-right
+              this.x = canvas.width + buffer; this.y = canvas.height + buffer;
+              this.dx = -speed; this.dy = -speed;
+            }
+            break;
+
+          case 'burst':
+            // Expanding outwards from the center.
+            this.x = canvas.width / 2;
+            this.y = canvas.height / 2;
+            // Use a slightly smaller base radius for burst effect.
+            this.radius = 20 + Math.random() * 30;
+            const angle = Math.random() * Math.PI * 2; // Random outward direction
+            const burstSpeed = 1 + Math.random() * 3;
+            this.dx = Math.cos(angle) * burstSpeed;
+            this.dy = Math.sin(angle) * burstSpeed;
+            this.scale = 0.1; // Start very small
+            this.growthRate = 0.01 + Math.random() * 0.02; // Speed of expansion
+            break;
+        }
+      }
+
+      /** Updates the heart's state for the next frame. */
+      update() {
+        // --- Movement ---
+        this.x += this.dx;
+        this.y += this.dy;
+
+        // --- Mode-Specific Updates ---
+        if (this.mode === 'burst') {
+          // Increase size over time.
+          this.scale += this.growthRate;
+          // Optional: slow down burst movement over time
+          // this.dx *= 0.99;
+          // this.dy *= 0.99;
+        }
+
+        // --- Pulsing ---
+        this.pulsePhase += this.pulseSpeed;
+        // Keep phase within reasonable bounds to prevent potential floating point issues over long periods.
+        if (this.pulsePhase > Math.PI * 100) {
+            this.pulsePhase -= Math.PI * 100;
+        }
+
+        // --- Off-Screen Check ---
+        // Check if the heart has moved significantly off-screen.
+        const offScreenBuffer = 200; // Generous buffer
+        if (
+          this.x < -offScreenBuffer ||
+          this.x > canvas.width + offScreenBuffer ||
+          this.y < -offScreenBuffer ||
+          this.y > canvas.height + offScreenBuffer
+        ) {
+          // Reset the heart to come back on screen with new properties.
+          this.reset();
+        }
+      }
+
+      /** Draws the heart onto the canvas context. */
+      draw() {
+        // --- Calculate Current Size ---
+        // Determine base size, considering scale for 'burst' mode.
+        const baseSize = (this.mode === 'burst' ? this.radius * this.scale : this.radius);
+        // Apply pulsing effect using a sine wave.
+        const pulseFactor = 1 + Math.sin(this.pulsePhase) * 0.2; // Pulse between 0.8x and 1.2x size
+        const currentSize = baseSize * pulseFactor;
+
+        // Prevent drawing if size is negligible (especially for burst start).
+        if (currentSize < 1) return;
+
+        // --- Apply Glow Effect ---
+        ctx.shadowBlur = currentSize * this.glowIntensity * 1.5; // Blur radius based on size and intensity
+        ctx.shadowColor = this.color;                           // Glow color matches heart color
+
+        // --- Create Main Fill Gradient ---
+        // A radial gradient gives a nice voluminous look.
+        const gradient = ctx.createRadialGradient(
+          // Inner circle (brightest point, slightly offset for highlight illusion)
+          this.x - currentSize * 0.3, // x offset
+          this.y - currentSize * 0.3, // y offset (matches drawHeart's y-adjustment)
+          currentSize * 0.1,           // Inner radius
+          // Outer circle (centered)
+          this.x,
+          this.y,
+          currentSize                   // Outer radius
+        );
+        // Gradient color stops: White hot center -> Heart color -> Fades towards edge
+        gradient.addColorStop(0, "#ffffff");         // Bright center
+        gradient.addColorStop(0.2, this.color);        // Transition to main color
+        gradient.addColorStop(0.6, this.color);        // Main color dominant
+        gradient.addColorStop(1, "rgba(0,0,0,0.9)"); // Dark/transparent edge for depth
+
+        ctx.fillStyle = gradient;
+        // Draw the main heart shape.
+        // We pass y - currentSize / 4 to visually center the heart around (this.x, this.y).
+        drawHeart(ctx, this.x, this.y - currentSize / 4, currentSize);
+
+        // --- Add Highlight Overlay ---
+        // Create a smaller, white, mostly transparent gradient for a specular highlight.
+        const highlightX = this.x - currentSize * 0.5; // Position highlight top-left-ish
+        const highlightY = this.y - currentSize * 0.5; // Adjusting for drawHeart offset
+        const highlightGradient = ctx.createRadialGradient(
+          highlightX, highlightY, currentSize * 0.05, // Inner circle (small, bright)
+          highlightX, highlightY, currentSize * 0.4   // Outer circle (larger, fading)
+        );
+        highlightGradient.addColorStop(0, "rgba(255,255,255,0.8)"); // Bright white center
+        highlightGradient.addColorStop(1, "rgba(255,255,255,0)");   // Fully transparent edge
+
+        // Apply the highlight fill.
+        ctx.fillStyle = highlightGradient;
+        // Draw the heart shape again, overlaying the highlight.
+        // Use the same positioning adjustments as the main draw.
+        // Note: We are drawing *without* the shadow for the highlight itself.
+        ctx.shadowBlur = 0; // Temporarily disable shadow for highlight
+        drawHeart(ctx, this.x, this.y - currentSize / 4, currentSize);
+
+        // --- Reset Shadow ---
+        // IMPORTANT: Reset shadow settings so they don't affect subsequent drawings
+        // in the loop or the background clearing in the next frame.
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = 'transparent'; // Or 'rgba(0,0,0,0)'
+      }
+    }
+
+    // --- Collision Detection (Basic) ---
+    /**
+     * Checks for collision between two hearts and applies a simple bounce response.
+     * @param {Heart} h1 - First heart.
+     * @param {Heart} h2 - Second heart.
+     */
+    function checkCollision(h1, h2) {
+      const dx = h1.x - h2.x;
+      const dy = h1.y - h2.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Use the base radius for collision checks, ignoring pulse/scale for simplicity.
+      const collisionThreshold = h1.radius * 0.8 + h2.radius * 0.8; // Use slightly smaller than visual radius
+
+      if (distance < collisionThreshold) {
+        // --- Basic Elastic Collision Response ---
+        // Calculate angle of collision.
+        const angle = Math.atan2(dy, dx);
+        // Calculate speeds (magnitude of velocity vectors).
+        const speed1 = Math.sqrt(h1.dx * h1.dx + h1.dy * h1.dy);
+        const speed2 = Math.sqrt(h2.dx * h2.dx + h2.dy * h2.dy);
+
+        // Calculate new velocities using conservation of momentum (simplified).
+        // Heart 1 gets Heart 2's speed along the collision angle.
+        h1.dx = Math.cos(angle) * speed2;
+        h1.dy = Math.sin(angle) * speed2;
+        // Heart 2 gets Heart 1's speed along the opposite direction.
+        h2.dx = Math.cos(angle + Math.PI) * speed1;
+        h2.dy = Math.sin(angle + Math.PI) * speed1;
+
+        // Optional: Move hearts slightly apart to prevent sticking
+        const overlap = collisionThreshold - distance;
+        const moveApartFactor = 0.5; // How much of the overlap to correct immediately
+        h1.x += Math.cos(angle) * overlap * moveApartFactor;
+        h1.y += Math.sin(angle) * overlap * moveApartFactor;
+        h2.x -= Math.cos(angle) * overlap * moveApartFactor;
+        h2.y -= Math.sin(angle) * overlap * moveApartFactor;
+      }
+    }
+
+    // --- Initialization ---
+    // Create an array to hold all the heart objects.
+    const hearts = [];
+    const numberOfHearts = 50; // Adjust for performance vs density
+    // Populate the array with new Heart instances.
+    for (let i = 0; i < numberOfHearts; i++) {
+      // Pass 'true' to the constructor so initial hearts start inside.
+      hearts.push(new Heart());
+    }
+
+    // --- Animation Loop ---
+    function animate() {
+      // --- Create Fading Trail Effect ---
+      // Fill the canvas with a semi-transparent black rectangle.
+      // This makes previous frames fade out slowly.
+      // Adjust the alpha value (0.15) for longer/shorter trails.
+      ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // --- Update and Draw Hearts ---
+      hearts.forEach((heart, i) => {
+        heart.update(); // Update heart state (position, pulse, etc.)
+        heart.draw();   // Draw the heart
+
+        // --- Check Collisions ---
+        // Check collision between the current heart (i) and all subsequent hearts (j).
+        // This avoids checking pairs twice and a heart against itself.
+        for (let j = i + 1; j < hearts.length; j++) {
+          checkCollision(heart, hearts[j]);
+        }
+      });
+
+      // Request the browser to call 'animate' again before the next repaint.
+      requestAnimationFrame(animate);
+    }
+
+    // Start the animation loop.
+    animate();
+
+    // --- Optional: Close Window on Click ---
+    // Provides a simple way to exit the 'screensaver'.
+    // Note: window.close() might be blocked by browsers unless the window
+    // was opened by script.
+    document.addEventListener("click", () => {
+        // Could add a fade out or other closing effect here.
+        try {
+            window.close();
+        } catch (e) {
+            console.warn("window.close() was blocked by the browser.");
+            // Provide feedback if closing fails.
+            document.body.innerHTML = `<div style="color: white; text-align: center; padding-top: 40vh; font-family: sans-serif; font-size: 1.5em;">Could not close window automatically.<br>Please close the tab manually.</div>`;
+            document.body.style.cursor = 'default'; // Show cursor again
+        }
+    });
+
+  </script>
+</body>
+</html>

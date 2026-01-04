@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greg Seymour AI | 2025 Portal</title>
+    <style>
+        :root {
+            --neon-pink: #ff00ff;
+            --neon-blue: #00f2ff;
+            --neon-green: #39ff14;
+            --neon-yellow: #fff01f;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow-x: hidden;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Animated Mesh Background */
+        .bg-animate {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 0% 0%, #4b0082 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, #00008b 0%, transparent 50%),
+                radial-gradient(circle at 100% 0%, #ff0080 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, #00ffcc 0%, transparent 50%);
+            background-size: 200% 200%;
+            animation: meshMove 10s ease infinite;
+        }
+
+        @keyframes meshMove {
+            0% { background-position: 0% 0%; }
+            50% { background-position: 100% 100%; }
+            100% { background-position: 0% 0%; }
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .title-gsai {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            margin: 0;
+            background: linear-gradient(90deg, #fff, var(--neon-blue), #fff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+            filter: drop-shadow(0 0 10px rgba(0,242,255,0.5));
+        }
+
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            width: 95%;
+            max-width: 1400px;
+            padding: 20px;
+            perspective: 1000px;
+        }
+
+        /* Base Button Style */
+        .btn {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: white;
+            font-weight: 800;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* 1. TETTTER - The Glitcher */
+        .btn-1 { background: #ff0055; border: 4px solid #fff; clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%); }
+        .btn-1:hover { animation: glitch 0.3s infinite; background: #00ff00; color: #000; }
+
+        /* 2. Tic-Tac-Toe - The Jelly */
+        .btn-2 { background: var(--neon-blue); border-radius: 50% 20% 50% 20%; }
+        .btn-2:hover { transform: scale(1.1) rotate(5deg); border-radius: 20% 50% 20% 50%; background: #fff; color: var(--neon-blue); }
+
+        /* 3. Tunnels Android - The Rainbow Road */
+        .btn-3 { background: #333; border-radius: 15px; border: 3px solid transparent; background-image: linear-gradient(#333, #333), linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red); background-origin: border-box; background-clip: content-box, border-box; }
+        .btn-3:hover { transform: translateY(-10px); filter: brightness(1.5); }
+
+        /* 4. TUNNELS MENU - The Flash */
+        .btn-4 { background: transparent; border: 2px solid var(--neon-green); }
+        .btn-4:hover { background: var(--neon-green); color: #000; box-shadow: 0 0 50px var(--neon-green); }
+
+        /* 5. SANTASLOTS - The Golden Sparkle */
+        .btn-5 { background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 0 40px 0 40px; }
+        .btn-5:hover { letter-spacing: 5px; background: #fff; color: #ff8c00; }
+
+        /* 6. MEMORY DELUXE - The 3D Flip */
+        .btn-6 { background: #6a11cb; border-bottom: 8px solid #2575fc; }
+        .btn-6:hover { transform: rotateX(20deg); background: #2575fc; }
+
+        /* 7. INVERSIONS GSAI - The Ghost */
+        .btn-7 { background: white; color: black; border-radius: 100px; }
+        .btn-7:hover { mix-blend-mode: difference; transform: scale(0.8); }
+
+        /* 8. GREGOUT - The Bounce */
+        .btn-8 { background: #ff4e50; border-radius: 5px; }
+        .btn-8:hover { animation: bounce 0.5s infinite alternate; background: #f9d423; }
+
+        /* 9. INVERSIONS 5 - The Portal */
+        .btn-9 { background: #000; border: 5px double var(--neon-pink); border-radius: 50%; height: 140px; width: 140px; margin: auto; }
+        .btn-9:hover { transform: rotate(180deg); border-color: #fff; }
+
+        /* 10. SHADERS - The Liquid */
+        .btn-10 { background: #4ecdc4; clip-path: circle(50% at 50% 50%); }
+        .btn-10:hover { clip-path: circle(75% at 50% 50%); background: #ff6b6b; }
+
+        /* 11. 5IN1 - The Radar */
+        .btn-11 { background: #2c3e50; }
+        .btn-11:hover { background: radial-gradient(circle, var(--neon-yellow), transparent); color: #000; }
+
+        /* 12. CASINO - The Neon Sign */
+        .btn-12 { border: 3px solid #ff00ff; color: #ff00ff; background: rgba(255,0,255,0.1); }
+        .btn-12:hover { animation: flicker 0.1s infinite; color: #fff; border-color: #fff; }
+
+        /* 13. HRTS 5 - The Beating Heart */
+        .btn-13 { background: #e94560; border-radius: 20px; }
+        .btn-13:hover { animation: heartBeat 0.8s infinite; background: #ff0000; }
+
+        /* 14. HRTS 2 - The Slide */
+        .btn-14 { background: #0f3443; overflow: hidden; }
+        .btn-14::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: rgba(255,255,255,0.2); transition: 0.4s; }
+        .btn-14:hover::before { left: 100%; }
+
+        /* 15. SHADIES - The Shadow */
+        .btn-15 { background: #111; color: #444; }
+        .btn-15:hover { color: #fff; text-shadow: 0 0 20px #fff; transform: scale(1.05); }
+
+        /* 16. COSMIC - The Black Hole */
+        .btn-16 { background: linear-gradient(45deg, #000, #333); border-left: 10px solid var(--neon-blue); }
+        .btn-16:hover { border-left: 100px solid var(--neon-blue); color: #000; }
+
+        /* Animations */
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-5px, 5px); }
+            40% { transform: translate(-5px, -5px); }
+            60% { transform: translate(5px, 5px); }
+            80% { transform: translate(5px, -5px); }
+            100% { transform: translate(0); }
+        }
+
+        @keyframes bounce {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
+
+        @keyframes flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes heartBeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.1); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.1); }
+            70% { transform: scale(1); }
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 40px;
+            width: 100%;
+            text-align: center;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-weight: bold;
+            letter-spacing: 2px;
+            color: var(--neon-blue);
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 600px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            .btn {
+                height: 80px;
+                font-size: 1rem;
+            }
+            .btn-9 { width: 100%; border-radius: 10px; height: 80px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-animate"></div>
+
+    <header>
+        <h1 class="title-gsai">Greg Seymour AI</h1>
+        <p style="color: var(--neon-yellow); font-weight: bold; letter-spacing: 4px;">SYSTEM INTERFACE v2.0</p>
+    </header>
+
+    <div class="menu-grid">
+        <a href="TETTTER-GSAI.html" class="btn btn-1">TETTTER GSAI</a>
+        <a href="Tic-Tac-Toe.html" class="btn btn-2">Tic-Tac-Toe</a>
+        <a href="tunnels-android.html" class="btn btn-3">Tunnels Android</a>
+        <a href="TUNNELS----MENU.html" class="btn btn-4">Tunnels Menu</a>
+        <a href="SANTASLOTS3x3.html" class="btn btn-5">Santa Slots 3x3</a>
+        <a href="MEMORY-DELUXE.html" class="btn btn-6">Memory Deluxe</a>
+        <a href="INVERSIONS-GSAI.html" class="btn btn-7">Inversions GSAI</a>
+        <a href="gregout.html" class="btn btn-8">GregOut</a>
+        <a href="inversions5.html" class="btn btn-9">Inversions 5</a>
+        <a href="shaders-and-spirals-gsai.html" class="btn btn-10">Shaders & Spirals</a>
+        <a href="5in1 (1).html" class="btn btn-11">5-in-1 Game Pack</a>
+        <a href="casino_menu.html" class="btn btn-12">Casino Menu</a>
+        <a href="hrts (5).html" class="btn btn-13">Hearts Deluxe</a>
+        <a href="hrts (2).html" class="btn btn-14">Hearts Classic</a>
+        <a href="shadies-012.html" class="btn btn-15">Shadies 012</a>
+        <a href="cosmic-collision (1).html" class="btn btn-16">Cosmic Collision</a>
+    </div>
+
+    <footer>
+        COPYRIGHTED GREG SEYMOUR AI 2025
+    </footer>
+
+</body>
+</html>
