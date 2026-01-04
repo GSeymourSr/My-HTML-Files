@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greg Seymour AI | Nexus Interface</title>
+    <style>
+        :root {
+            --primary: #00f3ff;
+            --secondary: #ff00ff;
+            --bg-dark: #050510;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Courier New', Courier, monospace; /* Terminal feel */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            perspective: 1000px;
+        }
+
+        /* Moving Grid Background */
+        .cyber-grid {
+            position: fixed;
+            top: 0; left: 0; width: 200%; height: 200%;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 0, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-position: 0 0;
+            transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+            animation: gridMove 20s linear infinite;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        @keyframes gridMove {
+            0% { transform: perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px); }
+            100% { transform: perspective(500px) rotateX(60deg) translateY(50px) translateZ(-200px); }
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            z-index: 2;
+        }
+
+        h1 {
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 900;
+            font-size: clamp(2rem, 5vw, 4rem);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            position: relative;
+            color: white;
+            text-shadow: 2px 2px 0px var(--secondary), -2px -2px 0px var(--primary);
+            animation: glitchText 3s infinite alternate;
+        }
+
+        .subtitle {
+            margin-top: 10px;
+            color: var(--primary);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            border: 1px solid var(--primary);
+            padding: 5px 15px;
+            display: inline-block;
+            background: rgba(0, 243, 255, 0.1);
+        }
+
+        /* Container */
+        .interface-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            width: 90%;
+            max-width: 1400px;
+            padding-bottom: 80px;
+            z-index: 2;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(5px);
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            color: white;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            overflow: hidden;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Corner accents */
+        .card::before, .card::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            transition: all 0.3s ease;
+        }
+        .card::before { top: 0; left: 0; border-top: 2px solid var(--primary); border-left: 2px solid var(--primary); }
+        .card::after { bottom: 0; right: 0; border-bottom: 2px solid var(--secondary); border-right: 2px solid var(--secondary); }
+
+        .card:hover {
+            transform: translateY(-5px) scale(1.02);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+        }
+
+        .card:hover::before { width: 100%; height: 100%; opacity: 0.1; background: var(--primary); border: none; }
+        .card:hover::after { width: 100%; height: 100%; opacity: 0.1; background: var(--secondary); border: none; }
+
+        .card-title {
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            z-index: 2;
+            letter-spacing: 1px;
+        }
+
+        .card-id {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.4);
+            font-family: monospace;
+        }
+
+        /* Icon graphic simulation */
+        .card-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 0 5px currentColor);
+        }
+
+        /* Specific Colors per Card Group */
+        /* Games */
+        .type-game .card-title { color: #fff; }
+        .type-game:hover .card-title { color: var(--primary); }
+        
+        /* Tools/Inversions */
+        .type-tool { border-left: 3px solid var(--secondary); }
+        .type-tool:hover .card-title { color: var(--secondary); }
+
+        /* Menu/System */
+        .type-sys { border-left: 3px solid #ffff00; }
+        .type-sys:hover .card-title { color: #ffff00; }
+
+
+        @keyframes glitchText {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+
+        footer {
+            margin-top: auto;
+            width: 100%;
+            background: rgba(0,0,0,0.8);
+            border-top: 1px solid var(--card-border);
+            padding: 15px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
+            z-index: 10;
+        }
+
+        .status-light {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 50%;
+            margin-right: 8px;
+            box-shadow: 0 0 10px #00ff00;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="cyber-grid"></div>
+
+    <header>
+        <h1>Greg Seymour AI</h1>
+        <div class="subtitle">SYSTEM PORTAL V3.0</div>
+    </header>
+
+    <div class="interface-grid">
+        <!-- 1 -->
+        <a href="TETTTER-GSAI.html" class="card type-game">
+            <span class="card-id">01</span>
+            <div class="card-icon">🧱</div>
+            <span class="card-title">Tettter GSAI</span>
+        </a>
+        <!-- 2 -->
+        <a href="Tic-Tac-Toe.html" class="card type-game">
+            <span class="card-id">02</span>
+            <div class="card-icon">❌⭕</div>
+            <span class="card-title">Tic-Tac-Toe</span>
+        </a>
+        <!-- 3 -->
+        <a href="tunnels-android.html" class="card type-game">
+            <span class="card-id">03</span>
+            <div class="card-icon">🚇</div>
+            <span class="card-title">Tunnels Android</span>
+        </a>
+        <!-- 4 -->
+        <a href="TUNNELS----MENU.html" class="card type-sys">
+            <span class="card-id">04</span>
+            <div class="card-icon">📋</div>
+            <span class="card-title">Tunnels Menu</span>
+        </a>
+        <!-- 5 -->
+        <a href="SANTASLOTS3x3.html" class="card type-game">
+            <span class="card-id">05</span>
+            <div class="card-icon">🎰</div>
+            <span class="card-title">Santa Slots</span>
+        </a>
+        <!-- 6 -->
+        <a href="MEMORY-DELUXE.html" class="card type-game">
+            <span class="card-id">06</span>
+            <div class="card-icon">🧠</div>
+            <span class="card-title">Memory Deluxe</span>
+        </a>
+        <!-- 7 -->
+        <a href="INVERSIONS-GSAI.html" class="card type-tool">
+            <span class="card-id">07</span>
+            <div class="card-icon">👁️</div>
+            <span class="card-title">Inversions GSAI</span>
+        </a>
+        <!-- 8 -->
+        <a href="gregout.html" class="card type-game">
+            <span class="card-id">08</span>
+            <div class="card-icon">🎾</div>
+            <span class="card-title">GregOut</span>
+        </a>
+        <!-- 9 -->
+        <a href="inversions5.html" class="card type-tool">
+            <span class="card-id">09</span>
+            <div class="card-icon">🌀</div>
+            <span class="card-title">Inversions 5</span>
+        </a>
+        <!-- 10 -->
+        <a href="shaders-and-spirals-gsai.html" class="card type-tool">
+            <span class="card-id">10</span>
+            <div class="card-icon">🎨</div>
+            <span class="card-title">Shaders & Spirals</span>
+        </a>
+        <!-- 11 -->
+        <a href="5in1 (1).html" class="card type-sys">
+            <span class="card-id">11</span>
+            <div class="card-icon">📦</div>
+            <span class="card-title">5-in-1 Bundle</span>
+        </a>
+        <!-- 12 -->
+        <a href="casino_menu.html" class="card type-game">
+            <span class="card-id">12</span>
+            <div class="card-icon">🎲</div>
+            <span class="card-title">Casino Menu</span>
+        </a>
+        <!-- 13 -->
+        <a href="hrts (5).html" class="card type-game">
+            <span class="card-id">13</span>
+            <div class="card-icon">♥️</div>
+            <span class="card-title">Hearts Deluxe</span>
+        </a>
+        <!-- 14 -->
+        <a href="hrts (2).html" class="card type-game">
+            <span class="card-id">14</span>
+            <div class="card-icon">💔</div>
+            <span class="card-title">Hearts Classic</span>
+        </a>
+        <!-- 15 -->
+        <a href="shadies-012.html" class="card type-tool">
+            <span class="card-id">15</span>
+            <div class="card-icon">🌑</div>
+            <span class="card-title">Shadies 012</span>
+        </a>
+        <!-- 16 -->
+        <a href="cosmic-collision (1).html" class="card type-game">
+            <span class="card-id">16</span>
+            <div class="card-icon">☄️</div>
+            <span class="card-title">Cosmic Collision</span>
+        </a>
+    </div>
+
+    <footer>
+        <span class="status-light"></span> SYSTEM ONLINE | © 2026 GREG SEYMOUR AI
+    </footer>
+
+    <script>
+        // Subtle 3D Tilt Effect on Mouse Move
+        const cards = document.querySelectorAll('.card');
+        
+        cards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateX = ((y - centerY) / centerY) * -10; // Max 10deg rotation
+                const rotateY = ((x - centerX) / centerX) * 10;
+
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
